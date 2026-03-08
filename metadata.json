@@ -1,0 +1,5 @@
+{
+  "name": "BunkSafe – by Kaif Khan",
+  "description": "A mobile-first attendance tracker and bunk calculator for college students.",
+  "requestFramePermissions": ["notifications"]
+}
