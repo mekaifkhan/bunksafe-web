@@ -4,9 +4,6 @@
  */
 
 import React, { useState, useEffect, useMemo } from 'react';
-
-import { db } from "./firebase";
-import { doc, updateDoc, increment } from "firebase/firestore";
 import { 
   LayoutDashboard, 
   Calendar as CalendarIcon, 
@@ -113,23 +110,6 @@ const Input = ({ label, value, onChange, type = "text", placeholder = "" }: any)
 // --- Main App ---
 
 export default function App() {
-  // Firebase Install Counter
-useEffect(() => {
-  const updateCounter = async () => {
-    try {
-      const ref = doc(db, "stats", "visits");
-
-      await updateDoc(ref, {
-        count: increment(1)
-      });
-
-    } catch (error) {
-      console.log("Firebase counter error:", error);
-    }
-  };
-
-  updateCounter();
-}, []);
   // Persistence
   const [profile, setProfile] = useState<Profile>(() => {
     const saved = localStorage.getItem('bs_profile');
@@ -168,6 +148,7 @@ useEffect(() => {
   const [gapDays, setGapDays] = useState<string[]>([]);
   const [currentGapIndex, setCurrentGapIndex] = useState(0);
   const [viewDate, setViewDate] = useState(new Date());
+  const [selectedDate, setSelectedDate] = useState<string | null>(getTodayStr());
 
   // Wizard State
   const [wizardStep, setWizardStep] = useState(1);
@@ -1054,25 +1035,116 @@ useEffect(() => {
               <button 
                 key={dateStr}
                 onClick={() => {
-                  if (isLocked) {
-                    alert("This attendance data was initialized during setup and cannot be edited.");
-                    return;
-                  }
-                  // Open edit modal logic here
-                  const held = prompt("Total classes?", record?.held.toString() || "0");
-                  const attended = prompt("Attended classes?", record?.attended.toString() || "0");
-                  if (held !== null && attended !== null) {
-                    updateAttendance(dateStr, parseInt(held), parseInt(attended), false);
-                  }
+                  setSelectedDate(dateStr);
                 }}
-                className={`aspect-square rounded-xl border flex flex-col items-center justify-center relative transition-all active:scale-90 ${bgColor} ${borderColor} ${textColor} ${isToday(day) ? 'ring-2 ring-emerald-500 ring-offset-2 ring-offset-zinc-950' : ''}`}
+                className={`aspect-square rounded-xl border flex flex-col items-center justify-center relative transition-all active:scale-95 ${bgColor} ${borderColor} ${textColor} ${isToday(day) ? 'ring-2 ring-emerald-500 ring-offset-2 ring-offset-zinc-950' : ''} ${selectedDate === dateStr ? 'ring-2 ring-white ring-offset-2 ring-offset-zinc-950' : ''}`}
               >
                 <span className="text-sm font-bold">{format(day, 'd')}</span>
+                {record && record.held > 0 && !record.isHoliday && (
+                  <span className="text-[9px] font-black mt-0.5 opacity-80">{record.attended}/{record.held}</span>
+                )}
+                {record && record.isHoliday && (
+                  <span className="text-[8px] font-bold mt-0.5 opacity-60">H</span>
+                )}
                 {isLocked && <Lock size={10} className="absolute top-1 right-1 opacity-50" />}
               </button>
             );
           })}
         </div>
+
+        <AnimatePresence mode="wait">
+          {selectedDate && (
+            <motion.div
+              key={selectedDate}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="mt-4"
+            >
+              <Card className="border-t-4 border-t-emerald-500">
+                <div className="flex justify-between items-start mb-4">
+                  <div>
+                    <h3 className="text-lg font-bold">{format(parseISO(selectedDate), 'EEEE, MMM do')}</h3>
+                    <p className="text-zinc-500 text-xs uppercase tracking-wider font-bold">
+                      {records[selectedDate]?.isHoliday ? 'Holiday' : 'Regular Class Day'}
+                    </p>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button 
+                      variant="secondary" 
+                      className="text-xs py-1.5 px-3" 
+                      onClick={() => {
+                        const record = records[selectedDate];
+                        const isLocked = semester.lockedUntil && !isAfter(parseISO(selectedDate), parseISO(semester.lockedUntil));
+                        if (isLocked) {
+                          alert("This attendance data was initialized during setup and cannot be edited.");
+                          return;
+                        }
+                        const held = prompt("Total classes?", record?.held.toString() || "0");
+                        const attended = prompt("Attended classes?", record?.attended.toString() || "0");
+                        if (held !== null && attended !== null) {
+                          updateAttendance(selectedDate, parseInt(held), parseInt(attended), false);
+                        }
+                      }}
+                    >
+                      Edit
+                    </Button>
+                  </div>
+                </div>
+                
+                {records[selectedDate] && !records[selectedDate].isHoliday && records[selectedDate].held > 0 ? (
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="bg-zinc-800/50 p-4 rounded-2xl text-center border border-zinc-800">
+                        <p className="text-zinc-500 text-[10px] uppercase font-bold tracking-widest mb-1">Attended</p>
+                        <p className="text-3xl font-black text-emerald-500">{records[selectedDate].attended}</p>
+                      </div>
+                      <div className="bg-zinc-800/50 p-4 rounded-2xl text-center border border-zinc-800">
+                        <p className="text-zinc-500 text-[10px] uppercase font-bold tracking-widest mb-1">Total Held</p>
+                        <p className="text-3xl font-black text-zinc-100">{records[selectedDate].held}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3 bg-emerald-500/5 border border-emerald-500/10 p-3 rounded-xl">
+                      <div className="w-10 h-10 rounded-full bg-emerald-500/20 flex items-center justify-center text-emerald-500">
+                        <BarChart3 size={20} />
+                      </div>
+                      <div>
+                        <p className="text-xs font-bold text-emerald-500/80 uppercase tracking-wider">Daily Percentage</p>
+                        <p className="text-lg font-bold text-emerald-500">
+                          {((records[selectedDate].attended / records[selectedDate].held) * 100).toFixed(1)}%
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ) : records[selectedDate]?.isHoliday ? (
+                  <div className="bg-blue-500/10 border border-blue-500/20 p-6 rounded-2xl text-center">
+                    <Info className="mx-auto mb-2 text-blue-500" size={32} />
+                    <p className="text-blue-500 font-bold">This day is marked as a holiday.</p>
+                    <p className="text-blue-500/60 text-xs mt-1">No classes were held on this date.</p>
+                  </div>
+                ) : (
+                  <div className="bg-zinc-800/50 p-8 rounded-2xl text-center border border-zinc-800 border-dashed">
+                    <AlertCircle className="mx-auto mb-2 text-zinc-700" size={32} />
+                    <p className="text-zinc-500 font-medium italic">No attendance data recorded for this date.</p>
+                    <Button 
+                      variant="ghost" 
+                      className="mt-4 text-xs text-emerald-500"
+                      onClick={() => {
+                        const held = prompt("Total classes?", "0");
+                        const attended = prompt("Attended classes?", "0");
+                        if (held !== null && attended !== null) {
+                          updateAttendance(selectedDate, parseInt(held), parseInt(attended), false);
+                        }
+                      }}
+                    >
+                      + Add Record
+                    </Button>
+                  </div>
+                )}
+              </Card>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         <div className="grid grid-cols-2 gap-3">
           <div className="flex items-center gap-2 text-xs text-zinc-500">
