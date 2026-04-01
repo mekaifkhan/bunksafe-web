@@ -77,7 +77,7 @@ const Button = ({
   disabled?: boolean
 }) => {
   const variants = {
-    primary: 'bg-emerald-500 text-white hover:bg-emerald-600',
+    primary: 'bg-yellow-400 text-zinc-950 hover:bg-yellow-500',
     secondary: 'bg-zinc-800 text-zinc-100 hover:bg-zinc-700',
     danger: 'bg-red-500/10 text-red-500 border border-red-500/20 hover:bg-red-500/20',
     ghost: 'bg-transparent text-zinc-400 hover:text-zinc-100'
@@ -102,7 +102,7 @@ const Input = ({ label, value, onChange, type = "text", placeholder = "" }: any)
       value={value}
       onChange={(e) => onChange(e.target.value)}
       placeholder={placeholder}
-      className="bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3 text-zinc-100 focus:outline-none focus:border-emerald-500 transition-colors"
+      className="bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3 text-zinc-100 focus:outline-none focus:border-yellow-400 transition-colors"
     />
   </div>
 );
@@ -426,7 +426,7 @@ export default function App() {
           exit={{ opacity: 0, scale: 1.2 }}
           className="space-y-4"
         >
-          <div className="w-24 h-24 bg-emerald-500 rounded-3xl mx-auto flex items-center justify-center text-white shadow-2xl shadow-emerald-500/20">
+          <div className="w-24 h-24 bg-yellow-400 rounded-3xl mx-auto flex items-center justify-center text-zinc-950 shadow-2xl shadow-yellow-400/20">
             <CalendarIcon size={48} />
           </div>
           <div className="space-y-1">
@@ -439,7 +439,7 @@ export default function App() {
           initial={{ width: 0 }}
           animate={{ width: "120px" }}
           transition={{ duration: 2, ease: "easeInOut" }}
-          className="h-1 bg-emerald-500 rounded-full mt-12 opacity-50"
+          className="h-1 bg-yellow-400 rounded-full mt-12 opacity-50"
         />
       </div>
     );
@@ -480,8 +480,8 @@ export default function App() {
   if (appState === 'LATE_DETECTION') {
     return (
       <div className="min-h-screen bg-zinc-950 text-zinc-100 p-6 flex flex-col justify-center gap-6">
-        <div className="bg-emerald-500/10 border border-emerald-500/20 p-6 rounded-3xl space-y-4">
-          <div className="flex items-center gap-3 text-emerald-500">
+        <div className="bg-yellow-400/10 border border-yellow-400/20 p-6 rounded-3xl space-y-4">
+          <div className="flex items-center gap-3 text-yellow-400">
             <Info size={24} />
             <h3 className="text-xl font-bold">Late Start Detected</h3>
           </div>
@@ -588,7 +588,7 @@ export default function App() {
                 <input 
                   type="range" min="0" max="100" value={wizardData.percentage} 
                   onChange={(e) => setWizardData({...wizardData, percentage: parseInt(e.target.value)})}
-                  className="flex-1 accent-emerald-500"
+                  className="flex-1 accent-yellow-400"
                 />
                 <span className="text-2xl font-bold w-16 text-right">{wizardData.percentage}%</span>
               </div>
@@ -650,7 +650,7 @@ export default function App() {
                         : [...wizardData.holidays, i];
                       setWizardData({...wizardData, holidays: h});
                     }}
-                    className={`p-4 rounded-2xl border transition-all ${wizardData.holidays.includes(i) ? 'bg-emerald-500/10 border-emerald-500 text-emerald-500' : 'bg-zinc-900 border-zinc-800 text-zinc-400'}`}
+                    className={`p-4 rounded-2xl border transition-all ${wizardData.holidays.includes(i) ? 'bg-yellow-400/10 border-yellow-400 text-yellow-400' : 'bg-zinc-900 border-zinc-800 text-zinc-400'}`}
                   >
                     {day}
                   </button>
@@ -675,7 +675,7 @@ export default function App() {
                   type="date" 
                   value={extraHolidayInput}
                   onChange={(e) => setExtraHolidayInput(e.target.value)}
-                  className="flex-1 bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-2 text-zinc-100 outline-none focus:border-emerald-500 transition-all"
+                  className="flex-1 bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-2 text-zinc-100 outline-none focus:border-yellow-400 transition-all"
                 />
                 <Button onClick={() => {
                   if (extraHolidayInput && !wizardData.extraHolidays.includes(extraHolidayInput)) {
@@ -746,7 +746,7 @@ export default function App() {
                     <button
                       key={`gap-held-${num}`}
                       onClick={() => updateAttendance(date, num, Math.min(records[date]?.attended || 0, num), false)}
-                      className={`px-4 py-2 rounded-xl border text-sm font-bold transition-all shrink-0 ${records[date]?.held === num ? 'bg-emerald-500 border-emerald-500 text-white' : 'bg-zinc-800 border-zinc-700 text-zinc-400'}`}
+                      className={`px-4 py-2 rounded-xl border text-sm font-bold transition-all shrink-0 ${records[date]?.held === num ? 'bg-yellow-400 border-yellow-400 text-zinc-950' : 'bg-zinc-800 border-zinc-700 text-zinc-400'}`}
                     >
                       {num}
                     </button>
@@ -761,7 +761,7 @@ export default function App() {
                     const r = records[date] || { held: 0, attended: 0 };
                     updateAttendance(date, r.held, Math.max(0, r.attended - 1), false);
                   }}><Minus /></Button>
-                  <span className="text-5xl font-bold w-12 text-center text-emerald-500">{records[date]?.attended || 0}</span>
+                  <span className="text-5xl font-bold w-12 text-center text-yellow-400">{records[date]?.attended || 0}</span>
                   <Button variant="secondary" className="p-4 rounded-full" onClick={() => {
                     const r = records[date] || { held: 0, attended: 0 };
                     updateAttendance(date, r.held, Math.min(r.held, r.attended + 1), false);
@@ -772,7 +772,7 @@ export default function App() {
                     <button
                       key={`gap-attended-${num}`}
                       onClick={() => updateAttendance(date, records[date]?.held || 0, num, false)}
-                      className={`px-4 py-2 rounded-xl border text-sm font-bold transition-all shrink-0 ${records[date]?.attended === num ? 'bg-emerald-500 border-emerald-500 text-white' : 'bg-zinc-800 border-zinc-700 text-zinc-400'}`}
+                      className={`px-4 py-2 rounded-xl border text-sm font-bold transition-all shrink-0 ${records[date]?.attended === num ? 'bg-yellow-400 border-yellow-400 text-zinc-950' : 'bg-zinc-800 border-zinc-700 text-zinc-400'}`}
                     >
                       {num}
                     </button>
@@ -815,7 +815,7 @@ export default function App() {
             <h1 className="text-2xl font-bold">{profile.name}</h1>
           </div>
           <div className="bg-zinc-900 p-2 rounded-full border border-zinc-800">
-            <User size={24} className="text-emerald-500" />
+            <User size={24} className="text-yellow-400" />
           </div>
         </header>
 
@@ -847,7 +847,7 @@ export default function App() {
                 <motion.div 
                   initial={{ width: 0 }}
                   animate={{ width: `${Math.min(100, stats.percentage)}%` }}
-                  className={`h-full ${stats.percentage < semester.targetAttendance ? 'bg-red-500' : 'bg-emerald-500'}`}
+                  className={`h-full ${stats.percentage < semester.targetAttendance ? 'bg-red-500' : 'bg-yellow-400'}`}
                 />
               </div>
             </div>
@@ -861,14 +861,14 @@ export default function App() {
             </Card>
             <Card className="space-y-2">
               <p className="text-zinc-500 text-xs uppercase font-bold tracking-wider">Target</p>
-              <h3 className="text-2xl font-bold text-emerald-500">{semester.targetAttendance}%</h3>
+              <h3 className="text-2xl font-bold text-yellow-400">{semester.targetAttendance}%</h3>
               <p className="text-zinc-500 text-xs">Current Goal</p>
             </Card>
           </div>
 
-          <Card className={`border-l-4 ${bunkInfo.status === 'SAFE' ? 'border-l-emerald-500' : 'border-l-red-500'}`}>
+          <Card className={`border-l-4 ${bunkInfo.status === 'SAFE' ? 'border-l-yellow-400' : 'border-l-red-500'}`}>
             <div className="flex items-start gap-4">
-              <div className={`p-3 rounded-2xl ${bunkInfo.status === 'SAFE' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-red-500/10 text-red-500'}`}>
+              <div className={`p-3 rounded-2xl ${bunkInfo.status === 'SAFE' ? 'bg-yellow-400/10 text-yellow-400' : 'bg-red-500/10 text-red-500'}`}>
                 {bunkInfo.status === 'SAFE' ? <CheckCircle2 size={24} /> : <AlertCircle size={24} />}
               </div>
               <div className="space-y-1">
@@ -910,7 +910,7 @@ export default function App() {
                   <button
                     key={`held-${num}`}
                     onClick={() => updateAttendance(today, num, Math.min(todayRecord.attended, num), false)}
-                    className={`px-4 py-2 rounded-xl border text-sm font-bold transition-all shrink-0 ${todayRecord.held === num ? 'bg-emerald-500 border-emerald-500 text-white' : 'bg-zinc-800 border-zinc-700 text-zinc-400'}`}
+                    className={`px-4 py-2 rounded-xl border text-sm font-bold transition-all shrink-0 ${todayRecord.held === num ? 'bg-yellow-400 border-yellow-400 text-zinc-950' : 'bg-zinc-800 border-zinc-700 text-zinc-400'}`}
                   >
                     {num}
                   </button>
@@ -927,7 +927,7 @@ export default function App() {
                 </div>
                 <div className="flex items-center gap-4">
                   <Button variant="secondary" className="p-2" onClick={() => updateAttendance(today, todayRecord.held, Math.max(0, todayRecord.attended - 1), false)}><Minus size={18}/></Button>
-                  <span className="text-2xl font-bold w-6 text-center text-emerald-500">{todayRecord.attended}</span>
+                  <span className="text-2xl font-bold w-6 text-center text-yellow-400">{todayRecord.attended}</span>
                   <Button variant="secondary" className="p-2" onClick={() => updateAttendance(today, todayRecord.held, Math.min(todayRecord.held, todayRecord.attended + 1), false)}><Plus size={18}/></Button>
                 </div>
               </div>
@@ -936,7 +936,7 @@ export default function App() {
                   <button
                     key={`attended-${num}`}
                     onClick={() => updateAttendance(today, todayRecord.held, num, false)}
-                    className={`px-4 py-2 rounded-xl border text-sm font-bold transition-all shrink-0 ${todayRecord.attended === num ? 'bg-emerald-500 border-emerald-500 text-white' : 'bg-zinc-800 border-zinc-700 text-zinc-400'}`}
+                    className={`px-4 py-2 rounded-xl border text-sm font-bold transition-all shrink-0 ${todayRecord.attended === num ? 'bg-yellow-400 border-yellow-400 text-zinc-950' : 'bg-zinc-800 border-zinc-700 text-zinc-400'}`}
                   >
                     {num}
                   </button>
@@ -944,7 +944,7 @@ export default function App() {
                 {todayRecord.held > 0 && (
                   <button
                     onClick={() => updateAttendance(today, todayRecord.held, todayRecord.held, false)}
-                    className="px-4 py-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 text-sm font-bold shrink-0"
+                    className="px-4 py-2 rounded-xl bg-yellow-400/10 border border-yellow-400/20 text-yellow-400 text-sm font-bold shrink-0"
                   >
                     All
                   </button>
@@ -1007,22 +1007,22 @@ export default function App() {
 
             if (record) {
               if (record.isHoliday) {
-                bgColor = 'bg-blue-500/20';
-                borderColor = 'border-blue-500/30';
-                textColor = 'text-blue-500';
+                bgColor = 'bg-zinc-800/80';
+                borderColor = 'border-zinc-700';
+                textColor = 'text-zinc-400';
               } else if (record.held > 0) {
                 if (record.attended === record.held) {
-                  bgColor = 'bg-emerald-500/20';
-                  borderColor = 'border-emerald-500/30';
-                  textColor = 'text-emerald-500';
+                  bgColor = 'bg-yellow-400/20';
+                  borderColor = 'border-yellow-400/30';
+                  textColor = 'text-yellow-400';
                 } else if (record.attended === 0) {
                   bgColor = 'bg-red-500/20';
                   borderColor = 'border-red-500/30';
                   textColor = 'text-red-500';
                 } else {
-                  bgColor = 'bg-yellow-500/20';
-                  borderColor = 'border-yellow-500/30';
-                  textColor = 'text-yellow-500';
+                  bgColor = 'bg-amber-500/20';
+                  borderColor = 'border-amber-500/30';
+                  textColor = 'text-amber-500';
                 }
               }
             } else if (isBefore(day, startOfDay(new Date())) && isAfter(day, subDays(parseISO(semester.startDate), 1))) {
@@ -1037,7 +1037,7 @@ export default function App() {
                 onClick={() => {
                   setSelectedDate(dateStr);
                 }}
-                className={`aspect-square rounded-xl border flex flex-col items-center justify-center relative transition-all active:scale-95 ${bgColor} ${borderColor} ${textColor} ${isToday(day) ? 'ring-2 ring-emerald-500 ring-offset-2 ring-offset-zinc-950' : ''} ${selectedDate === dateStr ? 'ring-2 ring-white ring-offset-2 ring-offset-zinc-950' : ''}`}
+                className={`aspect-square rounded-xl border flex flex-col items-center justify-center relative transition-all active:scale-95 ${bgColor} ${borderColor} ${textColor} ${isToday(day) ? 'ring-2 ring-yellow-400 ring-offset-2 ring-offset-zinc-950' : ''} ${selectedDate === dateStr ? 'ring-2 ring-white ring-offset-2 ring-offset-zinc-950' : ''}`}
               >
                 <span className="text-sm font-bold">{format(day, 'd')}</span>
                 {record && record.held > 0 && !record.isHoliday && (
@@ -1061,7 +1061,7 @@ export default function App() {
               exit={{ opacity: 0, y: -10 }}
               className="mt-4"
             >
-              <Card className="border-t-4 border-t-emerald-500">
+              <Card className="border-t-4 border-t-yellow-400">
                 <div className="flex justify-between items-start mb-4">
                   <div>
                     <h3 className="text-lg font-bold">{format(parseISO(selectedDate), 'EEEE, MMM do')}</h3>
@@ -1097,30 +1097,30 @@ export default function App() {
                     <div className="grid grid-cols-2 gap-4">
                       <div className="bg-zinc-800/50 p-4 rounded-2xl text-center border border-zinc-800">
                         <p className="text-zinc-500 text-[10px] uppercase font-bold tracking-widest mb-1">Attended</p>
-                        <p className="text-3xl font-black text-emerald-500">{records[selectedDate].attended}</p>
+                        <p className="text-3xl font-black text-yellow-400">{records[selectedDate].attended}</p>
                       </div>
                       <div className="bg-zinc-800/50 p-4 rounded-2xl text-center border border-zinc-800">
                         <p className="text-zinc-500 text-[10px] uppercase font-bold tracking-widest mb-1">Total Held</p>
                         <p className="text-3xl font-black text-zinc-100">{records[selectedDate].held}</p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-3 bg-emerald-500/5 border border-emerald-500/10 p-3 rounded-xl">
-                      <div className="w-10 h-10 rounded-full bg-emerald-500/20 flex items-center justify-center text-emerald-500">
+                    <div className="flex items-center gap-3 bg-yellow-400/5 border border-yellow-400/10 p-3 rounded-xl">
+                      <div className="w-10 h-10 rounded-full bg-yellow-400/20 flex items-center justify-center text-yellow-400">
                         <BarChart3 size={20} />
                       </div>
                       <div>
-                        <p className="text-xs font-bold text-emerald-500/80 uppercase tracking-wider">Daily Percentage</p>
-                        <p className="text-lg font-bold text-emerald-500">
+                        <p className="text-xs font-bold text-yellow-400/80 uppercase tracking-wider">Daily Percentage</p>
+                        <p className="text-lg font-bold text-yellow-400">
                           {((records[selectedDate].attended / records[selectedDate].held) * 100).toFixed(1)}%
                         </p>
                       </div>
                     </div>
                   </div>
                 ) : records[selectedDate]?.isHoliday ? (
-                  <div className="bg-blue-500/10 border border-blue-500/20 p-6 rounded-2xl text-center">
-                    <Info className="mx-auto mb-2 text-blue-500" size={32} />
-                    <p className="text-blue-500 font-bold">This day is marked as a holiday.</p>
-                    <p className="text-blue-500/60 text-xs mt-1">No classes were held on this date.</p>
+                  <div className="bg-zinc-800/50 border border-zinc-700 p-6 rounded-2xl text-center">
+                    <Info className="mx-auto mb-2 text-zinc-500" size={32} />
+                    <p className="text-zinc-400 font-bold">This day is marked as a holiday.</p>
+                    <p className="text-zinc-500 text-xs mt-1">No classes were held on this date.</p>
                   </div>
                 ) : (
                   <div className="bg-zinc-800/50 p-8 rounded-2xl text-center border border-zinc-800 border-dashed">
@@ -1128,7 +1128,7 @@ export default function App() {
                     <p className="text-zinc-500 font-medium italic">No attendance data recorded for this date.</p>
                     <Button 
                       variant="ghost" 
-                      className="mt-4 text-xs text-emerald-500"
+                      className="mt-4 text-xs text-yellow-400"
                       onClick={() => {
                         const held = prompt("Total classes?", "0");
                         const attended = prompt("Attended classes?", "0");
@@ -1148,13 +1148,16 @@ export default function App() {
 
         <div className="grid grid-cols-2 gap-3">
           <div className="flex items-center gap-2 text-xs text-zinc-500">
-            <div className="w-3 h-3 rounded-full bg-emerald-500/20 border border-emerald-500/30" /> Full Attendance
+            <div className="w-3 h-3 rounded-full bg-yellow-400/20 border border-yellow-400/30" /> Full Attendance
           </div>
           <div className="flex items-center gap-2 text-xs text-zinc-500">
             <div className="w-3 h-3 rounded-full bg-red-500/20 border border-red-500/30" /> Missed All
           </div>
           <div className="flex items-center gap-2 text-xs text-zinc-500">
-            <div className="w-3 h-3 rounded-full bg-blue-500/20 border border-blue-500/30" /> Holiday
+            <div className="w-3 h-3 rounded-full bg-amber-500/20 border border-amber-500/30" /> Partial
+          </div>
+          <div className="flex items-center gap-2 text-xs text-zinc-500">
+            <div className="w-3 h-3 rounded-full bg-zinc-800 border border-zinc-700" /> Holiday
           </div>
           <div className="flex items-center gap-2 text-xs text-zinc-500">
             <div className="w-3 h-3 rounded-full bg-zinc-900 border border-zinc-800" /> No Data
@@ -1176,7 +1179,7 @@ export default function App() {
                 <motion.div 
                   initial={{ height: 0 }}
                   animate={{ height: `${h}%` }}
-                  className={`w-full rounded-t-lg ${h > 75 ? 'bg-emerald-500' : 'bg-zinc-700'}`}
+                  className={`w-full rounded-t-lg ${h > 75 ? 'bg-yellow-400' : 'bg-zinc-700'}`}
                 />
                 <span className="text-[10px] text-zinc-500">M{i+1}</span>
               </div>
@@ -1199,7 +1202,7 @@ export default function App() {
                   <p className="text-xs text-zinc-500">{h.totalAttended} / {h.totalHeld} classes</p>
                 </div>
                 <div className="text-right">
-                  <p className="text-xl font-bold text-emerald-500">{h.finalPercentage.toFixed(1)}%</p>
+                  <p className="text-xl font-bold text-yellow-400">{h.finalPercentage.toFixed(1)}%</p>
                 </div>
               </Card>
             ))
@@ -1223,7 +1226,7 @@ export default function App() {
         </header>
 
         <div className="flex flex-col items-center gap-4 py-6">
-          <div className="w-24 h-24 bg-emerald-500 rounded-full flex items-center justify-center text-4xl font-bold text-white shadow-xl shadow-emerald-500/20">
+          <div className="w-24 h-24 bg-yellow-400 rounded-full flex items-center justify-center text-4xl font-bold text-zinc-950 shadow-xl shadow-yellow-400/20">
             {profile.name.charAt(0)}
           </div>
           <div className="text-center">
@@ -1254,7 +1257,7 @@ export default function App() {
           <h3 className="text-zinc-500 uppercase text-xs font-bold tracking-widest">Notifications</h3>
           <Card className="flex justify-between items-center">
             <div className="flex items-center gap-3">
-              <div className={`p-2 rounded-lg ${notificationPermission === 'granted' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-zinc-800 text-zinc-500'}`}>
+              <div className={`p-2 rounded-lg ${notificationPermission === 'granted' ? 'bg-yellow-400/10 text-yellow-400' : 'bg-zinc-800 text-zinc-500'}`}>
                 {notificationPermission === 'granted' ? <Bell size={20} /> : <BellOff size={20} />}
               </div>
               <div>
@@ -1280,7 +1283,7 @@ export default function App() {
               <button 
                 key={t}
                 onClick={() => setSemester({...semester, targetAttendance: t})}
-                className={`p-4 rounded-2xl border transition-all font-bold ${semester.targetAttendance === t ? 'bg-emerald-500 border-emerald-500 text-white' : 'bg-zinc-900 border-zinc-800 text-zinc-400'}`}
+                className={`p-4 rounded-2xl border transition-all font-bold ${semester.targetAttendance === t ? 'bg-yellow-400 border-yellow-400 text-zinc-950' : 'bg-zinc-900 border-zinc-800 text-zinc-400'}`}
               >
                 {t}%
               </button>
@@ -1326,7 +1329,7 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-zinc-100 font-sans selection:bg-emerald-500/30">
+    <div className="min-h-screen bg-zinc-950 text-zinc-100 font-sans selection:bg-yellow-400/30">
       <main className="max-w-md mx-auto p-6">
         <AnimatePresence mode="wait">
           <motion.div
@@ -1346,9 +1349,9 @@ export default function App() {
       </main>
 
       {/* Online Status Floating Badge */}
-      <div className="fixed bottom-20 left-4 z-40 flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/20 px-3 py-1.5 rounded-full backdrop-blur-md">
-        <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
-        <span className="text-[10px] font-bold text-emerald-500 uppercase tracking-wider">{onlineCount} Live Users</span>
+      <div className="fixed bottom-20 left-4 z-40 flex items-center gap-2 bg-yellow-400/10 border border-yellow-400/20 px-3 py-1.5 rounded-full backdrop-blur-md">
+        <div className="w-1.5 h-1.5 bg-yellow-400 rounded-full animate-pulse" />
+        <span className="text-[10px] font-bold text-yellow-400 uppercase tracking-wider">{onlineCount} Live Users</span>
       </div>
 
       {/* Bottom Navigation */}
@@ -1369,9 +1372,9 @@ function NavButton({ active, onClick, icon, label }: any) {
   return (
     <button 
       onClick={onClick}
-      className={`flex flex-col items-center gap-1 transition-all ${active ? 'text-emerald-500' : 'text-zinc-500'}`}
+      className={`flex flex-col items-center gap-1 transition-all ${active ? 'text-yellow-400' : 'text-zinc-500'}`}
     >
-      <div className={`p-1 rounded-xl transition-all ${active ? 'bg-emerald-500/10' : ''}`}>
+      <div className={`p-1 rounded-xl transition-all ${active ? 'bg-yellow-400/10' : ''}`}>
         {icon}
       </div>
       <span className="text-[10px] font-bold uppercase tracking-tighter">{label}</span>
