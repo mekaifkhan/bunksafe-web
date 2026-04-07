@@ -1,5 +1,6 @@
 export interface Profile {
   name: string;
+  email: string;
   college: string;
   department: string;
   semester: string;
@@ -33,4 +34,4 @@ export interface SemesterHistory {
   totalAttended: number;
 }
 
-export type AppState = 'WELCOME' | 'SEMESTER_SETUP' | 'LATE_DETECTION' | 'WIZARD' | 'GAP_HANDLING' | 'MAIN' | 'TODAY_CONFIRMATION';
+export type AppState = 'WELCOME' | 'EMAIL_COLLECTION' | 'SEMESTER_SETUP' | 'LATE_DETECTION' | 'WIZARD' | 'GAP_HANDLING' | 'MAIN' | 'TODAY_CONFIRMATION';

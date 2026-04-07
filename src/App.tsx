@@ -32,6 +32,7 @@ import {
   startOfMonth, 
   endOfMonth, 
   eachDayOfInterval, 
+  eachMonthOfInterval,
   isSameDay, 
   isToday, 
   parseISO, 
@@ -113,7 +114,10 @@ export default function App() {
   // Persistence
   const [profile, setProfile] = useState<Profile>(() => {
     const saved = localStorage.getItem('bs_profile');
-    return saved ? JSON.parse(saved) : { name: '', college: '', department: '', semester: '', mobile: '' };
+    const defaultProfile = { name: '', email: '', college: '', department: '', semester: '', mobile: '' };
+    if (!saved) return defaultProfile;
+    const parsed = JSON.parse(saved);
+    return { ...defaultProfile, ...parsed };
   });
 
   const [semester, setSemester] = useState<Semester>(() => {
@@ -133,6 +137,7 @@ export default function App() {
 
   const [appState, setAppState] = useState<AppState>(() => {
     if (!profile.name) return 'WELCOME';
+    if (!profile.email) return 'EMAIL_COLLECTION';
     if (!semester.isInitialized) return 'SEMESTER_SETUP';
     return 'MAIN';
   });
@@ -177,6 +182,60 @@ export default function App() {
   // Calculations
   const stats = useMemo(() => calculateAttendance(records, semester.initialHeld, semester.initialAttended), [records, semester]);
   const bunkInfo = useMemo(() => calculateBunkInfo(stats.totalHeld, stats.totalAttended, semester.targetAttendance), [stats, semester]);
+
+  const semesterMonthlyStats = useMemo(() => {
+    if (!semester.startDate) return [];
+    
+    const start = startOfDay(parseISO(semester.startDate));
+    const end = endOfMonth(new Date());
+    const months = eachMonthOfInterval({ start, end });
+    
+    // Total initial data
+    const lockedUntil = semester.lockedUntil ? parseISO(semester.lockedUntil) : null;
+    const initialPeriodDays = (lockedUntil && start <= lockedUntil) ? differenceInDays(lockedUntil, start) + 1 : 0;
+    
+    return months.map(month => {
+      const mStart = startOfMonth(month);
+      const mEnd = endOfMonth(month);
+      
+      // Actual records for this month
+      const monthRecords = Object.entries(records).filter(([date]) => {
+        const d = parseISO(date);
+        return d >= mStart && d <= mEnd;
+      }) as [string, AttendanceRecord][];
+      
+      let held = 0;
+      let attended = 0;
+      monthRecords.forEach(([_, r]) => {
+        if (!r.isHoliday) {
+          held += r.held;
+          attended += r.attended;
+        }
+      });
+      
+      // If there's initial data and this month is before or during the locked period
+      if (lockedUntil && mStart <= lockedUntil && initialPeriodDays > 0) {
+        // Calculate how many days of this month fall within the initial period
+        const periodStart = isBefore(mStart, start) ? start : mStart;
+        const periodEnd = isAfter(mEnd, lockedUntil) ? lockedUntil : mEnd;
+        
+        if (periodStart <= periodEnd) {
+          const daysInMonthInPeriod = differenceInDays(periodEnd, periodStart) + 1;
+          const ratio = daysInMonthInPeriod / initialPeriodDays;
+          
+          held += Math.round((semester.initialHeld || 0) * ratio);
+          attended += Math.round((semester.initialAttended || 0) * ratio);
+        }
+      }
+      
+      return {
+        month: format(month, 'MMM'),
+        percentage: held > 0 ? (attended / held) * 100 : 0,
+        held,
+        attended
+      };
+    });
+  }, [records, semester]);
 
   const monthlyStats = useMemo(() => {
     const now = new Date();
@@ -309,9 +368,32 @@ export default function App() {
 
   // --- Handlers ---
 
+  const notifySetup = async (p: Profile) => {
+    try {
+      await fetch('/api/notify-setup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(p)
+      });
+    } catch (e) {
+      console.error("Failed to notify setup", e);
+    }
+  };
+
   const handleWelcomeSubmit = () => {
     if (profile.name && profile.college) {
-      setAppState('SEMESTER_SETUP');
+      setAppState('EMAIL_COLLECTION');
+    }
+  };
+
+  const handleEmailSubmit = () => {
+    if (profile.email && profile.email.includes('@')) {
+      if (semester.isInitialized) {
+        notifySetup(profile);
+        setAppState('MAIN');
+      } else {
+        setAppState('SEMESTER_SETUP');
+      }
     }
   };
 
@@ -319,6 +401,8 @@ export default function App() {
     if (semester.startDate && semester.endDate) {
       const start = startOfDay(parseISO(semester.startDate));
       const today = startOfDay(new Date());
+
+      notifySetup(profile);
 
       if (isBefore(start, today)) {
         setAppState('LATE_DETECTION');
@@ -445,6 +529,26 @@ export default function App() {
     );
   }
 
+  if (appState === 'EMAIL_COLLECTION') {
+    return (
+      <div className="min-h-screen bg-zinc-950 text-zinc-100 p-6 flex flex-col justify-center gap-8">
+        <div className="space-y-2">
+          <h2 className="text-3xl font-bold tracking-tight">One Last Thing</h2>
+          <p className="text-zinc-500">Please provide your email to complete the setup.</p>
+        </div>
+        <div className="space-y-6">
+          <Input 
+            type="email" 
+            label="Email Address" 
+            value={profile.email} 
+            onChange={(v: string) => setProfile({ ...profile, email: v })} 
+            placeholder="e.g. kaif@example.com" 
+          />
+          <Button onClick={handleEmailSubmit} className="w-full py-4 text-lg">Complete Setup</Button>
+        </div>
+      </div>
+    );
+  }
   if (appState === 'WELCOME') {
     return (
       <div className="min-h-screen bg-zinc-950 text-zinc-100 p-6 flex flex-col justify-center gap-8">
@@ -1174,16 +1278,26 @@ export default function App() {
         <Card className="space-y-6">
           <h3 className="font-bold text-zinc-400 uppercase text-xs tracking-widest">Attendance Trend</h3>
           <div className="h-48 flex items-end gap-2 px-2">
-            {[40, 70, 55, 90, 85, 60, 75].map((h, i) => (
+            {semesterMonthlyStats.map((s, i) => (
               <div key={i} className="flex-1 flex flex-col items-center gap-2">
-                <motion.div 
-                  initial={{ height: 0 }}
-                  animate={{ height: `${h}%` }}
-                  className={`w-full rounded-t-lg ${h > 75 ? 'bg-emerald-500' : 'bg-zinc-700'}`}
-                />
-                <span className="text-[10px] text-zinc-500">M{i+1}</span>
+                <div className="relative w-full flex flex-col items-center group">
+                  <div className="absolute -top-8 bg-zinc-800 text-white text-[10px] px-1.5 py-0.5 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10">
+                    {s.percentage.toFixed(1)}%
+                  </div>
+                  <motion.div 
+                    initial={{ height: 0 }}
+                    animate={{ height: `${Math.min(100, s.percentage)}%` }}
+                    className={`w-full rounded-t-lg ${s.percentage >= semester.targetAttendance ? 'bg-emerald-500' : 'bg-red-500/50'}`}
+                  />
+                </div>
+                <span className="text-[10px] text-zinc-500 font-bold">{s.month}</span>
               </div>
             ))}
+            {semesterMonthlyStats.length === 0 && (
+              <div className="w-full h-full flex items-center justify-center text-zinc-600 text-sm italic">
+                No data for current semester
+              </div>
+            )}
           </div>
         </Card>
 
@@ -1237,6 +1351,7 @@ export default function App() {
 
         <Card className="space-y-4">
           <Input label="Full Name" value={profile.name} onChange={(v: string) => setProfile({...profile, name: v})} />
+          <Input label="Email Address" value={profile.email} onChange={(v: string) => setProfile({...profile, email: v})} />
           <Input label="College" value={profile.college} onChange={(v: string) => setProfile({...profile, college: v})} />
           <Input label="Department" value={profile.department} onChange={(v: string) => setProfile({...profile, department: v})} />
           <Input label="Semester" value={profile.semester} onChange={(v: string) => setProfile({...profile, semester: v})} />
