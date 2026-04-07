@@ -31,6 +31,7 @@ import {
   subDays, 
   startOfMonth, 
   endOfMonth, 
+  isSameMonth,
   eachDayOfInterval, 
   eachMonthOfInterval,
   isSameDay, 
@@ -189,6 +190,8 @@ export default function App() {
     const start = startOfDay(parseISO(semester.startDate));
     const end = endOfMonth(new Date());
     const months = eachMonthOfInterval({ start, end });
+    const now = new Date();
+    const currentMonthStart = startOfMonth(now);
     
     // Total initial data
     const lockedUntil = semester.lockedUntil ? parseISO(semester.lockedUntil) : null;
@@ -197,6 +200,8 @@ export default function App() {
     return months.map(month => {
       const mStart = startOfMonth(month);
       const mEnd = endOfMonth(month);
+      const isCompleted = isBefore(mEnd, now);
+      const isCurrent = isSameMonth(month, now);
       
       // Actual records for this month
       const monthRecords = Object.entries(records).filter(([date]) => {
@@ -232,7 +237,9 @@ export default function App() {
         month: format(month, 'MMM'),
         percentage: held > 0 ? (attended / held) * 100 : 0,
         held,
-        attended
+        attended,
+        isCompleted,
+        isCurrent
       };
     });
   }, [records, semester]);
@@ -1272,11 +1279,42 @@ export default function App() {
   };
 
   const renderAnalytics = () => {
+    const completedMonths = semesterMonthlyStats.filter(s => s.isCompleted);
+    const lastMonth = completedMonths.length > 0 ? completedMonths[completedMonths.length - 1] : null;
+
     return (
       <div className="space-y-6 pb-24">
         <h1 className="text-2xl font-bold">Analytics</h1>
+
+        {lastMonth && (
+          <Card className="bg-emerald-500/10 border-emerald-500/20">
+            <div className="flex justify-between items-center">
+              <div>
+                <p className="text-xs font-bold text-emerald-500 uppercase tracking-widest">Last Month Performance</p>
+                <h2 className="text-2xl font-black text-white">{lastMonth.month} {new Date().getFullYear()}</h2>
+              </div>
+              <div className="text-right">
+                <p className="text-3xl font-black text-emerald-500">{lastMonth.percentage.toFixed(1)}%</p>
+                <p className="text-[10px] text-zinc-500 font-bold uppercase">{lastMonth.attended} / {lastMonth.held} Classes</p>
+              </div>
+            </div>
+          </Card>
+        )}
+
         <Card className="space-y-6">
-          <h3 className="font-bold text-zinc-400 uppercase text-xs tracking-widest">Attendance Trend</h3>
+          <div className="flex justify-between items-center">
+            <h3 className="font-bold text-zinc-400 uppercase text-xs tracking-widest">Semester Progress</h3>
+            <div className="flex gap-2">
+              <div className="flex items-center gap-1">
+                <div className="w-2 h-2 rounded-full bg-emerald-500" />
+                <span className="text-[8px] text-zinc-500 uppercase font-bold">Completed</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <div className="w-2 h-2 rounded-full bg-zinc-700" />
+                <span className="text-[8px] text-zinc-500 uppercase font-bold">Ongoing</span>
+              </div>
+            </div>
+          </div>
           <div className="h-48 flex items-end gap-2 px-2">
             {semesterMonthlyStats.map((s, i) => (
               <div key={i} className="flex-1 flex flex-col items-center gap-2">
@@ -1287,10 +1325,16 @@ export default function App() {
                   <motion.div 
                     initial={{ height: 0 }}
                     animate={{ height: `${Math.min(100, s.percentage)}%` }}
-                    className={`w-full rounded-t-lg ${s.percentage >= semester.targetAttendance ? 'bg-emerald-500' : 'bg-red-500/50'}`}
+                    className={`w-full rounded-t-lg transition-colors ${
+                      s.isCompleted 
+                        ? (s.percentage >= semester.targetAttendance ? 'bg-emerald-500' : 'bg-red-500/50') 
+                        : 'bg-zinc-700'
+                    }`}
                   />
                 </div>
-                <span className="text-[10px] text-zinc-500 font-bold">{s.month}</span>
+                <span className={`text-[10px] font-bold ${s.isCurrent ? 'text-emerald-500' : 'text-zinc-500'}`}>
+                  {s.month}
+                </span>
               </div>
             ))}
             {semesterMonthlyStats.length === 0 && (
