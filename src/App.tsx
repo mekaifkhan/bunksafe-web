@@ -208,19 +208,7 @@ export default function App() {
       });
       
       // If there's initial data and this month is before or during the locked period
-      if (lockedUntil && mStart <= lockedUntil && initialPeriodDays > 0) {
-        // Calculate how many days of this month fall within the initial period
-        const periodStart = isBefore(mStart, start) ? start : mStart;
-        const periodEnd = isAfter(mEnd, lockedUntil) ? lockedUntil : mEnd;
-        
-        if (periodStart <= periodEnd) {
-          const daysInMonthInPeriod = differenceInDays(periodEnd, periodStart) + 1;
-          const ratio = daysInMonthInPeriod / initialPeriodDays;
-          
-          held += Math.round((semester.initialHeld || 0) * ratio);
-          attended += Math.round((semester.initialAttended || 0) * ratio);
-        }
-      }
+      // REMOVED: Initial data is now handled separately to avoid confusion with calendar
       
       return {
         month: format(month, 'MMM'),
@@ -300,25 +288,6 @@ export default function App() {
         attended += r.attended;
       }
     });
-
-    // Include initial data if current month overlaps with locked period
-    const lockedUntil = semester.lockedUntil ? parseISO(semester.lockedUntil) : null;
-    const semStart = sDate;
-    if (lockedUntil && semStart && start <= lockedUntil) {
-      const initialPeriodDays = differenceInDays(lockedUntil, semStart) + 1;
-      if (initialPeriodDays > 0) {
-        const periodStart = isBefore(start, semStart) ? semStart : start;
-        const periodEnd = isAfter(end, lockedUntil) ? lockedUntil : end;
-        
-        if (periodStart <= periodEnd) {
-          const daysInMonthInPeriod = differenceInDays(periodEnd, periodStart) + 1;
-          const ratio = daysInMonthInPeriod / initialPeriodDays;
-          
-          held += Math.round((semester.initialHeld || 0) * ratio);
-          attended += Math.round((semester.initialAttended || 0) * ratio);
-        }
-      }
-    }
 
     return { held, attended, percentage: held > 0 ? (attended / held) * 100 : 0 };
   }, [records, semester]);
@@ -1010,6 +979,11 @@ export default function App() {
                 <div>
                   <p className="text-zinc-500 text-xs uppercase font-bold tracking-wider">Semester Attendance</p>
                   <h2 className="text-4xl font-bold">{stats.percentage.toFixed(1)}%</h2>
+                  {semester.initialHeld > 0 && (
+                    <p className="text-[10px] text-emerald-500 font-bold uppercase mt-1 flex items-center gap-1">
+                      <Info size={10} /> Includes {semester.initialAttended}/{semester.initialHeld} from setup
+                    </p>
+                  )}
                 </div>
                 <p className="text-zinc-400 font-medium">{stats.totalAttended} / {stats.totalHeld}</p>
               </div>
