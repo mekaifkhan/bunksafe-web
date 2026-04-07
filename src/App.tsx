@@ -1029,128 +1029,6 @@ export default function App() {
               </div>
             </div>
           </Card>
-
-          {/* Kaif's Special Section */}
-          <Card className="relative overflow-hidden border-none bg-gradient-to-br from-indigo-600 to-violet-700 p-0">
-            <div className="absolute top-0 right-0 p-4 opacity-20">
-              <Sparkles size={80} />
-            </div>
-            <div className="relative p-5 space-y-4">
-              <div className="flex items-center gap-2">
-                <div className="p-2 bg-white/20 rounded-lg text-white">
-                  <Zap size={18} />
-                </div>
-                <h3 className="font-black text-white uppercase tracking-tighter text-lg">Kaif's Special Section</h3>
-              </div>
-              
-              <div className="grid grid-cols-1 gap-3">
-                <div className="bg-white/10 backdrop-blur-md rounded-xl p-3 border border-white/10">
-                  <div className="flex items-center gap-2 mb-1">
-                    <TrendingUp size={14} className="text-emerald-300" />
-                    <span className="text-[10px] font-bold text-emerald-100 uppercase tracking-widest">Bunk Strategy</span>
-                  </div>
-                  <p className="text-xs text-white/90 leading-relaxed">
-                    {stats.percentage >= semester.targetAttendance 
-                      ? `You're in the safe zone! You can strategically bunk up to ${bunkInfo.canBunk} classes without dropping below ${semester.targetAttendance}%. Use them wisely for self-study or rest.`
-                      : `Focus mode active. You need to attend the next ${bunkInfo.mustAttend} classes to hit your ${semester.targetAttendance}% goal. Avoid any unnecessary bunks this week.`
-                    }
-                  </p>
-                </div>
-
-                <div className="bg-white/10 backdrop-blur-md rounded-xl p-3 border border-white/10">
-                  <div className="flex items-center gap-2 mb-1">
-                    <BarChart3 size={14} className="text-blue-300" />
-                    <span className="text-[10px] font-bold text-blue-100 uppercase tracking-widest">Consistency Score</span>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <div className="flex-1 h-2 bg-white/10 rounded-full overflow-hidden">
-                      <div className="h-full bg-blue-400" style={{ width: `${Math.min(100, stats.percentage)}%` }} />
-                    </div>
-                    <span className="text-xs font-black text-white">{Math.round(stats.percentage)}/100</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </Card>
-
-          {/* Combi Attendance Section */}
-          <Card className="space-y-4 border-emerald-500/30 bg-emerald-500/5">
-            <div className="flex items-center gap-2">
-              <div className="p-2 bg-emerald-500/20 rounded-lg text-emerald-500">
-                <BarChart3 size={18} />
-              </div>
-              <h3 className="font-bold text-sm uppercase tracking-wider">Combi Attendance</h3>
-            </div>
-
-            <div className="flex flex-wrap gap-2">
-              {semesterMonthlyStats.map(s => (
-                <button
-                  key={s.month}
-                  onClick={() => toggleCombiMonth(s.month)}
-                  className={`px-3 py-1.5 rounded-full text-[10px] font-bold uppercase transition-all border ${
-                    combiSelectedMonths.includes(s.month)
-                      ? 'bg-emerald-500 border-emerald-500 text-white shadow-lg shadow-emerald-500/20'
-                      : 'bg-zinc-800 border-zinc-700 text-zinc-400 hover:border-zinc-600'
-                  }`}
-                >
-                  {s.month}
-                </button>
-              ))}
-            </div>
-
-            {combiStats ? (
-              <motion.div 
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="space-y-4 pt-2 border-t border-emerald-500/10"
-              >
-                <div className="flex justify-between items-end">
-                  <div>
-                    <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-1">Combined Percentage</p>
-                    <div className="flex items-baseline gap-2">
-                      <span className="text-4xl font-black text-white">{combiStats.percentage.toFixed(1)}%</span>
-                      <span className="text-xs text-zinc-500 font-medium">({combiStats.totalAttended}/{combiStats.totalHeld})</span>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    {combiStats.percentage >= semester.targetAttendance ? (
-                      <div className="flex flex-col items-end gap-1">
-                        <div className="flex items-center gap-1 text-emerald-500">
-                          <CheckCircle2 size={14} />
-                          <span className="text-[10px] font-bold uppercase">Safe</span>
-                        </div>
-                        <p className="text-[9px] text-zinc-500 max-w-[120px]">You are above your {semester.targetAttendance}% target for these months.</p>
-                      </div>
-                    ) : (
-                      <div className="flex flex-col items-end gap-1">
-                        <div className="flex items-center gap-1 text-red-500">
-                          <AlertCircle size={14} />
-                          <span className="text-[10px] font-bold uppercase">Action Needed</span>
-                        </div>
-                        <p className="text-lg font-black text-red-500">+{combiStats.mustAttend}</p>
-                        <p className="text-[9px] text-zinc-500">Classes needed to hit {semester.targetAttendance}%</p>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-2">
-                  {semesterMonthlyStats.filter(s => combiSelectedMonths.includes(s.month)).map(s => (
-                    <div key={s.month} className="bg-zinc-900/50 p-2 rounded-xl border border-zinc-800 flex justify-between items-center">
-                      <span className="text-[10px] font-bold text-zinc-400 uppercase">{s.month}</span>
-                      <span className={`text-xs font-bold ${s.percentage >= semester.targetAttendance ? 'text-emerald-500' : 'text-red-500'}`}>
-                        {s.percentage.toFixed(1)}%
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </motion.div>
-            ) : (
-              <div className="py-4 text-center border-t border-zinc-800/50">
-                <p className="text-[10px] text-zinc-500 uppercase font-bold tracking-widest">Select months to see combined stats</p>
-              </div>
-            )}
-          </Card>
         </div>
 
         <div className="space-y-4">
@@ -1221,10 +1099,10 @@ export default function App() {
             <div className="space-y-4 pt-4 border-t border-zinc-800">
               <button 
                 onClick={() => updateAttendance(today, 0, 0, !todayRecord.isHoliday)}
-                className={`w-full py-3 rounded-lg font-bold transition-all active:scale-95 flex items-center justify-center gap-2 bg-emerald-500 text-white shadow-lg ${
+                className={`w-full py-3 rounded-lg font-bold transition-all active:scale-95 flex items-center justify-center gap-2 shadow-lg ${
                   todayRecord.isHoliday 
-                    ? 'shadow-emerald-500/40 ring-2 ring-white/20' 
-                    : 'opacity-90 hover:opacity-100'
+                    ? 'bg-blue-600 text-white shadow-blue-500/40 ring-2 ring-white/20' 
+                    : 'bg-emerald-500 text-white opacity-90 hover:opacity-100 shadow-emerald-500/40'
                 }`}
               >
                 {todayRecord.isHoliday ? 'Today is a Holiday' : 'Mark Today as Holiday'}
@@ -1474,8 +1352,8 @@ export default function App() {
           </div>
           <div className="h-48 flex items-end gap-2 px-2">
             {semesterMonthlyStats.map((s, i) => (
-              <div key={i} className="flex-1 flex flex-col items-center gap-2">
-                <div className="relative w-full flex flex-col items-center group">
+              <div key={i} className="flex-1 flex flex-col items-center gap-2 h-full">
+                <div className="relative w-full h-full flex flex-col justify-end items-center group">
                   <div className="absolute -top-8 bg-zinc-800 text-white text-[10px] px-1.5 py-0.5 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10">
                     {s.percentage.toFixed(1)}%
                   </div>
@@ -1523,6 +1401,136 @@ export default function App() {
             ))
           )}
         </div>
+      </div>
+    );
+  };
+
+  const renderSpecial = () => {
+    return (
+      <div className="space-y-6 pb-24">
+        <h1 className="text-2xl font-bold">Special</h1>
+        
+        {/* Kaif's Special Section */}
+        <Card className="relative overflow-hidden border-none bg-gradient-to-br from-indigo-600 to-violet-700 p-0">
+          <div className="absolute top-0 right-0 p-4 opacity-20">
+            <Sparkles size={80} />
+          </div>
+          <div className="relative p-5 space-y-4">
+            <div className="flex items-center gap-2">
+              <div className="p-2 bg-white/20 rounded-lg text-white">
+                <Zap size={18} />
+              </div>
+              <h3 className="font-black text-white uppercase tracking-tighter text-lg">Kaif's Special Section</h3>
+            </div>
+            
+            <div className="grid grid-cols-1 gap-3">
+              <div className="bg-white/10 backdrop-blur-md rounded-xl p-3 border border-white/10">
+                <div className="flex items-center gap-2 mb-1">
+                  <TrendingUp size={14} className="text-emerald-300" />
+                  <span className="text-[10px] font-bold text-emerald-100 uppercase tracking-widest">Bunk Strategy</span>
+                </div>
+                <p className="text-xs text-white/90 leading-relaxed">
+                  {stats.percentage >= semester.targetAttendance 
+                    ? `You're in the safe zone! You can strategically bunk up to ${bunkInfo.canBunk} classes without dropping below ${semester.targetAttendance}%. Use them wisely for self-study or rest.`
+                    : `Focus mode active. You need to attend the next ${bunkInfo.mustAttend} classes to hit your ${semester.targetAttendance}% goal. Avoid any unnecessary bunks this week.`
+                  }
+                </p>
+              </div>
+
+              <div className="bg-white/10 backdrop-blur-md rounded-xl p-3 border border-white/10">
+                <div className="flex items-center gap-2 mb-1">
+                  <BarChart3 size={14} className="text-blue-300" />
+                  <span className="text-[10px] font-bold text-blue-100 uppercase tracking-widest">Consistency Score</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="flex-1 h-2 bg-white/10 rounded-full overflow-hidden">
+                    <div className="h-full bg-blue-400" style={{ width: `${Math.min(100, stats.percentage)}%` }} />
+                  </div>
+                  <span className="text-xs font-black text-white">{Math.round(stats.percentage)}/100</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </Card>
+
+        {/* Combi Attendance Section */}
+        <Card className="space-y-4 border-emerald-500/30 bg-emerald-500/5">
+          <div className="flex items-center gap-2">
+            <div className="p-2 bg-emerald-500/20 rounded-lg text-emerald-500">
+              <BarChart3 size={18} />
+            </div>
+            <h3 className="font-bold text-sm uppercase tracking-wider">Combi Attendance</h3>
+          </div>
+
+          <div className="flex flex-wrap gap-2">
+            {semesterMonthlyStats.map(s => (
+              <button
+                key={s.month}
+                onClick={() => toggleCombiMonth(s.month)}
+                className={`px-3 py-1.5 rounded-full text-[10px] font-bold uppercase transition-all border ${
+                  combiSelectedMonths.includes(s.month)
+                    ? 'bg-emerald-500 border-emerald-500 text-white shadow-lg shadow-emerald-500/20'
+                    : 'bg-zinc-800 border-zinc-700 text-zinc-400 hover:border-zinc-600'
+                }`}
+              >
+                {s.month}
+              </button>
+            ))}
+          </div>
+
+          {combiStats ? (
+            <motion.div 
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="space-y-4 pt-2 border-t border-emerald-500/10"
+            >
+              <div className="flex justify-between items-end">
+                <div>
+                  <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-1">Combined Percentage</p>
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-4xl font-black text-white">{combiStats.percentage.toFixed(1)}%</span>
+                    <span className="text-xs text-zinc-500 font-medium">({combiStats.totalAttended}/{combiStats.totalHeld})</span>
+                  </div>
+                </div>
+                <div className="text-right">
+                  {combiStats.percentage >= semester.targetAttendance ? (
+                    <div className="flex flex-col items-end gap-1">
+                      <div className="flex items-center gap-1 text-emerald-500">
+                        <CheckCircle2 size={14} />
+                        <span className="text-[10px] font-bold uppercase">Safe</span>
+                      </div>
+                      <p className="text-[9px] text-zinc-500 max-w-[120px]">You are above your {semester.targetAttendance}% target for these months.</p>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-end gap-1">
+                      <div className="flex items-center gap-1 text-red-500">
+                        <AlertCircle size={14} />
+                        <span className="text-[10px] font-bold uppercase">Action Needed</span>
+                      </div>
+                      <p className="text-lg font-black text-red-500">+{combiStats.mustAttend}</p>
+                      <p className="text-[9px] text-zinc-500">Classes needed to hit {semester.targetAttendance}%</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                {semesterMonthlyStats.filter(s => combiSelectedMonths.includes(s.month)).map(s => (
+                  <div key={s.month} className="bg-zinc-900/50 p-2 rounded-xl border border-zinc-800 flex justify-between items-center">
+                    <span className="text-[10px] font-bold text-zinc-400 uppercase">{s.month}</span>
+                    <span className={`text-xs font-bold ${s.percentage >= semester.targetAttendance ? 'text-emerald-500' : 'text-red-500'}`}>
+                      {s.percentage.toFixed(1)}%
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </motion.div>
+          ) : (
+            <div className="py-4 text-center border-t border-zinc-800/50">
+              <p className="text-[10px] text-zinc-500 uppercase font-bold tracking-widest">Select months to see combined stats</p>
+            </div>
+          )}
+        </Card>
       </div>
     );
   };
@@ -1657,6 +1665,7 @@ export default function App() {
           >
             {activeTab === 'dashboard' && renderDashboard()}
             {activeTab === 'calendar' && renderCalendar()}
+            {activeTab === 'special' && renderSpecial()}
             {activeTab === 'analytics' && renderAnalytics()}
             {activeTab === 'profile' && renderProfile()}
             {activeTab === 'settings' && renderSettings()}
@@ -1675,6 +1684,7 @@ export default function App() {
         <div className="max-w-md mx-auto flex justify-between items-center">
           <NavButton active={activeTab === 'dashboard'} onClick={() => setActiveTab('dashboard')} icon={<LayoutDashboard size={24} />} label="Home" />
           <NavButton active={activeTab === 'calendar'} onClick={() => setActiveTab('calendar')} icon={<CalendarIcon size={24} />} label="Calendar" />
+          <NavButton active={activeTab === 'special'} onClick={() => setActiveTab('special')} icon={<Sparkles size={24} />} label="Special" />
           <NavButton active={activeTab === 'analytics'} onClick={() => setActiveTab('analytics')} icon={<BarChart3 size={24} />} label="Stats" />
           <NavButton active={activeTab === 'profile'} onClick={() => setActiveTab('profile')} icon={<User size={24} />} label="Profile" />
           <NavButton active={activeTab === 'settings'} onClick={() => setActiveTab('settings')} icon={<Settings size={24} />} label="Setup" />
