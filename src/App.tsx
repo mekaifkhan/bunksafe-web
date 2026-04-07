@@ -155,6 +155,7 @@ export default function App() {
   const [currentGapIndex, setCurrentGapIndex] = useState(0);
   const [viewDate, setViewDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<string | null>(getTodayStr());
+  const [combiSelectedMonths, setCombiSelectedMonths] = useState<string[]>([]);
 
   // Wizard State
   const [wizardStep, setWizardStep] = useState(1);
@@ -1282,6 +1283,30 @@ export default function App() {
     const completedMonths = semesterMonthlyStats.filter(s => s.isCompleted);
     const lastMonth = completedMonths.length > 0 ? completedMonths[completedMonths.length - 1] : null;
 
+    const combiStats = useMemo(() => {
+      const selectedData = semesterMonthlyStats.filter(s => combiSelectedMonths.includes(s.month));
+      if (selectedData.length === 0) return null;
+
+      const totalHeld = selectedData.reduce((acc, curr) => acc + curr.held, 0);
+      const totalAttended = selectedData.reduce((acc, curr) => acc + curr.attended, 0);
+      const percentage = totalHeld > 0 ? (totalAttended / totalHeld) * 100 : 0;
+      
+      // Calculate needed for target
+      const target = semester.targetAttendance;
+      let mustAttend = 0;
+      if (percentage < target && totalHeld > 0) {
+        mustAttend = Math.ceil((target * totalHeld - 100 * totalAttended) / (100 - target));
+      }
+
+      return { totalHeld, totalAttended, percentage, mustAttend, selectedMonths: selectedData.map(s => s.month) };
+    }, [combiSelectedMonths, semesterMonthlyStats, semester.targetAttendance]);
+
+    const toggleCombiMonth = (month: string) => {
+      setCombiSelectedMonths(prev => 
+        prev.includes(month) ? prev.filter(m => m !== month) : [...prev, month]
+      );
+    };
+
     return (
       <div className="space-y-6 pb-24">
         <h1 className="text-2xl font-bold">Analytics</h1>
@@ -1300,6 +1325,85 @@ export default function App() {
             </div>
           </Card>
         )}
+
+        {/* Combi Attendance Section */}
+        <Card className="space-y-4 border-emerald-500/30 bg-emerald-500/5">
+          <div className="flex items-center gap-2">
+            <div className="p-2 bg-emerald-500/20 rounded-lg text-emerald-500">
+              <BarChart3 size={18} />
+            </div>
+            <h3 className="font-bold text-sm uppercase tracking-wider">Combi Attendance</h3>
+          </div>
+
+          <div className="flex flex-wrap gap-2">
+            {semesterMonthlyStats.map(s => (
+              <button
+                key={s.month}
+                onClick={() => toggleCombiMonth(s.month)}
+                className={`px-3 py-1.5 rounded-full text-[10px] font-bold uppercase transition-all border ${
+                  combiSelectedMonths.includes(s.month)
+                    ? 'bg-emerald-500 border-emerald-500 text-white shadow-lg shadow-emerald-500/20'
+                    : 'bg-zinc-800 border-zinc-700 text-zinc-400 hover:border-zinc-600'
+                }`}
+              >
+                {s.month}
+              </button>
+            ))}
+          </div>
+
+          {combiStats ? (
+            <motion.div 
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="space-y-4 pt-2 border-t border-emerald-500/10"
+            >
+              <div className="flex justify-between items-end">
+                <div>
+                  <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-1">Combined Percentage</p>
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-4xl font-black text-white">{combiStats.percentage.toFixed(1)}%</span>
+                    <span className="text-xs text-zinc-500 font-medium">({combiStats.totalAttended}/{combiStats.totalHeld})</span>
+                  </div>
+                </div>
+                <div className="text-right">
+                  {combiStats.percentage >= semester.targetAttendance ? (
+                    <div className="flex flex-col items-end gap-1">
+                      <div className="flex items-center gap-1 text-emerald-500">
+                        <CheckCircle2 size={14} />
+                        <span className="text-[10px] font-bold uppercase">Safe</span>
+                      </div>
+                      <p className="text-[9px] text-zinc-500 max-w-[120px]">You are above your {semester.targetAttendance}% target for these months.</p>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-end gap-1">
+                      <div className="flex items-center gap-1 text-red-500">
+                        <AlertCircle size={14} />
+                        <span className="text-[10px] font-bold uppercase">Action Needed</span>
+                      </div>
+                      <p className="text-lg font-black text-red-500">+{combiStats.mustAttend}</p>
+                      <p className="text-[9px] text-zinc-500">Classes needed to hit {semester.targetAttendance}%</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                {semesterMonthlyStats.filter(s => combiSelectedMonths.includes(s.month)).map(s => (
+                  <div key={s.month} className="bg-zinc-900/50 p-2 rounded-xl border border-zinc-800 flex justify-between items-center">
+                    <span className="text-[10px] font-bold text-zinc-400 uppercase">{s.month}</span>
+                    <span className={`text-xs font-bold ${s.percentage >= semester.targetAttendance ? 'text-emerald-500' : 'text-red-500'}`}>
+                      {s.percentage.toFixed(1)}%
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </motion.div>
+          ) : (
+            <div className="py-4 text-center border-t border-zinc-800/50">
+              <p className="text-[10px] text-zinc-500 uppercase font-bold tracking-widest">Select months to see combined stats</p>
+            </div>
+          )}
+        </Card>
 
         <Card className="space-y-6">
           <div className="flex justify-between items-center">
