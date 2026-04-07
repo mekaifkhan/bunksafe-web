@@ -123,7 +123,10 @@ export default function App() {
 
   const [semester, setSemester] = useState<Semester>(() => {
     const saved = localStorage.getItem('bs_semester');
-    return saved ? JSON.parse(saved) : { startDate: '', endDate: '', targetAttendance: 75, isInitialized: false };
+    const defaultSemester = { startDate: '', endDate: '', targetAttendance: 75, isInitialized: false };
+    if (!saved) return defaultSemester;
+    const parsed = JSON.parse(saved);
+    return { ...defaultSemester, ...parsed };
   });
 
   const [records, setRecords] = useState<Record<string, AttendanceRecord>>(() => {
@@ -157,30 +160,6 @@ export default function App() {
   const [selectedDate, setSelectedDate] = useState<string | null>(getTodayStr());
   const [combiSelectedMonths, setCombiSelectedMonths] = useState<string[]>([]);
 
-  // Wizard State
-  const [wizardStep, setWizardStep] = useState(1);
-  const [wizardData, setWizardData] = useState({
-    percentage: 75,
-    untilDate: getTodayStr(),
-    schedule: [0, 0, 0, 0, 0, 0, 0], // Sun-Sat
-    holidays: [] as number[], // 0-6
-    extraHolidays: [] as string[], // specific dates
-  });
-
-  // Effects for saving
-  useEffect(() => localStorage.setItem('bs_profile', JSON.stringify(profile)), [profile]);
-  useEffect(() => localStorage.setItem('bs_semester', JSON.stringify(semester)), [semester]);
-  useEffect(() => localStorage.setItem('bs_records', JSON.stringify(records)), [records]);
-  useEffect(() => localStorage.setItem('bs_history', JSON.stringify(history)), [history]);
-
-  // Splash Screen Timer
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setIsSplashVisible(false);
-    }, 2500);
-    return () => clearTimeout(timer);
-  }, []);
-
   // Calculations
   const stats = useMemo(() => calculateAttendance(records, semester.initialHeld, semester.initialAttended), [records, semester]);
   const bunkInfo = useMemo(() => calculateBunkInfo(stats.totalHeld, stats.totalAttended, semester.targetAttendance), [stats, semester]);
@@ -189,7 +168,12 @@ export default function App() {
     if (!semester.startDate) return [];
     
     const start = startOfDay(parseISO(semester.startDate));
+    if (isNaN(start.getTime())) return [];
+    
     const end = endOfMonth(new Date());
+    
+    if (isAfter(start, end)) return [];
+    
     const months = eachMonthOfInterval({ start, end });
     const now = new Date();
     const currentMonthStart = startOfMonth(now);
@@ -244,6 +228,54 @@ export default function App() {
       };
     });
   }, [records, semester]);
+
+  const combiStats = useMemo(() => {
+    const selectedData = semesterMonthlyStats.filter(s => combiSelectedMonths.includes(s.month));
+    if (selectedData.length === 0) return null;
+
+    const totalHeld = selectedData.reduce((acc, curr) => acc + curr.held, 0);
+    const totalAttended = selectedData.reduce((acc, curr) => acc + curr.attended, 0);
+    const percentage = totalHeld > 0 ? (totalAttended / totalHeld) * 100 : 0;
+    
+    // Calculate needed for target
+    const target = semester.targetAttendance;
+    let mustAttend = 0;
+    if (percentage < target && totalHeld > 0) {
+      mustAttend = Math.ceil((target * totalHeld - 100 * totalAttended) / (100 - target));
+    }
+
+    return { totalHeld, totalAttended, percentage, mustAttend, selectedMonths: selectedData.map(s => s.month) };
+  }, [combiSelectedMonths, semesterMonthlyStats, semester.targetAttendance]);
+
+  const toggleCombiMonth = (month: string) => {
+    setCombiSelectedMonths(prev => 
+      prev.includes(month) ? prev.filter(m => m !== month) : [...prev, month]
+    );
+  };
+
+  // Wizard State
+  const [wizardStep, setWizardStep] = useState(1);
+  const [wizardData, setWizardData] = useState({
+    percentage: 75,
+    untilDate: getTodayStr(),
+    schedule: [0, 0, 0, 0, 0, 0, 0], // Sun-Sat
+    holidays: [] as number[], // 0-6
+    extraHolidays: [] as string[], // specific dates
+  });
+
+  // Effects for saving
+  useEffect(() => localStorage.setItem('bs_profile', JSON.stringify(profile)), [profile]);
+  useEffect(() => localStorage.setItem('bs_semester', JSON.stringify(semester)), [semester]);
+  useEffect(() => localStorage.setItem('bs_records', JSON.stringify(records)), [records]);
+  useEffect(() => localStorage.setItem('bs_history', JSON.stringify(history)), [history]);
+
+  // Splash Screen Timer
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsSplashVisible(false);
+    }, 2500);
+    return () => clearTimeout(timer);
+  }, []);
 
   const monthlyStats = useMemo(() => {
     const now = new Date();
@@ -1282,30 +1314,6 @@ export default function App() {
   const renderAnalytics = () => {
     const completedMonths = semesterMonthlyStats.filter(s => s.isCompleted);
     const lastMonth = completedMonths.length > 0 ? completedMonths[completedMonths.length - 1] : null;
-
-    const combiStats = useMemo(() => {
-      const selectedData = semesterMonthlyStats.filter(s => combiSelectedMonths.includes(s.month));
-      if (selectedData.length === 0) return null;
-
-      const totalHeld = selectedData.reduce((acc, curr) => acc + curr.held, 0);
-      const totalAttended = selectedData.reduce((acc, curr) => acc + curr.attended, 0);
-      const percentage = totalHeld > 0 ? (totalAttended / totalHeld) * 100 : 0;
-      
-      // Calculate needed for target
-      const target = semester.targetAttendance;
-      let mustAttend = 0;
-      if (percentage < target && totalHeld > 0) {
-        mustAttend = Math.ceil((target * totalHeld - 100 * totalAttended) / (100 - target));
-      }
-
-      return { totalHeld, totalAttended, percentage, mustAttend, selectedMonths: selectedData.map(s => s.month) };
-    }, [combiSelectedMonths, semesterMonthlyStats, semester.targetAttendance]);
-
-    const toggleCombiMonth = (month: string) => {
-      setCombiSelectedMonths(prev => 
-        prev.includes(month) ? prev.filter(m => m !== month) : [...prev, month]
-      );
-    };
 
     return (
       <div className="space-y-6 pb-24">
