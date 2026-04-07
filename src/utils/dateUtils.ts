@@ -7,11 +7,18 @@ export const formatDate = (date: Date | string) => {
 
 export const getTodayStr = () => formatDate(new Date());
 
-export const calculateAttendance = (records: Record<string, any>, initialHeld = 0, initialAttended = 0) => {
+export const calculateAttendance = (records: Record<string, any>, initialHeld = 0, initialAttended = 0, startDate?: string) => {
   let totalHeld = initialHeld;
   let totalAttended = initialAttended;
 
-  Object.values(records).forEach((record: any) => {
+  const start = startDate ? startOfDay(parseISO(startDate)) : null;
+
+  Object.entries(records).forEach(([date, record]: [string, any]) => {
+    if (start) {
+      const d = startOfDay(parseISO(date));
+      if (isBefore(d, start)) return;
+    }
+    
     if (!record.isHoliday) {
       totalHeld += record.held;
       totalAttended += record.attended;

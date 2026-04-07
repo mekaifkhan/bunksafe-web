@@ -158,10 +158,9 @@ export default function App() {
   const [currentGapIndex, setCurrentGapIndex] = useState(0);
   const [viewDate, setViewDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<string | null>(getTodayStr());
-  const [combiSelectedMonths, setCombiSelectedMonths] = useState<string[]>([]);
 
   // Calculations
-  const stats = useMemo(() => calculateAttendance(records, semester.initialHeld, semester.initialAttended), [records, semester]);
+  const stats = useMemo(() => calculateAttendance(records, semester.initialHeld, semester.initialAttended, semester.startDate), [records, semester]);
   const bunkInfo = useMemo(() => calculateBunkInfo(stats.totalHeld, stats.totalAttended, semester.targetAttendance), [stats, semester]);
 
   const semesterMonthlyStats = useMemo(() => {
@@ -191,7 +190,8 @@ export default function App() {
       // Actual records for this month
       const monthRecords = Object.entries(records).filter(([date]) => {
         const d = parseISO(date);
-        return d >= mStart && d <= mEnd;
+        const sDate = startOfDay(parseISO(semester.startDate));
+        return d >= mStart && d <= mEnd && !isBefore(d, sDate);
       }) as [string, AttendanceRecord][];
       
       let held = 0;
@@ -229,30 +229,6 @@ export default function App() {
     });
   }, [records, semester]);
 
-  const combiStats = useMemo(() => {
-    const selectedData = semesterMonthlyStats.filter(s => combiSelectedMonths.includes(s.month));
-    if (selectedData.length === 0) return null;
-
-    const totalHeld = selectedData.reduce((acc, curr) => acc + curr.held, 0);
-    const totalAttended = selectedData.reduce((acc, curr) => acc + curr.attended, 0);
-    const percentage = totalHeld > 0 ? (totalAttended / totalHeld) * 100 : 0;
-    
-    // Calculate needed for target
-    const target = semester.targetAttendance;
-    let mustAttend = 0;
-    if (percentage < target && totalHeld > 0) {
-      mustAttend = Math.ceil((target * totalHeld - 100 * totalAttended) / (100 - target));
-    }
-
-    return { totalHeld, totalAttended, percentage, mustAttend, selectedMonths: selectedData.map(s => s.month) };
-  }, [combiSelectedMonths, semesterMonthlyStats, semester.targetAttendance]);
-
-  const toggleCombiMonth = (month: string) => {
-    setCombiSelectedMonths(prev => 
-      prev.includes(month) ? prev.filter(m => m !== month) : [...prev, month]
-    );
-  };
-
   // Wizard State
   const [wizardStep, setWizardStep] = useState(1);
   const [wizardData, setWizardData] = useState({
@@ -281,9 +257,11 @@ export default function App() {
     const now = new Date();
     const start = startOfMonth(now);
     const end = endOfMonth(now);
+    const sDate = semester.startDate ? startOfDay(parseISO(semester.startDate)) : null;
+
     const monthRecords = Object.entries(records).filter(([date]) => {
       const d = parseISO(date);
-      return d >= start && d <= end;
+      return d >= start && d <= end && (!sDate || !isBefore(d, sDate));
     }) as [string, AttendanceRecord][];
     
     let held = 0;
@@ -294,8 +272,28 @@ export default function App() {
         attended += r.attended;
       }
     });
+
+    // Include initial data if current month overlaps with locked period
+    const lockedUntil = semester.lockedUntil ? parseISO(semester.lockedUntil) : null;
+    const semStart = sDate;
+    if (lockedUntil && semStart && start <= lockedUntil) {
+      const initialPeriodDays = differenceInDays(lockedUntil, semStart) + 1;
+      if (initialPeriodDays > 0) {
+        const periodStart = isBefore(start, semStart) ? semStart : start;
+        const periodEnd = isAfter(end, lockedUntil) ? lockedUntil : end;
+        
+        if (periodStart <= periodEnd) {
+          const daysInMonthInPeriod = differenceInDays(periodEnd, periodStart) + 1;
+          const ratio = daysInMonthInPeriod / initialPeriodDays;
+          
+          held += Math.round((semester.initialHeld || 0) * ratio);
+          attended += Math.round((semester.initialAttended || 0) * ratio);
+        }
+      }
+    }
+
     return { held, attended, percentage: held > 0 ? (attended / held) * 100 : 0 };
-  }, [records]);
+  }, [records, semester]);
 
   const missedDays = useMemo(() => {
     if (!semester.startDate) return [];
@@ -1143,13 +1141,15 @@ export default function App() {
           {days.map(day => {
             const dateStr = formatDate(day);
             const record = records[dateStr];
+            const sDate = semester.startDate ? startOfDay(parseISO(semester.startDate)) : null;
+            const isBeforeSemester = sDate && isBefore(day, sDate);
             const isLocked = semester.lockedUntil && !isAfter(day, parseISO(semester.lockedUntil));
             
             let bgColor = 'bg-zinc-900';
             let borderColor = 'border-zinc-800';
             let textColor = 'text-zinc-100';
 
-            if (record) {
+            if (record && !isBeforeSemester) {
               if (record.isHoliday) {
                 bgColor = 'bg-blue-500/20';
                 borderColor = 'border-blue-500/30';
@@ -1169,7 +1169,7 @@ export default function App() {
                   textColor = 'text-yellow-500';
                 }
               }
-            } else if (isBefore(day, startOfDay(new Date())) && isAfter(day, subDays(parseISO(semester.startDate), 1))) {
+            } else if (!isBeforeSemester && isBefore(day, startOfDay(new Date()))) {
               bgColor = 'bg-zinc-800/50';
               borderColor = 'border-zinc-700/50';
               textColor = 'text-zinc-600';
@@ -1333,85 +1333,6 @@ export default function App() {
             </div>
           </Card>
         )}
-
-        {/* Combi Attendance Section */}
-        <Card className="space-y-4 border-emerald-500/30 bg-emerald-500/5">
-          <div className="flex items-center gap-2">
-            <div className="p-2 bg-emerald-500/20 rounded-lg text-emerald-500">
-              <BarChart3 size={18} />
-            </div>
-            <h3 className="font-bold text-sm uppercase tracking-wider">Combi Attendance</h3>
-          </div>
-
-          <div className="flex flex-wrap gap-2">
-            {semesterMonthlyStats.map(s => (
-              <button
-                key={s.month}
-                onClick={() => toggleCombiMonth(s.month)}
-                className={`px-3 py-1.5 rounded-full text-[10px] font-bold uppercase transition-all border ${
-                  combiSelectedMonths.includes(s.month)
-                    ? 'bg-emerald-500 border-emerald-500 text-white shadow-lg shadow-emerald-500/20'
-                    : 'bg-zinc-800 border-zinc-700 text-zinc-400 hover:border-zinc-600'
-                }`}
-              >
-                {s.month}
-              </button>
-            ))}
-          </div>
-
-          {combiStats ? (
-            <motion.div 
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="space-y-4 pt-2 border-t border-emerald-500/10"
-            >
-              <div className="flex justify-between items-end">
-                <div>
-                  <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-1">Combined Percentage</p>
-                  <div className="flex items-baseline gap-2">
-                    <span className="text-4xl font-black text-white">{combiStats.percentage.toFixed(1)}%</span>
-                    <span className="text-xs text-zinc-500 font-medium">({combiStats.totalAttended}/{combiStats.totalHeld})</span>
-                  </div>
-                </div>
-                <div className="text-right">
-                  {combiStats.percentage >= semester.targetAttendance ? (
-                    <div className="flex flex-col items-end gap-1">
-                      <div className="flex items-center gap-1 text-emerald-500">
-                        <CheckCircle2 size={14} />
-                        <span className="text-[10px] font-bold uppercase">Safe</span>
-                      </div>
-                      <p className="text-[9px] text-zinc-500 max-w-[120px]">You are above your {semester.targetAttendance}% target for these months.</p>
-                    </div>
-                  ) : (
-                    <div className="flex flex-col items-end gap-1">
-                      <div className="flex items-center gap-1 text-red-500">
-                        <AlertCircle size={14} />
-                        <span className="text-[10px] font-bold uppercase">Action Needed</span>
-                      </div>
-                      <p className="text-lg font-black text-red-500">+{combiStats.mustAttend}</p>
-                      <p className="text-[9px] text-zinc-500">Classes needed to hit {semester.targetAttendance}%</p>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-2">
-                {semesterMonthlyStats.filter(s => combiSelectedMonths.includes(s.month)).map(s => (
-                  <div key={s.month} className="bg-zinc-900/50 p-2 rounded-xl border border-zinc-800 flex justify-between items-center">
-                    <span className="text-[10px] font-bold text-zinc-400 uppercase">{s.month}</span>
-                    <span className={`text-xs font-bold ${s.percentage >= semester.targetAttendance ? 'text-emerald-500' : 'text-red-500'}`}>
-                      {s.percentage.toFixed(1)}%
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </motion.div>
-          ) : (
-            <div className="py-4 text-center border-t border-zinc-800/50">
-              <p className="text-[10px] text-zinc-500 uppercase font-bold tracking-widest">Select months to see combined stats</p>
-            </div>
-          )}
-        </Card>
 
         <Card className="space-y-6">
           <div className="flex justify-between items-center">
