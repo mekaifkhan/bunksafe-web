@@ -1121,8 +1121,17 @@ export default function App() {
             <p className="text-zinc-500 text-sm">Welcome back,</p>
             <h1 className="text-2xl font-bold">{profile.name}</h1>
           </div>
-          <div className="bg-zinc-900 p-2 rounded-full border border-zinc-800">
-            <User size={24} className="text-primary" />
+          <div className="flex gap-2">
+            <button 
+              onClick={handleDownloadReport}
+              className="p-2 bg-zinc-900 rounded-full border border-zinc-800 text-zinc-400 hover:text-primary transition-colors"
+              title="Download Report"
+            >
+              <Download size={20} />
+            </button>
+            <div className="bg-zinc-900 p-2 rounded-full border border-zinc-800">
+              <User size={24} className="text-primary" />
+            </div>
           </div>
         </header>
 
@@ -1545,6 +1554,23 @@ export default function App() {
                 No data for current semester
               </div>
             )}
+          </div>
+        </Card>
+
+        <Card className="bg-zinc-900 border-zinc-800">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-primary/20 rounded-lg text-primary">
+                <Download size={18} />
+              </div>
+              <div>
+                <h3 className="font-bold text-sm">Attendance Report</h3>
+                <p className="text-[10px] text-zinc-500">Download your {format(new Date(), 'MMMM')} report as PDF</p>
+              </div>
+            </div>
+            <Button onClick={handleDownloadReport} variant="secondary" className="text-xs py-1.5 px-3">
+              Download
+            </Button>
           </div>
         </Card>
 
