@@ -980,20 +980,33 @@ export default function App() {
       const doc = new jsPDF();
       const monthName = format(new Date(), 'MMMM yyyy');
       
+      // Helper to convert hex to RGB
+      const hexToRgb = (hex: string) => {
+        let h = hex.replace('#', '');
+        if (h.length === 3) {
+          h = h.split('').map(char => char + char).join('');
+        }
+        const r = parseInt(h.substring(0, 2), 16) || 0;
+        const g = parseInt(h.substring(2, 4), 16) || 0;
+        const b = parseInt(h.substring(4, 6), 16) || 0;
+        return { r, g, b };
+      };
+      const rgb = hexToRgb(themeColor);
+      
       // Header
       doc.setFontSize(22);
-      doc.setTextColor(themeColor);
+      doc.setTextColor(rgb.r, rgb.g, rgb.b);
       doc.text('BunkSafe Attendance Report', 14, 22);
       
       doc.setFontSize(12);
-      doc.setTextColor(100);
+      doc.setTextColor(100, 100, 100);
       doc.text(`Generated for: ${profile.name}`, 14, 32);
       doc.text(`Month: ${monthName}`, 14, 38);
       doc.text(`College: ${profile.college}`, 14, 44);
       
       // Stats Summary
       doc.setFontSize(16);
-      doc.setTextColor(0);
+      doc.setTextColor(0, 0, 0);
       doc.text('Monthly Summary', 14, 58);
       
       autoTable(doc, {
@@ -1006,7 +1019,7 @@ export default function App() {
           ['Status', monthlyStats.percentage >= semester.targetAttendance ? 'SAFE' : 'LOW ATTENDANCE']
         ],
         theme: 'striped',
-        headStyles: { fillColor: themeColor }
+        headStyles: { fillColor: [rgb.r, rgb.g, rgb.b] }
       });
 
       // Daily Breakdown
@@ -1034,7 +1047,7 @@ export default function App() {
         head: [['Date', 'Held', 'Attended', 'Percentage']],
         body: tableData,
         theme: 'grid',
-        headStyles: { fillColor: themeColor }
+        headStyles: { fillColor: [rgb.r, rgb.g, rgb.b] }
       });
 
       // Convert to Base64
@@ -1052,7 +1065,12 @@ export default function App() {
         })
       });
 
-      const result = await response.json();
+      let result;
+      try {
+        result = await response.json();
+      } catch (e) {
+        throw new Error(`Server returned non-JSON response: ${response.status} ${response.statusText}`);
+      }
 
       if (response.ok) {
         setReportStatus({ type: 'success', message: 'Report sent successfully to your mail!' });
@@ -1061,7 +1079,7 @@ export default function App() {
       }
     } catch (error) {
       console.error('Error generating/sending report:', error);
-      setReportStatus({ type: 'error', message: 'An unexpected error occurred.' });
+      setReportStatus({ type: 'error', message: error instanceof Error ? error.message : 'An unexpected error occurred.' });
     } finally {
       setIsSendingReport(false);
     }
