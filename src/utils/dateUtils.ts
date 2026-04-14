@@ -7,11 +7,20 @@ export const formatDate = (date: Date | string) => {
 
 export const getTodayStr = () => formatDate(new Date());
 
-export const calculateAttendance = (records: Record<string, any>, initialHeld = 0, initialAttended = 0, startDate?: string) => {
+export const calculateAttendance = (records: Record<string, any>, initialHeld = 0, initialAttended = 0, startDate?: string, exams: any[] = []) => {
   let totalHeld = initialHeld;
   let totalAttended = initialAttended;
 
   const start = startDate ? startOfDay(parseISO(startDate)) : null;
+
+  const isExamDay = (dateStr: string) => {
+    return exams.some(e => {
+      const start = startOfDay(parseISO(e.startDate));
+      const end = startOfDay(parseISO(e.endDate));
+      const d = startOfDay(parseISO(dateStr));
+      return d >= start && d <= end;
+    });
+  };
 
   Object.entries(records).forEach(([date, record]: [string, any]) => {
     if (start) {
@@ -19,7 +28,7 @@ export const calculateAttendance = (records: Record<string, any>, initialHeld = 
       if (isBefore(d, start)) return;
     }
     
-    if (!record.isHoliday) {
+    if (!record.isHoliday && !isExamDay(date)) {
       totalHeld += record.held;
       totalAttended += record.attended;
     }

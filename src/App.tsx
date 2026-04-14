@@ -28,7 +28,10 @@ import {
   Zap,
   Mail,
   Loader2,
-  Download
+  Download,
+  BookOpen,
+  CalendarDays,
+  Edit2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { jsPDF } from 'jspdf';
@@ -56,7 +59,8 @@ import {
   Semester, 
   AttendanceRecord, 
   SemesterHistory, 
-  AppState 
+  AppState,
+  Exam
 } from './types';
 import { 
   formatDate, 
@@ -78,13 +82,15 @@ const Button = ({
   onClick, 
   variant = 'primary', 
   className = "", 
-  disabled = false 
+  disabled = false,
+  type = 'button'
 }: { 
   children: React.ReactNode, 
   onClick?: () => void, 
   variant?: 'primary' | 'secondary' | 'danger' | 'ghost',
   className?: string,
-  disabled?: boolean
+  disabled?: boolean,
+  type?: 'button' | 'submit' | 'reset'
 }) => {
   const variants = {
     primary: 'bg-primary text-white hover:bg-primary-hover',
@@ -97,6 +103,7 @@ const Button = ({
     <button 
       onClick={onClick}
       disabled={disabled}
+      type={type}
       className={`px-4 py-2 rounded-xl font-medium transition-all active:scale-95 disabled:opacity-50 disabled:active:scale-100 ${variants[variant]} ${className}`}
     >
       {children}
@@ -147,6 +154,14 @@ export default function App() {
     return saved ? JSON.parse(saved) : [];
   });
 
+  const [exams, setExams] = useState<Exam[]>(() => {
+    const saved = localStorage.getItem('bs_exams');
+    return saved ? JSON.parse(saved) : [];
+  });
+
+  const [showExamModal, setShowExamModal] = useState(false);
+  const [editingExam, setEditingExam] = useState<Exam | null>(null);
+
   const [appState, setAppState] = useState<AppState>(() => {
     if (!profile.name) return 'WELCOME';
     if (!profile.email) return 'EMAIL_COLLECTION';
@@ -190,7 +205,7 @@ export default function App() {
   const [combiSelectedMonths, setCombiSelectedMonths] = useState<string[]>([]);
 
   // Calculations
-  const stats = useMemo(() => calculateAttendance(records, semester.initialHeld, semester.initialAttended, semester.startDate), [records, semester]);
+  const stats = useMemo(() => calculateAttendance(records, semester.initialHeld, semester.initialAttended, semester.startDate, exams), [records, semester, exams]);
   const bunkInfo = useMemo(() => calculateBunkInfo(stats.totalHeld, stats.totalAttended, semester.targetAttendance), [stats, semester]);
 
   const semesterMonthlyStats = useMemo(() => {
@@ -226,8 +241,14 @@ export default function App() {
       
       let held = 0;
       let attended = 0;
-      monthRecords.forEach(([_, r]) => {
-        if (!r.isHoliday) {
+      monthRecords.forEach(([date, r]) => {
+        const isExam = exams.some(e => {
+          const start = startOfDay(parseISO(e.startDate));
+          const end = startOfDay(parseISO(e.endDate));
+          const d = startOfDay(parseISO(date));
+          return d >= start && d <= end;
+        });
+        if (!r.isHoliday && !isExam) {
           held += r.held;
           attended += r.attended;
         }
@@ -286,6 +307,7 @@ export default function App() {
   useEffect(() => localStorage.setItem('bs_semester', JSON.stringify(semester)), [semester]);
   useEffect(() => localStorage.setItem('bs_records', JSON.stringify(records)), [records]);
   useEffect(() => localStorage.setItem('bs_history', JSON.stringify(history)), [history]);
+  useEffect(() => localStorage.setItem('bs_exams', JSON.stringify(exams)), [exams]);
 
   // Splash Screen Timer
   useEffect(() => {
@@ -1110,6 +1132,139 @@ export default function App() {
     }
   };
 
+  const getExamForDate = (date: Date) => {
+    const dateStr = formatDate(date);
+    return exams.find(e => {
+      const start = startOfDay(parseISO(e.startDate));
+      const end = startOfDay(parseISO(e.endDate));
+      const d = startOfDay(parseISO(dateStr));
+      return d >= start && d <= end;
+    });
+  };
+
+  const handleSaveExam = (examData: Omit<Exam, 'id'>) => {
+    if (editingExam) {
+      setExams(prev => prev.map(e => e.id === editingExam.id ? { ...examData, id: e.id } : e));
+    } else {
+      setExams(prev => [...prev, { ...examData, id: Date.now().toString() }]);
+    }
+    setShowExamModal(false);
+    setEditingExam(null);
+  };
+
+  const handleDeleteExam = (id: string) => {
+    setExams(prev => prev.filter(e => e.id !== id));
+  };
+
+  const ExamModal = () => {
+    const [type, setType] = useState<'Mid-sem' | 'End-sem'>(editingExam?.type || 'Mid-sem');
+    const [midSemNum, setMidSemNum] = useState(editingExam?.label.split(' ').pop() || '1');
+    const [customLabel, setCustomLabel] = useState(editingExam?.label || '');
+    const [startDate, setStartDate] = useState(editingExam?.startDate || getTodayStr());
+    const [endDate, setEndDate] = useState(editingExam?.endDate || getTodayStr());
+
+    const handleSubmit = (e: React.FormEvent) => {
+      e.preventDefault();
+      const label = type === 'Mid-sem' ? (midSemNum === 'Other' ? customLabel : `Mid-sem ${midSemNum}`) : 'End-sem';
+      handleSaveExam({
+        type,
+        label,
+        startDate,
+        endDate
+      });
+    };
+
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+        <motion.div 
+          initial={{ scale: 0.9, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          className="bg-zinc-900 border border-zinc-800 rounded-3xl p-6 w-full max-w-md space-y-6"
+        >
+          <div className="flex justify-between items-center">
+            <h2 className="text-xl font-bold">{editingExam ? 'Edit Exam' : 'Add Exam'}</h2>
+            <button onClick={() => { setShowExamModal(false); setEditingExam(null); }} className="text-zinc-500 hover:text-white">
+              <XCircle size={24} />
+            </button>
+          </div>
+
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-zinc-500 uppercase tracking-widest">Exam Type</label>
+              <div className="grid grid-cols-2 gap-2">
+                {['Mid-sem', 'End-sem'].map(t => (
+                  <button
+                    key={t}
+                    type="button"
+                    onClick={() => setType(t as any)}
+                    className={`py-3 rounded-xl border text-sm font-bold transition-all ${type === t ? 'bg-primary/10 border-primary text-primary' : 'bg-zinc-800/50 border-zinc-700 text-zinc-500'}`}
+                  >
+                    {t}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {type === 'Mid-sem' && (
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-zinc-500 uppercase tracking-widest">Which Mid-sem?</label>
+                <div className="grid grid-cols-4 gap-2">
+                  {['1', '2', '3', 'Other'].map(n => (
+                    <button
+                      key={n}
+                      type="button"
+                      onClick={() => setMidSemNum(n)}
+                      className={`py-2 rounded-lg border text-xs font-bold transition-all ${midSemNum === n ? 'bg-primary/10 border-primary text-primary' : 'bg-zinc-800/50 border-zinc-700 text-zinc-500'}`}
+                    >
+                      {n}
+                    </button>
+                  ))}
+                </div>
+                {midSemNum === 'Other' && (
+                  <input 
+                    type="text"
+                    value={customLabel}
+                    onChange={(e) => setCustomLabel(e.target.value)}
+                    placeholder="e.g. Sessional 1"
+                    className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-4 py-3 text-sm text-zinc-100 focus:outline-none focus:border-primary"
+                    required
+                  />
+                )}
+              </div>
+            )}
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-zinc-500 uppercase tracking-widest">Start Date</label>
+                <input 
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                  className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-4 py-3 text-sm text-zinc-100 focus:outline-none focus:border-primary"
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-zinc-500 uppercase tracking-widest">End Date</label>
+                <input 
+                  type="date"
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                  className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-4 py-3 text-sm text-zinc-100 focus:outline-none focus:border-primary"
+                  required
+                />
+              </div>
+            </div>
+
+            <Button type="submit" className="w-full py-4 text-lg mt-4">
+              {editingExam ? 'Update Exam' : 'Add to Schedule'}
+            </Button>
+          </form>
+        </motion.div>
+      </div>
+    );
+  };
+
   const renderDashboard = () => {
     const today = getTodayStr();
     const todayRecord = records[today] || { held: 0, attended: 0, isHoliday: false };
@@ -1323,12 +1478,17 @@ export default function App() {
             const sDate = semester.startDate ? startOfDay(parseISO(semester.startDate)) : null;
             const isBeforeSemester = sDate && isBefore(day, sDate);
             const isLocked = semester.lockedUntil && !isAfter(day, parseISO(semester.lockedUntil));
+            const exam = getExamForDate(day);
             
             let bgColor = 'bg-zinc-900';
             let borderColor = 'border-zinc-800';
             let textColor = 'text-zinc-100';
 
-            if (record && !isBeforeSemester) {
+            if (exam) {
+              bgColor = 'bg-amber-500/20';
+              borderColor = 'border-amber-500/30';
+              textColor = 'text-amber-500';
+            } else if (record && !isBeforeSemester) {
               if (record.isHoliday) {
                 bgColor = 'bg-blue-500/20';
                 borderColor = 'border-blue-500/30';
@@ -1369,6 +1529,9 @@ export default function App() {
                 {record && record.isHoliday && (
                   <span className="text-[8px] font-bold mt-0.5 opacity-60">H</span>
                 )}
+                {exam && (
+                  <span className="text-[8px] font-bold mt-0.5 opacity-80">EXAM</span>
+                )}
                 {isLocked && <Lock size={10} className="absolute top-1 right-1 opacity-50" />}
               </button>
             );
@@ -1389,7 +1552,7 @@ export default function App() {
                   <div>
                     <h3 className="text-lg font-bold">{format(parseISO(selectedDate), 'EEEE, MMM do')}</h3>
                     <p className="text-zinc-500 text-xs uppercase tracking-wider font-bold">
-                      {records[selectedDate]?.isHoliday ? 'Holiday' : 'Regular Class Day'}
+                      {getExamForDate(parseISO(selectedDate)) ? `Exam: ${getExamForDate(parseISO(selectedDate))?.label}` : records[selectedDate]?.isHoliday ? 'Holiday' : 'Regular Class Day'}
                     </p>
                   </div>
                   <div className="flex gap-2">
@@ -1727,6 +1890,66 @@ export default function App() {
           </div>
         </Card>
 
+        {/* Exams Schedule Section */}
+        <Card className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="p-2 bg-amber-500/20 rounded-lg text-amber-500">
+                <BookOpen size={18} />
+              </div>
+              <h3 className="font-bold text-sm uppercase tracking-wider">Exam Schedule</h3>
+            </div>
+            <Button 
+              onClick={() => { setEditingExam(null); setShowExamModal(true); }} 
+              variant="ghost" 
+              className="text-xs text-primary"
+            >
+              <Plus size={14} className="mr-1" /> Add Exam
+            </Button>
+          </div>
+          
+          <p className="text-xs text-zinc-500">Add your Mid-sem or End-sem exams to highlight them on the calendar.</p>
+
+          <div className="space-y-3">
+            {exams.length === 0 ? (
+              <div className="text-center py-6 border border-zinc-800 border-dashed rounded-2xl">
+                <CalendarDays className="mx-auto mb-2 text-zinc-700 opacity-30" size={32} />
+                <p className="text-zinc-600 text-xs italic">No exams scheduled yet.</p>
+              </div>
+            ) : (
+              exams.sort((a, b) => a.startDate.localeCompare(b.startDate)).map(exam => (
+                <div key={exam.id} className="bg-zinc-800/50 border border-zinc-700 rounded-2xl p-4 flex justify-between items-center group">
+                  <div className="flex items-center gap-4">
+                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${exam.type === 'End-sem' ? 'bg-red-500/20 text-red-500' : 'bg-amber-500/20 text-amber-500'}`}>
+                      <BookOpen size={20} />
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-sm">{exam.label}</h4>
+                      <p className="text-[10px] text-zinc-500 font-medium uppercase tracking-wider">
+                        {format(parseISO(exam.startDate), 'MMM dd')} - {format(parseISO(exam.endDate), 'MMM dd')}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button 
+                      onClick={() => { setEditingExam(exam); setShowExamModal(true); }}
+                      className="p-2 text-zinc-400 hover:text-primary transition-colors"
+                    >
+                      <Edit2 size={16} />
+                    </button>
+                    <button 
+                      onClick={() => handleDeleteExam(exam.id)}
+                      className="p-2 text-zinc-400 hover:text-red-500 transition-colors"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </Card>
+
         {/* Kaif's Special Section */}
         <Card className="relative overflow-hidden border-none bg-gradient-to-br from-indigo-600 to-violet-700 p-0">
           <div className="absolute top-0 right-0 p-4 opacity-20">
@@ -2007,6 +2230,8 @@ export default function App() {
           <NavButton active={activeTab === 'settings'} onClick={() => setActiveTab('settings')} icon={<Settings size={24} />} label="Setup" />
         </div>
       </nav>
+
+      {showExamModal && <ExamModal />}
     </div>
   );
 }

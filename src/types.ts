@@ -35,3 +35,11 @@ export interface SemesterHistory {
 }
 
 export type AppState = 'WELCOME' | 'EMAIL_COLLECTION' | 'SEMESTER_SETUP' | 'LATE_DETECTION' | 'WIZARD' | 'GAP_HANDLING' | 'MAIN' | 'TODAY_CONFIRMATION';
+
+export interface Exam {
+  id: string;
+  type: 'Mid-sem' | 'End-sem';
+  label: string; // e.g., "Mid-sem 1", "End-sem"
+  startDate: string; // YYYY-MM-DD
+  endDate: string; // YYYY-MM-DD
+}
