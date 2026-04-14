@@ -54,6 +54,48 @@ async function startServer() {
     res.json({ status: "ok" });
   });
 
+  app.post("/api/send-report", async (req, res) => {
+    const { email, pdfBase64, monthName, userName } = req.body;
+
+    if (!email || !pdfBase64) {
+      return res.status(400).json({ error: "Email and PDF data are required" });
+    }
+
+    if (process.env.SMTP_USER && process.env.SMTP_PASS) {
+      try {
+        const transporter = nodemailer.createTransport({
+          service: process.env.SMTP_SERVICE || 'gmail',
+          auth: {
+            user: process.env.SMTP_USER,
+            pass: process.env.SMTP_PASS,
+          },
+        });
+
+        const mailOptions = {
+          from: process.env.SMTP_USER,
+          to: email,
+          subject: `BunkSafe Attendance Report - ${monthName}`,
+          text: `Hi ${userName},\n\nPlease find attached your attendance report for ${monthName}.\n\nStay safe and keep tracking!\n\nBest regards,\nBunkSafe Team`,
+          attachments: [
+            {
+              filename: `Attendance_Report_${monthName.replace(/\s+/g, '_')}.pdf`,
+              content: pdfBase64.split("base64,")[1],
+              encoding: 'base64'
+            }
+          ]
+        };
+
+        await transporter.sendMail(mailOptions);
+        res.json({ success: true, message: "Report sent successfully" });
+      } catch (error) {
+        console.error("Error sending report email:", error);
+        res.status(500).json({ error: "Failed to send email" });
+      }
+    } else {
+      res.status(503).json({ error: "Email service not configured. Please set SMTP_USER and SMTP_PASS in environment variables." });
+    }
+  });
+
   app.post("/api/notify-setup", async (req, res) => {
     const profile = req.body;
     const { name, email, college, department, semester, mobile } = profile;

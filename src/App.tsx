@@ -25,9 +25,13 @@ import {
   BellOff,
   Sparkles,
   TrendingUp,
-  Zap
+  Zap,
+  Mail,
+  Loader2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { jsPDF } from 'jspdf';
+import autoTable from 'jspdf-autotable';
 import { 
   format, 
   addDays, 
@@ -163,6 +167,9 @@ export default function App() {
   const [themeColor, setThemeColor] = useState(() => {
     return localStorage.getItem('bs_theme_color') || '#10b981';
   });
+  const [reportEmail, setReportEmail] = useState(profile.email || '');
+  const [isSendingReport, setIsSendingReport] = useState(false);
+  const [reportStatus, setReportStatus] = useState<{ type: 'success' | 'error', message: string } | null>(null);
 
   useEffect(() => {
     document.documentElement.style.setProperty('--primary-color', themeColor);
@@ -960,6 +967,106 @@ export default function App() {
 
   // --- Main Dashboard ---
 
+  const generateAndSendReport = async () => {
+    if (!reportEmail) {
+      setReportStatus({ type: 'error', message: 'Please enter an email address.' });
+      return;
+    }
+
+    setIsSendingReport(true);
+    setReportStatus(null);
+
+    try {
+      const doc = new jsPDF();
+      const monthName = format(new Date(), 'MMMM yyyy');
+      
+      // Header
+      doc.setFontSize(22);
+      doc.setTextColor(themeColor);
+      doc.text('BunkSafe Attendance Report', 14, 22);
+      
+      doc.setFontSize(12);
+      doc.setTextColor(100);
+      doc.text(`Generated for: ${profile.name}`, 14, 32);
+      doc.text(`Month: ${monthName}`, 14, 38);
+      doc.text(`College: ${profile.college}`, 14, 44);
+      
+      // Stats Summary
+      doc.setFontSize(16);
+      doc.setTextColor(0);
+      doc.text('Monthly Summary', 14, 58);
+      
+      autoTable(doc, {
+        startY: 62,
+        head: [['Metric', 'Value']],
+        body: [
+          ['Total Classes Held', monthlyStats.held.toString()],
+          ['Total Classes Attended', monthlyStats.attended.toString()],
+          ['Attendance Percentage', `${monthlyStats.percentage.toFixed(1)}%`],
+          ['Status', monthlyStats.percentage >= semester.targetAttendance ? 'SAFE' : 'LOW ATTENDANCE']
+        ],
+        theme: 'striped',
+        headStyles: { fillColor: themeColor }
+      });
+
+      // Daily Breakdown
+      const currentMonthDays = eachDayOfInterval({
+        start: startOfMonth(new Date()),
+        end: endOfMonth(new Date())
+      });
+
+      const tableData = currentMonthDays.map(day => {
+        const dateStr = formatDate(day);
+        const record = records[dateStr];
+        return [
+          format(day, 'MMM dd (EEE)'),
+          record ? (record.isHoliday ? 'Holiday' : record.held) : '-',
+          record ? (record.isHoliday ? '-' : record.attended) : '-',
+          record ? (record.isHoliday ? '-' : (record.held > 0 ? `${((record.attended / record.held) * 100).toFixed(0)}%` : '-')) : '-'
+        ];
+      });
+
+      doc.setFontSize(16);
+      doc.text('Daily Breakdown', 14, (doc as any).lastAutoTable.finalY + 15);
+
+      autoTable(doc, {
+        startY: (doc as any).lastAutoTable.finalY + 20,
+        head: [['Date', 'Held', 'Attended', 'Percentage']],
+        body: tableData,
+        theme: 'grid',
+        headStyles: { fillColor: themeColor }
+      });
+
+      // Convert to Base64
+      const pdfBase64 = doc.output('datauristring');
+
+      // Send to Server
+      const response = await fetch('/api/send-report', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: reportEmail,
+          pdfBase64,
+          monthName,
+          userName: profile.name
+        })
+      });
+
+      const result = await response.json();
+
+      if (response.ok) {
+        setReportStatus({ type: 'success', message: 'Report sent successfully to your mail!' });
+      } else {
+        setReportStatus({ type: 'error', message: result.error || 'Failed to send report.' });
+      }
+    } catch (error) {
+      console.error('Error generating/sending report:', error);
+      setReportStatus({ type: 'error', message: 'An unexpected error occurred.' });
+    } finally {
+      setIsSendingReport(false);
+    }
+  };
+
   const renderDashboard = () => {
     const today = getTodayStr();
     const todayRecord = records[today] || { held: 0, attended: 0, isHoliday: false };
@@ -1478,6 +1585,61 @@ export default function App() {
           </div>
         </Card>
         
+        {/* Monthly Report Section */}
+        <Card className="space-y-4">
+          <div className="flex items-center gap-2">
+            <div className="p-2 bg-blue-500/20 rounded-lg text-blue-500">
+              <Mail size={18} />
+            </div>
+            <h3 className="font-bold text-sm uppercase tracking-wider">Monthly Report</h3>
+          </div>
+          <p className="text-xs text-zinc-500">Get a detailed PDF report of your {format(new Date(), 'MMMM')} attendance via email.</p>
+          
+          <div className="space-y-3">
+            <div className="relative">
+              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" size={16} />
+              <input 
+                type="email" 
+                value={reportEmail}
+                onChange={(e) => setReportEmail(e.target.value)}
+                placeholder="Enter your email"
+                className="w-full bg-zinc-800 border border-zinc-700 rounded-xl pl-10 pr-4 py-3 text-sm text-zinc-100 focus:outline-none focus:border-primary transition-all"
+              />
+            </div>
+            
+            <Button 
+              onClick={generateAndSendReport} 
+              disabled={isSendingReport}
+              className="w-full py-3 flex items-center justify-center gap-2"
+            >
+              {isSendingReport ? (
+                <>
+                  <Loader2 size={18} className="animate-spin" />
+                  Sending...
+                </>
+              ) : (
+                <>
+                  <Zap size={18} />
+                  Get This Month Attendance Report
+                </>
+              )}
+            </Button>
+
+            {reportStatus && (
+              <motion.div 
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className={`p-3 rounded-lg text-xs font-medium flex items-center gap-2 ${
+                  reportStatus.type === 'success' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-red-500/10 text-red-500'
+                }`}
+              >
+                {reportStatus.type === 'success' ? <CheckCircle2 size={14} /> : <AlertCircle size={14} />}
+                {reportStatus.message}
+              </motion.div>
+            )}
+          </div>
+        </Card>
+
         {/* Kaif's Special Section */}
         <Card className="relative overflow-hidden border-none bg-gradient-to-br from-indigo-600 to-violet-700 p-0">
           <div className="absolute top-0 right-0 p-4 opacity-20">
