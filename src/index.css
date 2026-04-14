@@ -4,6 +4,9 @@
 @theme {
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+  
+  --color-primary: var(--primary-color, #10b981);
+  --color-primary-hover: var(--primary-hover, #059669);
 }
 
 @layer utilities {

@@ -82,7 +82,7 @@ const Button = ({
   disabled?: boolean
 }) => {
   const variants = {
-    primary: 'bg-emerald-500 text-white hover:bg-emerald-600',
+    primary: 'bg-primary text-white hover:bg-primary-hover',
     secondary: 'bg-zinc-800 text-zinc-100 hover:bg-zinc-700',
     danger: 'bg-red-500/10 text-red-500 border border-red-500/20 hover:bg-red-500/20',
     ghost: 'bg-transparent text-zinc-400 hover:text-zinc-100'
@@ -107,7 +107,7 @@ const Input = ({ label, value, onChange, type = "text", placeholder = "" }: any)
       value={value}
       onChange={(e) => onChange(e.target.value)}
       placeholder={placeholder}
-      className="bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3 text-zinc-100 focus:outline-none focus:border-emerald-500 transition-colors"
+      className="bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3 text-zinc-100 focus:outline-none focus:border-primary transition-colors"
     />
   </div>
 );
@@ -159,6 +159,24 @@ export default function App() {
   const [extraHolidayInput, setExtraHolidayInput] = useState('');
   const [gapDays, setGapDays] = useState<string[]>([]);
   const [currentGapIndex, setCurrentGapIndex] = useState(0);
+
+  const [themeColor, setThemeColor] = useState(() => {
+    return localStorage.getItem('bs_theme_color') || '#10b981';
+  });
+
+  useEffect(() => {
+    document.documentElement.style.setProperty('--primary-color', themeColor);
+    // Simple darken for hover
+    const hex = themeColor.replace('#', '');
+    const r = parseInt(hex.substring(0, 2), 16);
+    const g = parseInt(hex.substring(2, 4), 16);
+    const b = parseInt(hex.substring(4, 6), 16);
+    const darken = (c: number) => Math.max(0, Math.floor(c * 0.85)).toString(16).padStart(2, '0');
+    const hoverColor = `#${darken(r)}${darken(g)}${darken(b)}`;
+    document.documentElement.style.setProperty('--primary-hover', hoverColor);
+    localStorage.setItem('bs_theme_color', themeColor);
+  }, [themeColor]);
+
   const [viewDate, setViewDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<string | null>(getTodayStr());
   const [combiSelectedMonths, setCombiSelectedMonths] = useState<string[]>([]);
@@ -545,7 +563,7 @@ export default function App() {
           exit={{ opacity: 0, scale: 1.2 }}
           className="space-y-4"
         >
-          <div className="w-24 h-24 bg-emerald-500 rounded-3xl mx-auto flex items-center justify-center text-white shadow-2xl shadow-emerald-500/20">
+          <div className="w-24 h-24 bg-primary rounded-3xl mx-auto flex items-center justify-center text-white shadow-2xl shadow-primary/20">
             <CalendarIcon size={48} />
           </div>
           <div className="space-y-1">
@@ -558,7 +576,7 @@ export default function App() {
           initial={{ width: 0 }}
           animate={{ width: "120px" }}
           transition={{ duration: 2, ease: "easeInOut" }}
-          className="h-1 bg-emerald-500 rounded-full mt-12 opacity-50"
+          className="h-1 bg-primary rounded-full mt-12 opacity-50"
         />
       </div>
     );
@@ -619,8 +637,8 @@ export default function App() {
   if (appState === 'LATE_DETECTION') {
     return (
       <div className="min-h-screen bg-zinc-950 text-zinc-100 p-6 flex flex-col justify-center gap-6">
-        <div className="bg-emerald-500/10 border border-emerald-500/20 p-6 rounded-3xl space-y-4">
-          <div className="flex items-center gap-3 text-emerald-500">
+        <div className="bg-primary/10 border border-primary/20 p-6 rounded-3xl space-y-4">
+          <div className="flex items-center gap-3 text-primary">
             <Info size={24} />
             <h3 className="text-xl font-bold">Late Start Detected</h3>
           </div>
@@ -646,7 +664,7 @@ export default function App() {
           </Button>
 
           <Button 
-            className="w-full py-4 bg-emerald-500 text-white font-bold hover:bg-emerald-600 transition-all active:scale-95 rounded-xl" 
+            className="w-full py-4 bg-primary text-white font-bold hover:bg-primary-hover transition-all active:scale-95 rounded-xl" 
             onClick={() => setAppState('TODAY_CONFIRMATION')}
           >
             Start tracking from today
@@ -660,7 +678,7 @@ export default function App() {
     return (
       <div className="min-h-screen bg-zinc-950 text-zinc-100 p-6 flex flex-col justify-center gap-8">
         <div className="space-y-4 text-center">
-          <div className="w-20 h-20 bg-emerald-500/10 border border-emerald-500/20 rounded-full mx-auto flex items-center justify-center text-emerald-500">
+          <div className="w-20 h-20 bg-primary/10 border border-primary/20 rounded-full mx-auto flex items-center justify-center text-primary">
             <AlertCircle size={40} />
           </div>
           <div className="space-y-2">
@@ -727,7 +745,7 @@ export default function App() {
                 <input 
                   type="range" min="0" max="100" value={wizardData.percentage} 
                   onChange={(e) => setWizardData({...wizardData, percentage: parseInt(e.target.value)})}
-                  className="flex-1 accent-emerald-500"
+                  className="flex-1 accent-primary"
                 />
                 <span className="text-2xl font-bold w-16 text-right">{wizardData.percentage}%</span>
               </div>
@@ -789,7 +807,7 @@ export default function App() {
                         : [...wizardData.holidays, i];
                       setWizardData({...wizardData, holidays: h});
                     }}
-                    className={`p-4 rounded-2xl border transition-all ${wizardData.holidays.includes(i) ? 'bg-emerald-500/10 border-emerald-500 text-emerald-500' : 'bg-zinc-900 border-zinc-800 text-zinc-400'}`}
+                    className={`p-4 rounded-2xl border transition-all ${wizardData.holidays.includes(i) ? 'bg-primary/10 border-primary text-primary' : 'bg-zinc-900 border-zinc-800 text-zinc-400'}`}
                   >
                     {day}
                   </button>
@@ -814,7 +832,7 @@ export default function App() {
                   type="date" 
                   value={extraHolidayInput}
                   onChange={(e) => setExtraHolidayInput(e.target.value)}
-                  className="flex-1 bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-2 text-zinc-100 outline-none focus:border-emerald-500 transition-all"
+                  className="flex-1 bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-2 text-zinc-100 outline-none focus:border-primary transition-all"
                 />
                 <Button onClick={() => {
                   if (extraHolidayInput && !wizardData.extraHolidays.includes(extraHolidayInput)) {
@@ -885,7 +903,7 @@ export default function App() {
                     <button
                       key={`gap-held-${num}`}
                       onClick={() => updateAttendance(date, num, Math.min(records[date]?.attended || 0, num), false)}
-                      className={`px-4 py-2 rounded-xl border text-sm font-bold transition-all shrink-0 ${records[date]?.held === num ? 'bg-emerald-500 border-emerald-500 text-white' : 'bg-zinc-800 border-zinc-700 text-zinc-400'}`}
+                      className={`px-4 py-2 rounded-xl border text-sm font-bold transition-all shrink-0 ${records[date]?.held === num ? 'bg-primary border-primary text-white' : 'bg-zinc-800 border-zinc-700 text-zinc-400'}`}
                     >
                       {num}
                     </button>
@@ -900,7 +918,7 @@ export default function App() {
                     const r = records[date] || { held: 0, attended: 0 };
                     updateAttendance(date, r.held, Math.max(0, r.attended - 1), false);
                   }}><Minus /></Button>
-                  <span className="text-5xl font-bold w-12 text-center text-emerald-500">{records[date]?.attended || 0}</span>
+                  <span className="text-5xl font-bold w-12 text-center text-primary">{records[date]?.attended || 0}</span>
                   <Button variant="secondary" className="p-4 rounded-full" onClick={() => {
                     const r = records[date] || { held: 0, attended: 0 };
                     updateAttendance(date, r.held, Math.min(r.held, r.attended + 1), false);
@@ -911,7 +929,7 @@ export default function App() {
                     <button
                       key={`gap-attended-${num}`}
                       onClick={() => updateAttendance(date, records[date]?.held || 0, num, false)}
-                      className={`px-4 py-2 rounded-xl border text-sm font-bold transition-all shrink-0 ${records[date]?.attended === num ? 'bg-emerald-500 border-emerald-500 text-white' : 'bg-zinc-800 border-zinc-700 text-zinc-400'}`}
+                      className={`px-4 py-2 rounded-xl border text-sm font-bold transition-all shrink-0 ${records[date]?.attended === num ? 'bg-primary border-primary text-white' : 'bg-zinc-800 border-zinc-700 text-zinc-400'}`}
                     >
                       {num}
                     </button>
@@ -927,7 +945,7 @@ export default function App() {
                 updateAttendance(date, 0, 0, true);
                 saveGapAttendance(0, 0);
               }}
-              className="w-full py-3 rounded-lg font-bold transition-all active:scale-95 flex items-center justify-center gap-2 bg-emerald-500/10 border border-emerald-500/30 text-emerald-500 hover:bg-emerald-500/20"
+              className="w-full py-3 rounded-lg font-bold transition-all active:scale-95 flex items-center justify-center gap-2 bg-primary/10 border border-primary/30 text-primary hover:bg-primary-hover"
             >
               Mark as Holiday
             </button>
@@ -954,7 +972,7 @@ export default function App() {
             <h1 className="text-2xl font-bold">{profile.name}</h1>
           </div>
           <div className="bg-zinc-900 p-2 rounded-full border border-zinc-800">
-            <User size={24} className="text-emerald-500" />
+            <User size={24} className="text-primary" />
           </div>
         </header>
 
@@ -962,9 +980,9 @@ export default function App() {
           <motion.div 
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="bg-emerald-500/10 border border-emerald-500/20 p-4 rounded-2xl flex items-center justify-between gap-4"
+            className="bg-primary/10 border border-primary/20 p-4 rounded-2xl flex items-center justify-between gap-4"
           >
-            <div className="flex items-center gap-3 text-emerald-500">
+            <div className="flex items-center gap-3 text-primary">
               <AlertCircle size={20} />
               <p className="text-sm font-medium">You missed {missedDays.length} attendance entries.</p>
             </div>
@@ -980,7 +998,7 @@ export default function App() {
                   <p className="text-zinc-500 text-xs uppercase font-bold tracking-wider">Semester Attendance</p>
                   <h2 className="text-4xl font-bold">{stats.percentage.toFixed(1)}%</h2>
                   {semester.initialHeld > 0 && (
-                    <p className="text-[10px] text-emerald-500 font-bold uppercase mt-1 flex items-center gap-1">
+                    <p className="text-[10px] text-primary font-bold uppercase mt-1 flex items-center gap-1">
                       <Info size={10} /> Includes {semester.initialAttended}/{semester.initialHeld} from setup
                     </p>
                   )}
@@ -991,7 +1009,7 @@ export default function App() {
                 <motion.div 
                   initial={{ width: 0 }}
                   animate={{ width: `${Math.min(100, stats.percentage)}%` }}
-                  className={`h-full ${stats.percentage < semester.targetAttendance ? 'bg-red-500' : 'bg-emerald-500'}`}
+                  className={`h-full ${stats.percentage < semester.targetAttendance ? 'bg-red-500' : 'bg-primary'}`}
                 />
               </div>
             </div>
@@ -1005,14 +1023,14 @@ export default function App() {
             </Card>
             <Card className="space-y-2">
               <p className="text-zinc-500 text-xs uppercase font-bold tracking-wider">Target</p>
-              <h3 className="text-2xl font-bold text-emerald-500">{semester.targetAttendance}%</h3>
+              <h3 className="text-2xl font-bold text-primary">{semester.targetAttendance}%</h3>
               <p className="text-zinc-500 text-xs">Current Goal</p>
             </Card>
           </div>
 
-          <Card className={`border-l-4 ${bunkInfo.status === 'SAFE' ? 'border-l-emerald-500' : 'border-l-red-500'}`}>
+          <Card className={`border-l-4 ${bunkInfo.status === 'SAFE' ? 'border-l-primary' : 'border-l-red-500'}`}>
             <div className="flex items-start gap-4">
-              <div className={`p-3 rounded-2xl ${bunkInfo.status === 'SAFE' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-red-500/10 text-red-500'}`}>
+              <div className={`p-3 rounded-2xl ${bunkInfo.status === 'SAFE' ? 'bg-primary/10 text-primary' : 'bg-red-500/10 text-red-500'}`}>
                 {bunkInfo.status === 'SAFE' ? <CheckCircle2 size={24} /> : <AlertCircle size={24} />}
               </div>
               <div className="space-y-1">
@@ -1054,7 +1072,7 @@ export default function App() {
                   <button
                     key={`held-${num}`}
                     onClick={() => updateAttendance(today, num, Math.min(todayRecord.attended, num), false)}
-                    className={`px-4 py-2 rounded-xl border text-sm font-bold transition-all shrink-0 ${todayRecord.held === num ? 'bg-emerald-500 border-emerald-500 text-white' : 'bg-zinc-800 border-zinc-700 text-zinc-400'}`}
+                    className={`px-4 py-2 rounded-xl border text-sm font-bold transition-all shrink-0 ${todayRecord.held === num ? 'bg-primary border-primary text-white' : 'bg-zinc-800 border-zinc-700 text-zinc-400'}`}
                   >
                     {num}
                   </button>
@@ -1071,7 +1089,7 @@ export default function App() {
                 </div>
                 <div className="flex items-center gap-4">
                   <Button variant="secondary" className="p-2" onClick={() => updateAttendance(today, todayRecord.held, Math.max(0, todayRecord.attended - 1), false)}><Minus size={18}/></Button>
-                  <span className="text-2xl font-bold w-6 text-center text-emerald-500">{todayRecord.attended}</span>
+                  <span className="text-2xl font-bold w-6 text-center text-primary">{todayRecord.attended}</span>
                   <Button variant="secondary" className="p-2" onClick={() => updateAttendance(today, todayRecord.held, Math.min(todayRecord.held, todayRecord.attended + 1), false)}><Plus size={18}/></Button>
                 </div>
               </div>
@@ -1080,7 +1098,7 @@ export default function App() {
                   <button
                     key={`attended-${num}`}
                     onClick={() => updateAttendance(today, todayRecord.held, num, false)}
-                    className={`px-4 py-2 rounded-xl border text-sm font-bold transition-all shrink-0 ${todayRecord.attended === num ? 'bg-emerald-500 border-emerald-500 text-white' : 'bg-zinc-800 border-zinc-700 text-zinc-400'}`}
+                    className={`px-4 py-2 rounded-xl border text-sm font-bold transition-all shrink-0 ${todayRecord.attended === num ? 'bg-primary border-primary text-white' : 'bg-zinc-800 border-zinc-700 text-zinc-400'}`}
                   >
                     {num}
                   </button>
@@ -1088,7 +1106,7 @@ export default function App() {
                 {todayRecord.held > 0 && (
                   <button
                     onClick={() => updateAttendance(today, todayRecord.held, todayRecord.held, false)}
-                    className="px-4 py-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 text-sm font-bold shrink-0"
+                    className="px-4 py-2 rounded-xl bg-primary/10 border border-primary/20 text-primary text-sm font-bold shrink-0"
                   >
                     All
                   </button>
@@ -1102,7 +1120,7 @@ export default function App() {
                 className={`w-full py-3 rounded-lg font-bold transition-all active:scale-95 flex items-center justify-center gap-2 shadow-lg ${
                   todayRecord.isHoliday 
                     ? 'bg-blue-600 text-white shadow-blue-500/40 ring-2 ring-white/20' 
-                    : 'bg-emerald-500 text-white opacity-90 hover:opacity-100 shadow-emerald-500/40'
+                    : 'bg-primary text-white opacity-90 hover:opacity-100 shadow-primary/40'
                 }`}
               >
                 {todayRecord.isHoliday ? 'Today is a Holiday' : 'Mark Today as Holiday'}
@@ -1158,9 +1176,9 @@ export default function App() {
                 textColor = 'text-blue-500';
               } else if (record.held > 0) {
                 if (record.attended === record.held) {
-                  bgColor = 'bg-emerald-500/20';
-                  borderColor = 'border-emerald-500/30';
-                  textColor = 'text-emerald-500';
+                  bgColor = 'bg-primary/20';
+                  borderColor = 'border-primary/30';
+                  textColor = 'text-primary';
                 } else if (record.attended === 0) {
                   bgColor = 'bg-red-500/20';
                   borderColor = 'border-red-500/30';
@@ -1183,7 +1201,7 @@ export default function App() {
                 onClick={() => {
                   setSelectedDate(dateStr);
                 }}
-                className={`aspect-square rounded-xl border flex flex-col items-center justify-center relative transition-all active:scale-95 ${bgColor} ${borderColor} ${textColor} ${isToday(day) ? 'ring-2 ring-emerald-500 ring-offset-2 ring-offset-zinc-950' : ''} ${selectedDate === dateStr ? 'ring-2 ring-white ring-offset-2 ring-offset-zinc-950' : ''}`}
+                className={`aspect-square rounded-xl border flex flex-col items-center justify-center relative transition-all active:scale-95 ${bgColor} ${borderColor} ${textColor} ${isToday(day) ? 'ring-2 ring-primary ring-offset-2 ring-offset-zinc-950' : ''} ${selectedDate === dateStr ? 'ring-2 ring-white ring-offset-2 ring-offset-zinc-950' : ''}`}
               >
                 <span className="text-sm font-bold">{format(day, 'd')}</span>
                 {record && record.held > 0 && !record.isHoliday && (
@@ -1207,7 +1225,7 @@ export default function App() {
               exit={{ opacity: 0, y: -10 }}
               className="mt-4"
             >
-              <Card className="border-t-4 border-t-emerald-500">
+              <Card className="border-t-4 border-t-primary">
                 <div className="flex justify-between items-start mb-4">
                   <div>
                     <h3 className="text-lg font-bold">{format(parseISO(selectedDate), 'EEEE, MMM do')}</h3>
@@ -1243,20 +1261,20 @@ export default function App() {
                     <div className="grid grid-cols-2 gap-4">
                       <div className="bg-zinc-800/50 p-4 rounded-2xl text-center border border-zinc-800">
                         <p className="text-zinc-500 text-[10px] uppercase font-bold tracking-widest mb-1">Attended</p>
-                        <p className="text-3xl font-black text-emerald-500">{records[selectedDate].attended}</p>
+                        <p className="text-3xl font-black text-primary">{records[selectedDate].attended}</p>
                       </div>
                       <div className="bg-zinc-800/50 p-4 rounded-2xl text-center border border-zinc-800">
                         <p className="text-zinc-500 text-[10px] uppercase font-bold tracking-widest mb-1">Total Held</p>
                         <p className="text-3xl font-black text-zinc-100">{records[selectedDate].held}</p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-3 bg-emerald-500/5 border border-emerald-500/10 p-3 rounded-xl">
-                      <div className="w-10 h-10 rounded-full bg-emerald-500/20 flex items-center justify-center text-emerald-500">
+                    <div className="flex items-center gap-3 bg-primary/5 border border-primary/10 p-3 rounded-xl">
+                      <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center text-primary">
                         <BarChart3 size={20} />
                       </div>
                       <div>
-                        <p className="text-xs font-bold text-emerald-500/80 uppercase tracking-wider">Daily Percentage</p>
-                        <p className="text-lg font-bold text-emerald-500">
+                        <p className="text-xs font-bold text-primary/80 uppercase tracking-wider">Daily Percentage</p>
+                        <p className="text-lg font-bold text-primary">
                           {((records[selectedDate].attended / records[selectedDate].held) * 100).toFixed(1)}%
                         </p>
                       </div>
@@ -1274,7 +1292,7 @@ export default function App() {
                     <p className="text-zinc-500 font-medium italic">No attendance data recorded for this date.</p>
                     <Button 
                       variant="ghost" 
-                      className="mt-4 text-xs text-emerald-500"
+                      className="mt-4 text-xs text-primary"
                       onClick={() => {
                         const held = prompt("Total classes?", "0");
                         const attended = prompt("Attended classes?", "0");
@@ -1294,7 +1312,7 @@ export default function App() {
 
         <div className="grid grid-cols-2 gap-3">
           <div className="flex items-center gap-2 text-xs text-zinc-500">
-            <div className="w-3 h-3 rounded-full bg-emerald-500/20 border border-emerald-500/30" /> Full Attendance
+            <div className="w-3 h-3 rounded-full bg-primary/20 border border-primary/30" /> Full Attendance
           </div>
           <div className="flex items-center gap-2 text-xs text-zinc-500">
             <div className="w-3 h-3 rounded-full bg-red-500/20 border border-red-500/30" /> Missed All
@@ -1322,14 +1340,14 @@ export default function App() {
         <h1 className="text-2xl font-bold">Analytics</h1>
 
         {lastMonth && (
-          <Card className="bg-emerald-500/10 border-emerald-500/20">
+          <Card className="bg-primary/10 border-primary/20">
             <div className="flex justify-between items-center">
               <div>
-                <p className="text-xs font-bold text-emerald-500 uppercase tracking-widest">Last Month Performance</p>
+                <p className="text-xs font-bold text-primary uppercase tracking-widest">Last Month Performance</p>
                 <h2 className="text-2xl font-black text-white">{lastMonth.month} {new Date().getFullYear()}</h2>
               </div>
               <div className="text-right">
-                <p className="text-3xl font-black text-emerald-500">{lastMonth.percentage.toFixed(1)}%</p>
+                <p className="text-3xl font-black text-primary">{lastMonth.percentage.toFixed(1)}%</p>
                 <p className="text-[10px] text-zinc-500 font-bold uppercase">{lastMonth.attended} / {lastMonth.held} Classes</p>
               </div>
             </div>
@@ -1341,7 +1359,7 @@ export default function App() {
             <h3 className="font-bold text-zinc-400 uppercase text-xs tracking-widest">Semester Progress</h3>
             <div className="flex gap-2">
               <div className="flex items-center gap-1">
-                <div className="w-2 h-2 rounded-full bg-emerald-500" />
+                <div className="w-2 h-2 rounded-full bg-primary" />
                 <span className="text-[8px] text-zinc-500 uppercase font-bold">Completed</span>
               </div>
               <div className="flex items-center gap-1">
@@ -1362,12 +1380,12 @@ export default function App() {
                     animate={{ height: `${Math.min(100, s.percentage)}%` }}
                     className={`w-full rounded-t-lg transition-colors ${
                       s.isCompleted 
-                        ? (s.percentage >= semester.targetAttendance ? 'bg-emerald-500' : 'bg-red-500/50') 
+                        ? (s.percentage >= semester.targetAttendance ? 'bg-primary' : 'bg-red-500/50') 
                         : 'bg-zinc-700'
                     }`}
                   />
                 </div>
-                <span className={`text-[10px] font-bold ${s.isCurrent ? 'text-emerald-500' : 'text-zinc-500'}`}>
+                <span className={`text-[10px] font-bold ${s.isCurrent ? 'text-primary' : 'text-zinc-500'}`}>
                   {s.month}
                 </span>
               </div>
@@ -1395,7 +1413,7 @@ export default function App() {
                   <p className="text-xs text-zinc-500">{h.totalAttended} / {h.totalHeld} classes</p>
                 </div>
                 <div className="text-right">
-                  <p className="text-xl font-bold text-emerald-500">{h.finalPercentage.toFixed(1)}%</p>
+                  <p className="text-xl font-bold text-primary">{h.finalPercentage.toFixed(1)}%</p>
                 </div>
               </Card>
             ))
@@ -1406,9 +1424,59 @@ export default function App() {
   };
 
   const renderSpecial = () => {
+    const themes = [
+      { name: 'Emerald', color: '#10b981' },
+      { name: 'Blue', color: '#3b82f6' },
+      { name: 'Purple', color: '#8b5cf6' },
+      { name: 'Rose', color: '#f43f5e' },
+      { name: 'Orange', color: '#f97316' },
+      { name: 'Amber', color: '#f59e0b' },
+    ];
+
     return (
       <div className="space-y-6 pb-24">
         <h1 className="text-2xl font-bold">Special</h1>
+
+        {/* Theme Customization */}
+        <Card className="space-y-4">
+          <div className="flex items-center gap-2">
+            <div className="p-2 bg-primary/20 rounded-lg text-primary">
+              <Sparkles size={18} />
+            </div>
+            <h3 className="font-bold text-sm uppercase tracking-wider">App Theme</h3>
+          </div>
+          <p className="text-xs text-zinc-500">Choose your favorite color combination for BunkSafe.</p>
+          <div className="grid grid-cols-3 gap-2">
+            {themes.map(t => (
+              <button
+                key={t.name}
+                onClick={() => setThemeColor(t.color)}
+                className={`flex flex-col items-center gap-2 p-3 rounded-xl border transition-all ${themeColor === t.color ? 'bg-primary/10 border-primary' : 'bg-zinc-800/50 border-zinc-700 hover:border-zinc-600'}`}
+              >
+                <div className="w-6 h-6 rounded-full shadow-lg" style={{ backgroundColor: t.color }} />
+                <span className={`text-[10px] font-bold uppercase ${themeColor === t.color ? 'text-primary' : 'text-zinc-500'}`}>{t.name}</span>
+              </button>
+            ))}
+          </div>
+          <div className="pt-2">
+            <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest block mb-2">Custom Hex Color</label>
+            <div className="flex gap-2">
+              <input 
+                type="color" 
+                value={themeColor} 
+                onChange={(e) => setThemeColor(e.target.value)}
+                className="w-10 h-10 rounded-lg bg-zinc-800 border border-zinc-700 cursor-pointer"
+              />
+              <input 
+                type="text" 
+                value={themeColor} 
+                onChange={(e) => setThemeColor(e.target.value)}
+                placeholder="#10b981"
+                className="flex-1 bg-zinc-800 border border-zinc-700 rounded-lg px-3 text-xs font-mono text-zinc-100 focus:outline-none focus:border-primary"
+              />
+            </div>
+          </div>
+        </Card>
         
         {/* Kaif's Special Section */}
         <Card className="relative overflow-hidden border-none bg-gradient-to-br from-indigo-600 to-violet-700 p-0">
@@ -1454,9 +1522,9 @@ export default function App() {
         </Card>
 
         {/* Combi Attendance Section */}
-        <Card className="space-y-4 border-emerald-500/30 bg-emerald-500/5">
+        <Card className="space-y-4 border-primary/30 bg-primary/5">
           <div className="flex items-center gap-2">
-            <div className="p-2 bg-emerald-500/20 rounded-lg text-emerald-500">
+            <div className="p-2 bg-primary/20 rounded-lg text-primary">
               <BarChart3 size={18} />
             </div>
             <h3 className="font-bold text-sm uppercase tracking-wider">Combi Attendance</h3>
@@ -1469,7 +1537,7 @@ export default function App() {
                 onClick={() => toggleCombiMonth(s.month)}
                 className={`px-3 py-1.5 rounded-full text-[10px] font-bold uppercase transition-all border ${
                   combiSelectedMonths.includes(s.month)
-                    ? 'bg-emerald-500 border-emerald-500 text-white shadow-lg shadow-emerald-500/20'
+                    ? 'bg-primary border-primary text-white shadow-lg shadow-primary/20'
                     : 'bg-zinc-800 border-zinc-700 text-zinc-400 hover:border-zinc-600'
                 }`}
               >
@@ -1482,7 +1550,7 @@ export default function App() {
             <motion.div 
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="space-y-4 pt-2 border-t border-emerald-500/10"
+              className="space-y-4 pt-2 border-t border-primary/10"
             >
               <div className="flex justify-between items-end">
                 <div>
@@ -1495,7 +1563,7 @@ export default function App() {
                 <div className="text-right">
                   {combiStats.percentage >= semester.targetAttendance ? (
                     <div className="flex flex-col items-end gap-1">
-                      <div className="flex items-center gap-1 text-emerald-500">
+                      <div className="flex items-center gap-1 text-primary">
                         <CheckCircle2 size={14} />
                         <span className="text-[10px] font-bold uppercase">Safe</span>
                       </div>
@@ -1518,7 +1586,7 @@ export default function App() {
                 {semesterMonthlyStats.filter(s => combiSelectedMonths.includes(s.month)).map(s => (
                   <div key={s.month} className="bg-zinc-900/50 p-2 rounded-xl border border-zinc-800 flex justify-between items-center">
                     <span className="text-[10px] font-bold text-zinc-400 uppercase">{s.month}</span>
-                    <span className={`text-xs font-bold ${s.percentage >= semester.targetAttendance ? 'text-emerald-500' : 'text-red-500'}`}>
+                    <span className={`text-xs font-bold ${s.percentage >= semester.targetAttendance ? 'text-primary' : 'text-red-500'}`}>
                       {s.percentage.toFixed(1)}%
                     </span>
                   </div>
@@ -1549,7 +1617,7 @@ export default function App() {
         </header>
 
         <div className="flex flex-col items-center gap-4 py-6">
-          <div className="w-24 h-24 bg-emerald-500 rounded-full flex items-center justify-center text-4xl font-bold text-white shadow-xl shadow-emerald-500/20">
+          <div className="w-24 h-24 bg-primary rounded-full flex items-center justify-center text-4xl font-bold text-white shadow-xl shadow-primary/20">
             {profile.name.charAt(0)}
           </div>
           <div className="text-center">
@@ -1581,7 +1649,7 @@ export default function App() {
           <h3 className="text-zinc-500 uppercase text-xs font-bold tracking-widest">Notifications</h3>
           <Card className="flex justify-between items-center">
             <div className="flex items-center gap-3">
-              <div className={`p-2 rounded-lg ${notificationPermission === 'granted' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-zinc-800 text-zinc-500'}`}>
+              <div className={`p-2 rounded-lg ${notificationPermission === 'granted' ? 'bg-primary/10 text-primary' : 'bg-zinc-800 text-zinc-500'}`}>
                 {notificationPermission === 'granted' ? <Bell size={20} /> : <BellOff size={20} />}
               </div>
               <div>
@@ -1607,7 +1675,7 @@ export default function App() {
               <button 
                 key={t}
                 onClick={() => setSemester({...semester, targetAttendance: t})}
-                className={`p-4 rounded-2xl border transition-all font-bold ${semester.targetAttendance === t ? 'bg-emerald-500 border-emerald-500 text-white' : 'bg-zinc-900 border-zinc-800 text-zinc-400'}`}
+                className={`p-4 rounded-2xl border transition-all font-bold ${semester.targetAttendance === t ? 'bg-primary border-primary text-white' : 'bg-zinc-900 border-zinc-800 text-zinc-400'}`}
               >
                 {t}%
               </button>
@@ -1653,7 +1721,7 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-zinc-100 font-sans selection:bg-emerald-500/30">
+    <div className="min-h-screen bg-zinc-950 text-zinc-100 font-sans selection:bg-primary/30">
       <main className="max-w-md mx-auto p-6">
         <AnimatePresence mode="wait">
           <motion.div
@@ -1674,9 +1742,9 @@ export default function App() {
       </main>
 
       {/* Online Status Floating Badge */}
-      <div className="fixed bottom-20 left-4 z-40 flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/20 px-3 py-1.5 rounded-full backdrop-blur-md">
-        <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
-        <span className="text-[10px] font-bold text-emerald-500 uppercase tracking-wider">{onlineCount} Live Users</span>
+      <div className="fixed bottom-20 left-4 z-40 flex items-center gap-2 bg-primary/10 border border-primary/20 px-3 py-1.5 rounded-full backdrop-blur-md">
+        <div className="w-1.5 h-1.5 bg-primary rounded-full animate-pulse" />
+        <span className="text-[10px] font-bold text-primary uppercase tracking-wider">{onlineCount} Live Users</span>
       </div>
 
       {/* Bottom Navigation */}
@@ -1698,9 +1766,9 @@ function NavButton({ active, onClick, icon, label }: any) {
   return (
     <button 
       onClick={onClick}
-      className={`flex flex-col items-center gap-1 transition-all ${active ? 'text-emerald-500' : 'text-zinc-500'}`}
+      className={`flex flex-col items-center gap-1 transition-all ${active ? 'text-primary' : 'text-zinc-500'}`}
     >
-      <div className={`p-1 rounded-xl transition-all ${active ? 'bg-emerald-500/10' : ''}`}>
+      <div className={`p-1 rounded-xl transition-all ${active ? 'bg-primary/10' : ''}`}>
         {icon}
       </div>
       <span className="text-[10px] font-bold uppercase tracking-tighter">{label}</span>
