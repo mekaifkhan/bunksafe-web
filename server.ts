@@ -6,6 +6,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import nodemailer from "nodemailer";
 import dotenv from "dotenv";
+import cors from "cors";
 
 dotenv.config();
 
@@ -14,6 +15,16 @@ const __dirname = path.dirname(__filename);
 
 async function startServer() {
   const app = express();
+  
+  // Basic middleware
+  app.use(cors());
+  app.use(express.json({ limit: '50mb' }));
+  app.use(express.urlencoded({ limit: '50mb', extended: true }));
+
+  app.use((req, res, next) => {
+    console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
+    next();
+  });
   const server = createServer(app);
   const wss = new WebSocketServer({ server });
 
@@ -48,54 +59,73 @@ async function startServer() {
   }
 
   // API Routes
-  app.use(express.json({ limit: '10mb' }));
-  app.use(express.urlencoded({ limit: '10mb', extended: true }));
-
   app.get("/api/health", (req, res) => {
-    res.json({ status: "ok" });
+    res.json({ status: "ok", version: "1.0.2", timestamp: new Date().toISOString() });
   });
 
-  app.post("/api/send-report", async (req, res) => {
+  const handleSendEmail = async (req: express.Request, res: express.Response) => {
     const { email, pdfBase64, monthName, userName } = req.body;
 
+    console.log(`Attempting to send report to: ${email}`);
+
     if (!email || !pdfBase64) {
-      return res.status(400).json({ error: "Email and PDF data are required" });
+      return res.status(400).json({ 
+        success: false, 
+        error: "Missing required fields", 
+        details: { email: !!email, pdf: !!pdfBase64 } 
+      });
     }
 
-    if (process.env.SMTP_USER && process.env.SMTP_PASS) {
+    const smtpUser = process.env.SMTP_USER;
+    const smtpPass = process.env.SMTP_PASS;
+
+    if (smtpUser && smtpPass) {
       try {
         const transporter = nodemailer.createTransport({
           service: process.env.SMTP_SERVICE || 'gmail',
           auth: {
-            user: process.env.SMTP_USER,
-            pass: process.env.SMTP_PASS,
+            user: smtpUser,
+            pass: smtpPass,
           },
         });
 
         const mailOptions = {
-          from: process.env.SMTP_USER,
+          from: `"BunkSafe" <${smtpUser}>`,
           to: email,
-          subject: `BunkSafe Attendance Report - ${monthName}`,
-          text: `Hi ${userName},\n\nPlease find attached your attendance report for ${monthName}.\n\nStay safe and keep tracking!\n\nBest regards,\nBunkSafe Team`,
+          subject: `BunkSafe Attendance Report - ${monthName || 'Current Month'}`,
+          text: `Hi ${userName || 'User'},\n\nPlease find attached your attendance report.\n\nStay safe and keep tracking!\n\nBest regards,\nBunkSafe Team`,
           attachments: [
             {
-              filename: `Attendance_Report_${monthName.replace(/\s+/g, '_')}.pdf`,
-              content: pdfBase64.split("base64,")[1],
+              filename: `Attendance_Report_${(monthName || 'Report').replace(/\s+/g, '_')}.pdf`,
+              content: pdfBase64.includes("base64,") ? pdfBase64.split("base64,")[1] : pdfBase64,
               encoding: 'base64'
             }
           ]
         };
 
         await transporter.sendMail(mailOptions);
-        res.json({ success: true, message: "Report sent successfully" });
-      } catch (error) {
+        console.log(`Email sent successfully to ${email}`);
+        return res.json({ success: true, message: "Report sent successfully" });
+      } catch (error: any) {
         console.error("Error sending report email:", error);
-        res.status(500).json({ error: "Failed to send email" });
+        return res.status(500).json({ 
+          success: false, 
+          error: "Failed to send email", 
+          message: error.message 
+        });
       }
     } else {
-      res.status(503).json({ error: "Email service not configured. Please set SMTP_USER and SMTP_PASS in environment variables." });
+      console.error("SMTP credentials missing in environment variables");
+      return res.status(503).json({ 
+        success: false, 
+        error: "Email service not configured", 
+        message: "Please set SMTP_USER and SMTP_PASS in environment variables." 
+      });
     }
-  });
+  };
+
+  app.post("/api/send-email", handleSendEmail);
+  app.post("/api/v1/send-report", handleSendEmail);
 
   app.post("/api/notify-setup", async (req, res) => {
     const profile = req.body;
@@ -141,6 +171,15 @@ async function startServer() {
     }
 
     res.json({ success: true });
+  });
+
+  // Catch-all for unhandled API routes
+  app.all("/api/*", (req, res) => {
+    res.status(404).json({ 
+      success: false, 
+      error: "API Route Not Found", 
+      message: `The endpoint ${req.method} ${req.originalUrl} does not exist.` 
+    });
   });
 
   // Vite middleware for development

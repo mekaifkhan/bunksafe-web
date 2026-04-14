@@ -1054,9 +1054,12 @@ export default function App() {
       const pdfBase64 = doc.output('datauristring');
 
       // Send to Server
-      const response = await fetch('/api/send-report', {
+      const response = await fetch('/api/send-email', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
         body: JSON.stringify({
           email: reportEmail,
           pdfBase64,
@@ -1066,16 +1069,20 @@ export default function App() {
       });
 
       let result;
-      try {
+      const contentType = response.headers.get("content-type");
+      
+      if (contentType && contentType.indexOf("application/json") !== -1) {
         result = await response.json();
-      } catch (e) {
+      } else {
+        const text = await response.text();
+        console.error("Server returned non-JSON response:", text);
         throw new Error(`Server returned non-JSON response: ${response.status} ${response.statusText}`);
       }
 
-      if (response.ok) {
+      if (response.ok && result.success) {
         setReportStatus({ type: 'success', message: 'Report sent successfully to your mail!' });
       } else {
-        setReportStatus({ type: 'error', message: result.error || 'Failed to send report.' });
+        setReportStatus({ type: 'error', message: result.error || result.message || 'Failed to send report.' });
       }
     } catch (error) {
       console.error('Error generating/sending report:', error);
