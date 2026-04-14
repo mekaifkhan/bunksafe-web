@@ -27,7 +27,8 @@ import {
   TrendingUp,
   Zap,
   Mail,
-  Loader2
+  Loader2,
+  Download
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { jsPDF } from 'jspdf';
@@ -967,7 +968,95 @@ export default function App() {
 
   // --- Main Dashboard ---
 
-  const generateAndSendReport = async () => {
+  const generatePDF = () => {
+    const doc = new jsPDF();
+    const monthName = format(new Date(), 'MMMM yyyy');
+    
+    // Helper to convert hex to RGB
+    const hexToRgb = (hex: string) => {
+      let h = hex.replace('#', '');
+      if (h.length === 3) {
+        h = h.split('').map(char => char + char).join('');
+      }
+      const r = parseInt(h.substring(0, 2), 16) || 0;
+      const g = parseInt(h.substring(2, 4), 16) || 0;
+      const b = parseInt(h.substring(4, 6), 16) || 0;
+      return { r, g, b };
+    };
+    const rgb = hexToRgb(themeColor);
+    
+    // Header
+    doc.setFontSize(22);
+    doc.setTextColor(rgb.r, rgb.g, rgb.b);
+    doc.text('BunkSafe Attendance Report', 14, 22);
+    
+    doc.setFontSize(12);
+    doc.setTextColor(100, 100, 100);
+    doc.text(`Generated for: ${profile.name}`, 14, 32);
+    doc.text(`Month: ${monthName}`, 14, 38);
+    doc.text(`College: ${profile.college}`, 14, 44);
+    
+    // Stats Summary
+    doc.setFontSize(16);
+    doc.setTextColor(0, 0, 0);
+    doc.text('Monthly Summary', 14, 58);
+    
+    autoTable(doc, {
+      startY: 62,
+      head: [['Metric', 'Value']],
+      body: [
+        ['Total Classes Held', monthlyStats.held.toString()],
+        ['Total Classes Attended', monthlyStats.attended.toString()],
+        ['Attendance Percentage', `${monthlyStats.percentage.toFixed(1)}%`],
+        ['Status', monthlyStats.percentage >= semester.targetAttendance ? 'SAFE' : 'LOW ATTENDANCE']
+      ],
+      theme: 'striped',
+      headStyles: { fillColor: [rgb.r, rgb.g, rgb.b] }
+    });
+
+    // Daily Breakdown
+    const currentMonthDays = eachDayOfInterval({
+      start: startOfMonth(new Date()),
+      end: endOfMonth(new Date())
+    });
+
+    const tableData = currentMonthDays.map(day => {
+      const dateStr = formatDate(day);
+      const record = records[dateStr];
+      return [
+        format(day, 'MMM dd (EEE)'),
+        record ? (record.isHoliday ? 'Holiday' : record.held) : '-',
+        record ? (record.isHoliday ? '-' : record.attended) : '-',
+        record ? (record.isHoliday ? '-' : (record.held > 0 ? `${((record.attended / record.held) * 100).toFixed(0)}%` : '-')) : '-'
+      ];
+    });
+
+    doc.setFontSize(16);
+    doc.text('Daily Breakdown', 14, (doc as any).lastAutoTable.finalY + 15);
+
+    autoTable(doc, {
+      startY: (doc as any).lastAutoTable.finalY + 20,
+      head: [['Date', 'Held', 'Attended', 'Percentage']],
+      body: tableData,
+      theme: 'grid',
+      headStyles: { fillColor: [rgb.r, rgb.g, rgb.b] }
+    });
+
+    return { doc, monthName };
+  };
+
+  const handleDownloadReport = () => {
+    try {
+      const { doc, monthName } = generatePDF();
+      doc.save(`Attendance_Report_${monthName.replace(/\s+/g, '_')}.pdf`);
+      setReportStatus({ type: 'success', message: 'Report downloaded successfully!' });
+    } catch (error) {
+      console.error('Error downloading report:', error);
+      setReportStatus({ type: 'error', message: 'Failed to download report.' });
+    }
+  };
+
+  const handleEmailReport = async () => {
     if (!reportEmail) {
       setReportStatus({ type: 'error', message: 'Please enter an email address.' });
       return;
@@ -977,79 +1066,8 @@ export default function App() {
     setReportStatus(null);
 
     try {
-      const doc = new jsPDF();
-      const monthName = format(new Date(), 'MMMM yyyy');
+      const { doc, monthName } = generatePDF();
       
-      // Helper to convert hex to RGB
-      const hexToRgb = (hex: string) => {
-        let h = hex.replace('#', '');
-        if (h.length === 3) {
-          h = h.split('').map(char => char + char).join('');
-        }
-        const r = parseInt(h.substring(0, 2), 16) || 0;
-        const g = parseInt(h.substring(2, 4), 16) || 0;
-        const b = parseInt(h.substring(4, 6), 16) || 0;
-        return { r, g, b };
-      };
-      const rgb = hexToRgb(themeColor);
-      
-      // Header
-      doc.setFontSize(22);
-      doc.setTextColor(rgb.r, rgb.g, rgb.b);
-      doc.text('BunkSafe Attendance Report', 14, 22);
-      
-      doc.setFontSize(12);
-      doc.setTextColor(100, 100, 100);
-      doc.text(`Generated for: ${profile.name}`, 14, 32);
-      doc.text(`Month: ${monthName}`, 14, 38);
-      doc.text(`College: ${profile.college}`, 14, 44);
-      
-      // Stats Summary
-      doc.setFontSize(16);
-      doc.setTextColor(0, 0, 0);
-      doc.text('Monthly Summary', 14, 58);
-      
-      autoTable(doc, {
-        startY: 62,
-        head: [['Metric', 'Value']],
-        body: [
-          ['Total Classes Held', monthlyStats.held.toString()],
-          ['Total Classes Attended', monthlyStats.attended.toString()],
-          ['Attendance Percentage', `${monthlyStats.percentage.toFixed(1)}%`],
-          ['Status', monthlyStats.percentage >= semester.targetAttendance ? 'SAFE' : 'LOW ATTENDANCE']
-        ],
-        theme: 'striped',
-        headStyles: { fillColor: [rgb.r, rgb.g, rgb.b] }
-      });
-
-      // Daily Breakdown
-      const currentMonthDays = eachDayOfInterval({
-        start: startOfMonth(new Date()),
-        end: endOfMonth(new Date())
-      });
-
-      const tableData = currentMonthDays.map(day => {
-        const dateStr = formatDate(day);
-        const record = records[dateStr];
-        return [
-          format(day, 'MMM dd (EEE)'),
-          record ? (record.isHoliday ? 'Holiday' : record.held) : '-',
-          record ? (record.isHoliday ? '-' : record.attended) : '-',
-          record ? (record.isHoliday ? '-' : (record.held > 0 ? `${((record.attended / record.held) * 100).toFixed(0)}%` : '-')) : '-'
-        ];
-      });
-
-      doc.setFontSize(16);
-      doc.text('Daily Breakdown', 14, (doc as any).lastAutoTable.finalY + 15);
-
-      autoTable(doc, {
-        startY: (doc as any).lastAutoTable.finalY + 20,
-        head: [['Date', 'Held', 'Attended', 'Percentage']],
-        body: tableData,
-        theme: 'grid',
-        headStyles: { fillColor: [rgb.r, rgb.g, rgb.b] }
-      });
-
       // Convert to Base64
       const pdfBase64 = doc.output('datauristring');
 
@@ -1621,6 +1639,24 @@ export default function App() {
           <p className="text-xs text-zinc-500">Get a detailed PDF report of your {format(new Date(), 'MMMM')} attendance via email.</p>
           
           <div className="space-y-3">
+            <Button 
+              onClick={handleDownloadReport} 
+              variant="secondary"
+              className="w-full py-3 flex items-center justify-center gap-2 border-zinc-700 hover:bg-zinc-800"
+            >
+              <Download size={18} />
+              Download Report (PDF)
+            </Button>
+
+            <div className="relative pt-2">
+              <div className="absolute inset-0 flex items-center" aria-hidden="true">
+                <div className="w-full border-t border-zinc-800"></div>
+              </div>
+              <div className="relative flex justify-center text-[10px] uppercase font-bold tracking-widest">
+                <span className="bg-zinc-900 px-2 text-zinc-500">Or Send via Email</span>
+              </div>
+            </div>
+
             <div className="relative">
               <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" size={16} />
               <input 
@@ -1633,7 +1669,7 @@ export default function App() {
             </div>
             
             <Button 
-              onClick={generateAndSendReport} 
+              onClick={handleEmailReport} 
               disabled={isSendingReport}
               className="w-full py-3 flex items-center justify-center gap-2"
             >
@@ -1644,8 +1680,8 @@ export default function App() {
                 </>
               ) : (
                 <>
-                  <Zap size={18} />
-                  Get This Month Attendance Report
+                  <Mail size={18} />
+                  Email Me The Report
                 </>
               )}
             </Button>

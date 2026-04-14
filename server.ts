@@ -77,7 +77,7 @@ async function startServer() {
     }
 
     const smtpUser = process.env.SMTP_USER;
-    const smtpPass = process.env.SMTP_PASS;
+    const smtpPass = process.env.SMTP_PASS?.replace(/\s+/g, '');
 
     if (smtpUser && smtpPass) {
       try {
@@ -199,6 +199,8 @@ async function startServer() {
   const PORT = 3000;
   server.listen(PORT, "0.0.0.0", () => {
     console.log(`Server running on http://localhost:${PORT}`);
+    console.log(`SMTP Configured: ${!!process.env.SMTP_USER && !!process.env.SMTP_PASS}`);
+    if (process.env.SMTP_USER) console.log(`SMTP User: ${process.env.SMTP_USER}`);
   });
 }
 
