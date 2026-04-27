@@ -166,6 +166,11 @@ export default function App() {
     if (!profile.name) return 'WELCOME';
     if (!profile.email) return 'EMAIL_COLLECTION';
     if (!semester.isInitialized) return 'SEMESTER_SETUP';
+    if (semester.endDate) {
+      const end = startOfDay(parseISO(semester.endDate));
+      const today = startOfDay(new Date());
+      if (isAfter(today, end)) return 'SEMESTER_END_REPORT';
+    }
     return 'MAIN';
   });
 
@@ -207,6 +212,170 @@ export default function App() {
   // Calculations
   const stats = useMemo(() => calculateAttendance(records, semester.initialHeld, semester.initialAttended, semester.startDate, exams), [records, semester, exams]);
   const bunkInfo = useMemo(() => calculateBunkInfo(stats.totalHeld, stats.totalAttended, semester.targetAttendance), [stats, semester]);
+
+  // Auto-end semester check
+  useEffect(() => {
+    if (semester.isInitialized && semester.endDate && appState === 'MAIN') {
+      const end = startOfDay(parseISO(semester.endDate));
+      const today = startOfDay(new Date());
+      if (isAfter(today, end)) {
+        setAppState('SEMESTER_END_REPORT');
+      }
+    }
+  }, [semester, appState]);
+
+  const generatePDF = () => {
+    const doc = new jsPDF();
+    const monthName = format(new Date(), 'MMMM yyyy');
+    
+    // Helper to convert hex to RGB
+    const hexToRgb = (hex: string) => {
+      let h = hex.replace('#', '');
+      if (h.length === 3) {
+        h = h.split('').map(char => char + char).join('');
+      }
+      const r = parseInt(h.substring(0, 2), 16) || 0;
+      const g = parseInt(h.substring(2, 4), 16) || 0;
+      const b = parseInt(h.substring(4, 6), 16) || 0;
+      return { r, g, b };
+    };
+    const rgb = hexToRgb(themeColor);
+    
+    // Header
+    doc.setFontSize(22);
+    doc.setTextColor(rgb.r, rgb.g, rgb.b);
+    doc.text('BunkSafe Attendance Report', 14, 22);
+    
+    doc.setFontSize(12);
+    doc.setTextColor(100, 100, 100);
+    doc.text(`Generated for: ${profile.name}`, 14, 32);
+    doc.text(`Month: ${monthName}`, 14, 38);
+    doc.text(`College: ${profile.college}`, 14, 44);
+    
+    // Stats Summary
+    doc.setFontSize(16);
+    doc.setTextColor(0, 0, 0);
+    doc.text('Monthly Summary', 14, 58);
+    
+    autoTable(doc, {
+      startY: 62,
+      head: [['Metric', 'Value']],
+      body: [
+        ['Total Classes Held', monthlyStats.held.toString()],
+        ['Total Classes Attended', monthlyStats.attended.toString()],
+        ['Attendance Percentage', `${monthlyStats.percentage.toFixed(1)}%`],
+        ['Status', monthlyStats.percentage >= semester.targetAttendance ? 'SAFE' : 'LOW ATTENDANCE']
+      ],
+      theme: 'striped',
+      headStyles: { fillColor: [rgb.r, rgb.g, rgb.b] }
+    });
+
+    // Daily Breakdown
+    const currentMonthDays = eachDayOfInterval({
+      start: startOfMonth(new Date()),
+      end: endOfMonth(new Date())
+    });
+
+    const tableData = currentMonthDays.map(day => {
+      const dateStr = formatDate(day);
+      const record = records[dateStr];
+      return [
+        format(day, 'MMM dd (EEE)'),
+        record ? (record.isHoliday ? 'Holiday' : record.held) : '-',
+        record ? (record.isHoliday ? '-' : record.attended) : '-',
+        record ? (record.isHoliday ? '-' : (record.held > 0 ? `${((record.attended / record.held) * 100).toFixed(0)}%` : '-')) : '-'
+      ];
+    });
+
+    doc.setFontSize(16);
+    doc.text('Daily Breakdown', 14, (doc as any).lastAutoTable.finalY + 15);
+
+    autoTable(doc, {
+      startY: (doc as any).lastAutoTable.finalY + 20,
+      head: [['Date', 'Held', 'Attended', 'Percentage']],
+      body: tableData,
+      theme: 'grid',
+      headStyles: { fillColor: [rgb.r, rgb.g, rgb.b] }
+    });
+
+    return { doc, monthName };
+  };
+
+  const handleDownloadReport = () => {
+    try {
+      const { doc, monthName } = generatePDF();
+      doc.save(`Attendance_Report_${monthName.replace(/\s+/g, '_')}.pdf`);
+      setReportStatus({ type: 'success', message: 'Report downloaded successfully!' });
+    } catch (error) {
+      console.error('Error downloading report:', error);
+      setReportStatus({ type: 'error', message: 'Failed to download report.' });
+    }
+  };
+
+  const renderSemesterEndReport = () => {
+    return (
+      <div className="space-y-6 flex flex-col items-center justify-center min-h-[80vh] text-center p-4">
+        <motion.div 
+          initial={{ scale: 0.5, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          className="w-20 h-20 bg-primary/20 rounded-full flex items-center justify-center text-primary mb-2"
+        >
+          <CheckCircle2 size={40} />
+        </motion.div>
+        
+        <h1 className="text-3xl font-black tracking-tight">Semester Completed!</h1>
+        <p className="text-zinc-500 max-w-xs">Your semester has officially ended according to your scheduled dates. Here is your final summary.</p>
+        
+        <Card className="w-full space-y-4 py-8">
+          <div className="flex flex-col items-center">
+            <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-[0.2em] mb-1">Final Attendance Score</p>
+            <h2 className="text-6xl font-black text-primary">{stats.percentage.toFixed(1)}%</h2>
+          </div>
+          
+          <div className="grid grid-cols-2 gap-4 pt-4 border-t border-zinc-800">
+            <div>
+              <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Total Classes</p>
+              <p className="text-xl font-bold">{stats.totalHeld}</p>
+            </div>
+            <div>
+              <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Attended</p>
+              <p className="text-xl font-bold">{stats.totalAttended}</p>
+            </div>
+          </div>
+        </Card>
+
+        <div className="w-full space-y-3">
+          <Button 
+            className="w-full py-4 text-lg" 
+            onClick={() => {
+              const h: SemesterHistory = {
+                id: Date.now().toString(),
+                startDate: semester.startDate,
+                endDate: semester.endDate,
+                finalPercentage: stats.percentage,
+                totalHeld: stats.totalHeld,
+                totalAttended: stats.totalAttended
+              };
+              setHistory([h, ...history]);
+              setSemester({ startDate: '', endDate: '', targetAttendance: 75, isInitialized: false });
+              setRecords({});
+              setExams([]); // Clear exams for new semester
+              setAppState('SEMESTER_SETUP');
+            }}
+          >
+            Start New Semester
+          </Button>
+          <Button 
+            variant="secondary" 
+            className="w-full py-2 flex items-center justify-center gap-2"
+            onClick={handleDownloadReport}
+          >
+            <Download size={16} /> Download Final Report
+          </Button>
+        </div>
+      </div>
+    );
+  };
 
   const semesterMonthlyStats = useMemo(() => {
     if (!semester.startDate) return [];
@@ -988,95 +1157,16 @@ export default function App() {
     );
   }
 
+  if (appState === 'SEMESTER_END_REPORT') {
+    return (
+      <div className="min-h-screen bg-zinc-950 text-zinc-100 font-sans p-4">
+        {renderSemesterEndReport()}
+      </div>
+    );
+  }
+
   // --- Main Dashboard ---
 
-  const generatePDF = () => {
-    const doc = new jsPDF();
-    const monthName = format(new Date(), 'MMMM yyyy');
-    
-    // Helper to convert hex to RGB
-    const hexToRgb = (hex: string) => {
-      let h = hex.replace('#', '');
-      if (h.length === 3) {
-        h = h.split('').map(char => char + char).join('');
-      }
-      const r = parseInt(h.substring(0, 2), 16) || 0;
-      const g = parseInt(h.substring(2, 4), 16) || 0;
-      const b = parseInt(h.substring(4, 6), 16) || 0;
-      return { r, g, b };
-    };
-    const rgb = hexToRgb(themeColor);
-    
-    // Header
-    doc.setFontSize(22);
-    doc.setTextColor(rgb.r, rgb.g, rgb.b);
-    doc.text('BunkSafe Attendance Report', 14, 22);
-    
-    doc.setFontSize(12);
-    doc.setTextColor(100, 100, 100);
-    doc.text(`Generated for: ${profile.name}`, 14, 32);
-    doc.text(`Month: ${monthName}`, 14, 38);
-    doc.text(`College: ${profile.college}`, 14, 44);
-    
-    // Stats Summary
-    doc.setFontSize(16);
-    doc.setTextColor(0, 0, 0);
-    doc.text('Monthly Summary', 14, 58);
-    
-    autoTable(doc, {
-      startY: 62,
-      head: [['Metric', 'Value']],
-      body: [
-        ['Total Classes Held', monthlyStats.held.toString()],
-        ['Total Classes Attended', monthlyStats.attended.toString()],
-        ['Attendance Percentage', `${monthlyStats.percentage.toFixed(1)}%`],
-        ['Status', monthlyStats.percentage >= semester.targetAttendance ? 'SAFE' : 'LOW ATTENDANCE']
-      ],
-      theme: 'striped',
-      headStyles: { fillColor: [rgb.r, rgb.g, rgb.b] }
-    });
-
-    // Daily Breakdown
-    const currentMonthDays = eachDayOfInterval({
-      start: startOfMonth(new Date()),
-      end: endOfMonth(new Date())
-    });
-
-    const tableData = currentMonthDays.map(day => {
-      const dateStr = formatDate(day);
-      const record = records[dateStr];
-      return [
-        format(day, 'MMM dd (EEE)'),
-        record ? (record.isHoliday ? 'Holiday' : record.held) : '-',
-        record ? (record.isHoliday ? '-' : record.attended) : '-',
-        record ? (record.isHoliday ? '-' : (record.held > 0 ? `${((record.attended / record.held) * 100).toFixed(0)}%` : '-')) : '-'
-      ];
-    });
-
-    doc.setFontSize(16);
-    doc.text('Daily Breakdown', 14, (doc as any).lastAutoTable.finalY + 15);
-
-    autoTable(doc, {
-      startY: (doc as any).lastAutoTable.finalY + 20,
-      head: [['Date', 'Held', 'Attended', 'Percentage']],
-      body: tableData,
-      theme: 'grid',
-      headStyles: { fillColor: [rgb.r, rgb.g, rgb.b] }
-    });
-
-    return { doc, monthName };
-  };
-
-  const handleDownloadReport = () => {
-    try {
-      const { doc, monthName } = generatePDF();
-      doc.save(`Attendance_Report_${monthName.replace(/\s+/g, '_')}.pdf`);
-      setReportStatus({ type: 'success', message: 'Report downloaded successfully!' });
-    } catch (error) {
-      console.error('Error downloading report:', error);
-      setReportStatus({ type: 'error', message: 'Failed to download report.' });
-    }
-  };
 
   const handleEmailReport = async () => {
     if (!reportEmail) {
@@ -1156,9 +1246,16 @@ export default function App() {
     setExams(prev => prev.filter(e => e.id !== id));
   };
 
+
   const ExamModal = () => {
     const [type, setType] = useState<'Mid-sem' | 'End-sem'>(editingExam?.type || 'Mid-sem');
-    const [midSemNum, setMidSemNum] = useState(editingExam?.label.split(' ').pop() || '1');
+    const [midSemNum, setMidSemNum] = useState(() => {
+      if (!editingExam) return '1';
+      if (editingExam.type === 'End-sem') return '1';
+      const lastPart = editingExam.label.split(' ').pop();
+      if (['1', '2', '3'].includes(lastPart || '')) return lastPart || '1';
+      return 'Other';
+    });
     const [customLabel, setCustomLabel] = useState(editingExam?.label || '');
     const [startDate, setStartDate] = useState(editingExam?.startDate || getTodayStr());
     const [endDate, setEndDate] = useState(editingExam?.endDate || getTodayStr());
@@ -1257,7 +1354,7 @@ export default function App() {
             </div>
 
             <Button type="submit" className="w-full py-4 text-lg mt-4">
-              {editingExam ? 'Update Exam' : 'Add to Schedule'}
+              {editingExam ? 'Save Changes' : 'Add to Schedule'}
             </Button>
           </form>
         </motion.div>
@@ -1930,16 +2027,17 @@ export default function App() {
                       </p>
                     </div>
                   </div>
-                  <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <div className="flex gap-2">
                     <button 
                       onClick={() => { setEditingExam(exam); setShowExamModal(true); }}
-                      className="p-2 text-zinc-400 hover:text-primary transition-colors"
+                      className="flex items-center gap-1 px-2 py-1 rounded-lg bg-zinc-700/50 text-zinc-300 hover:text-primary hover:bg-primary/10 transition-all text-[10px] font-bold uppercase"
                     >
-                      <Edit2 size={16} />
+                      <Edit2 size={12} />
+                      Edit
                     </button>
                     <button 
                       onClick={() => handleDeleteExam(exam.id)}
-                      className="p-2 text-zinc-400 hover:text-red-500 transition-colors"
+                      className="p-2 text-zinc-500 hover:text-red-500 transition-colors"
                     >
                       <Trash2 size={16} />
                     </button>
