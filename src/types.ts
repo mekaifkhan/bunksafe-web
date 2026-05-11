@@ -5,9 +5,11 @@ export interface Profile {
   department: string;
   semester: string;
   mobile: string;
+  avatar?: string;
 }
 
 export interface Semester {
+  title?: string;
   startDate: string; // ISO string
   endDate: string; // ISO string
   targetAttendance: number; // e.g., 75
@@ -27,6 +29,7 @@ export interface AttendanceRecord {
 
 export interface SemesterHistory {
   id: string;
+  title?: string;
   startDate: string;
   endDate: string;
   finalPercentage: number;

@@ -130,7 +130,7 @@ export default function App() {
   // Persistence
   const [profile, setProfile] = useState<Profile>(() => {
     const saved = localStorage.getItem('bs_profile');
-    const defaultProfile = { name: '', email: '', college: '', department: '', semester: '', mobile: '' };
+    const defaultProfile = { name: '', email: '', college: '', department: '', semester: '', mobile: '', avatar: '' };
     if (!saved) return defaultProfile;
     const parsed = JSON.parse(saved);
     return { ...defaultProfile, ...parsed };
@@ -138,7 +138,7 @@ export default function App() {
 
   const [semester, setSemester] = useState<Semester>(() => {
     const saved = localStorage.getItem('bs_semester');
-    const defaultSemester = { startDate: '', endDate: '', targetAttendance: 75, isInitialized: false };
+    const defaultSemester = { title: '', startDate: '', endDate: '', targetAttendance: 75, isInitialized: false };
     if (!saved) return defaultSemester;
     const parsed = JSON.parse(saved);
     return { ...defaultSemester, ...parsed };
@@ -822,9 +822,10 @@ export default function App() {
       <div className="min-h-screen bg-zinc-950 text-zinc-100 p-6 flex flex-col justify-center gap-8">
         <div className="space-y-2">
           <h2 className="text-3xl font-bold tracking-tight">Semester Setup</h2>
-          <p className="text-zinc-500">When does your semester start and end?</p>
+          <p className="text-zinc-500">Give your semester a name and set the dates.</p>
         </div>
         <div className="space-y-6">
+          <Input label="Semester Title / Number" value={semester.title} onChange={(v: string) => setSemester({ ...semester, title: v })} placeholder="e.g. Semester 3" />
           <Input type="date" label="Start Date" value={semester.startDate} onChange={(v: string) => setSemester({ ...semester, startDate: v })} />
           <Input type="date" label="End Date" value={semester.endDate} onChange={(v: string) => setSemester({ ...semester, endDate: v })} />
           <Button onClick={handleSemesterSubmit} className="w-full py-4 text-lg">Continue</Button>
@@ -1365,181 +1366,227 @@ export default function App() {
   const renderDashboard = () => {
     const today = getTodayStr();
     const todayRecord = records[today] || { held: 0, attended: 0, isHoliday: false };
+    const isNotStarted = semester.startDate && isBefore(startOfDay(new Date()), startOfDay(parseISO(semester.startDate)));
 
     return (
       <div className="space-y-6 pb-24">
         <header className="flex justify-between items-center">
-          <div>
-            <p className="text-zinc-500 text-sm">Welcome back,</p>
-            <h1 className="text-2xl font-bold">{profile.name}</h1>
-          </div>
-          <div className="flex gap-2">
-            <button 
-              onClick={handleDownloadReport}
-              className="p-2 bg-zinc-900 rounded-full border border-zinc-800 text-zinc-400 hover:text-primary transition-colors"
-              title="Download Report"
-            >
-              <Download size={20} />
-            </button>
-            <div className="bg-zinc-900 p-2 rounded-full border border-zinc-800">
-              <User size={24} className="text-primary" />
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 bg-zinc-900 rounded-full border border-zinc-800 flex items-center justify-center overflow-hidden">
+              {profile.avatar ? (
+                <img src={profile.avatar} alt="Profile" className="w-full h-full object-cover" />
+              ) : (
+                <div className="w-full h-full bg-primary flex items-center justify-center text-white font-bold text-lg">
+                  {profile.name.charAt(0)}
+                </div>
+              )}
             </div>
+            <div>
+              <p className="text-zinc-500 text-sm">Welcome back,</p>
+              <h1 className="text-2xl font-bold">{profile.name}</h1>
+            </div>
+          </div>
+          <div className="bg-zinc-900 p-2 rounded-full border border-zinc-800">
+            <Sparkles size={24} className="text-primary" />
           </div>
         </header>
 
-        {missedDays.length > 0 && (
+        {isNotStarted ? (
           <motion.div 
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="bg-primary/10 border border-primary/20 p-4 rounded-2xl flex items-center justify-between gap-4"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="space-y-6"
           >
-            <div className="flex items-center gap-3 text-primary">
-              <AlertCircle size={20} />
-              <p className="text-sm font-medium">You missed {missedDays.length} attendance entries.</p>
-            </div>
-            <Button variant="secondary" className="text-xs py-1 px-3" onClick={handleFillMissed}>Fill Now</Button>
-          </motion.div>
-        )}
-
-        <div className="grid grid-cols-1 gap-4">
-          <Card className="relative overflow-hidden">
-            <div className="relative z-10 space-y-4">
-              <div className="flex justify-between items-end">
-                <div>
-                  <p className="text-zinc-500 text-xs uppercase font-bold tracking-wider">Semester Attendance</p>
-                  <h2 className="text-4xl font-bold">{stats.percentage.toFixed(1)}%</h2>
-                  {semester.initialHeld > 0 && (
-                    <p className="text-[10px] text-primary font-bold uppercase mt-1 flex items-center gap-1">
-                      <Info size={10} /> Includes {semester.initialAttended}/{semester.initialHeld} from setup
-                    </p>
-                  )}
-                </div>
-                <p className="text-zinc-400 font-medium">{stats.totalAttended} / {stats.totalHeld}</p>
+            <Card className="bg-primary/5 border-primary/20 py-12 text-center space-y-4">
+              <div className="w-16 h-16 bg-primary/20 rounded-full mx-auto flex items-center justify-center text-primary">
+                <CalendarDays size={32} />
               </div>
-              <div className="h-3 bg-zinc-800 rounded-full overflow-hidden">
-                <motion.div 
-                  initial={{ width: 0 }}
-                  animate={{ width: `${Math.min(100, stats.percentage)}%` }}
-                  className={`h-full ${stats.percentage < semester.targetAttendance ? 'bg-red-500' : 'bg-primary'}`}
-                />
-              </div>
-            </div>
-          </Card>
-
-          <div className="grid grid-cols-2 gap-4">
-            <Card className="space-y-2">
-              <p className="text-zinc-500 text-xs uppercase font-bold tracking-wider">{format(new Date(), 'MMMM')}</p>
-              <h3 className="text-2xl font-bold">{monthlyStats.percentage.toFixed(1)}%</h3>
-              <p className="text-zinc-500 text-xs">{monthlyStats.attended} / {monthlyStats.held} classes</p>
-            </Card>
-            <Card className="space-y-2">
-              <p className="text-zinc-500 text-xs uppercase font-bold tracking-wider">Target</p>
-              <h3 className="text-2xl font-bold text-primary">{semester.targetAttendance}%</h3>
-              <p className="text-zinc-500 text-xs">Current Goal</p>
-            </Card>
-          </div>
-
-          <Card className={`border-l-4 ${bunkInfo.status === 'SAFE' ? 'border-l-primary' : 'border-l-red-500'}`}>
-            <div className="flex items-start gap-4">
-              <div className={`p-3 rounded-2xl ${bunkInfo.status === 'SAFE' ? 'bg-primary/10 text-primary' : 'bg-red-500/10 text-red-500'}`}>
-                {bunkInfo.status === 'SAFE' ? <CheckCircle2 size={24} /> : <AlertCircle size={24} />}
-              </div>
-              <div className="space-y-1">
-                <h3 className="font-bold text-lg">
-                  {bunkInfo.status === 'SAFE' 
-                    ? `You can bunk ${bunkInfo.canBunk} classes safely.` 
-                    : `Attend next ${bunkInfo.mustAttend} classes to reach ${semester.targetAttendance}%.`}
-                </h3>
-                <p className="text-zinc-500 text-sm">
-                  {bunkInfo.status === 'SAFE' 
-                    ? "Enjoy your free time, but stay above target!" 
-                    : "Time to get serious and hit those lectures."}
+              <div className="space-y-2">
+                <h2 className="text-xl font-bold">Semester Not Started</h2>
+                <p className="text-zinc-400 text-sm max-w-[250px] mx-auto leading-relaxed">
+                  Your "{semester.title || 'Next Semester'}" is scheduled to begin on <span className="text-primary font-bold">{format(parseISO(semester.startDate), 'PPP')}</span>.
                 </p>
+                <div className="pt-4">
+                  <span className="bg-primary/20 text-primary text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-widest">Entries are locked</span>
+                </div>
               </div>
-            </div>
-          </Card>
-        </div>
+            </Card>
+            
+            <Card className="space-y-3">
+              <h3 className="text-[10px] font-bold text-zinc-500 uppercase tracking-[0.2em]">Semester Plan</h3>
+              <div className="space-y-2">
+                <div className="flex justify-between items-center py-2 border-b border-zinc-800/50">
+                  <span className="text-sm text-zinc-400">Start Date</span>
+                  <span className="text-sm font-bold text-zinc-100">{format(parseISO(semester.startDate), 'MMM dd, yyyy')}</span>
+                </div>
+                <div className="flex justify-between items-center py-2">
+                  <span className="text-sm text-zinc-400">End Date</span>
+                  <span className="text-sm font-bold text-zinc-100">{format(parseISO(semester.endDate), 'MMM dd, yyyy')}</span>
+                </div>
+              </div>
+            </Card>
 
-        <div className="space-y-4">
-          <h3 className="text-lg font-bold flex items-center gap-2">
-            Daily Entry <span className="text-zinc-500 text-sm font-normal">— {format(new Date(), 'PPP')}</span>
-          </h3>
-          <Card className="space-y-8">
-            {/* Held Section */}
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="space-y-1">
-                  <p className="font-bold">Total Available Attendance Today</p>
-                  <p className="text-xs text-zinc-500">Theory: 1 | Labs: 2, 3, or 4 units</p>
-                </div>
-                <div className="flex items-center gap-4">
-                  <Button variant="secondary" className="p-2" onClick={() => updateAttendance(today, Math.max(0, todayRecord.held - 1), Math.min(todayRecord.attended, Math.max(0, todayRecord.held - 1)), false)}><Minus size={18}/></Button>
-                  <span className="text-2xl font-bold w-6 text-center">{todayRecord.held}</span>
-                  <Button variant="secondary" className="p-2" onClick={() => updateAttendance(today, todayRecord.held + 1, todayRecord.attended, false)}><Plus size={18}/></Button>
-                </div>
-              </div>
-              <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
-                {[1, 2, 3, 4, 5, 6].map(num => (
-                  <button
-                    key={`held-${num}`}
-                    onClick={() => updateAttendance(today, num, Math.min(todayRecord.attended, num), false)}
-                    className={`px-4 py-2 rounded-xl border text-sm font-bold transition-all shrink-0 ${todayRecord.held === num ? 'bg-primary border-primary text-white' : 'bg-zinc-800 border-zinc-700 text-zinc-400'}`}
-                  >
-                    {num}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Attended Section */}
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="space-y-1">
-                  <p className="font-bold">Classes Attended</p>
-                  <p className="text-xs text-zinc-500">How many did you go to?</p>
-                </div>
-                <div className="flex items-center gap-4">
-                  <Button variant="secondary" className="p-2" onClick={() => updateAttendance(today, todayRecord.held, Math.max(0, todayRecord.attended - 1), false)}><Minus size={18}/></Button>
-                  <span className="text-2xl font-bold w-6 text-center text-primary">{todayRecord.attended}</span>
-                  <Button variant="secondary" className="p-2" onClick={() => updateAttendance(today, todayRecord.held, Math.min(todayRecord.held, todayRecord.attended + 1), false)}><Plus size={18}/></Button>
-                </div>
-              </div>
-              <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
-                {Array.from({ length: todayRecord.held + 1 }, (_, i) => i).map(num => (
-                  <button
-                    key={`attended-${num}`}
-                    onClick={() => updateAttendance(today, todayRecord.held, num, false)}
-                    className={`px-4 py-2 rounded-xl border text-sm font-bold transition-all shrink-0 ${todayRecord.attended === num ? 'bg-primary border-primary text-white' : 'bg-zinc-800 border-zinc-700 text-zinc-400'}`}
-                  >
-                    {num}
-                  </button>
-                ))}
-                {todayRecord.held > 0 && (
-                  <button
-                    onClick={() => updateAttendance(today, todayRecord.held, todayRecord.held, false)}
-                    className="px-4 py-2 rounded-xl bg-primary/10 border border-primary/20 text-primary text-sm font-bold shrink-0"
-                  >
-                    All
-                  </button>
-                )}
-              </div>
-            </div>
-
-            <div className="space-y-4 pt-4 border-t border-zinc-800">
-              <button 
-                onClick={() => updateAttendance(today, 0, 0, !todayRecord.isHoliday)}
-                className={`w-full py-3 rounded-lg font-bold transition-all active:scale-95 flex items-center justify-center gap-2 shadow-lg ${
-                  todayRecord.isHoliday 
-                    ? 'bg-blue-600 text-white shadow-blue-500/40 ring-2 ring-white/20' 
-                    : 'bg-primary text-white opacity-90 hover:opacity-100 shadow-primary/40'
-                }`}
+            <p className="text-center text-zinc-600 text-[10px] uppercase font-bold tracking-widest leading-relaxed">
+              No attendance entries allowed<br />until the semester starts.
+            </p>
+          </motion.div>
+        ) : (
+          <>
+            {missedDays.length > 0 && (
+              <motion.div 
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="bg-primary/10 border border-primary/20 p-4 rounded-2xl flex items-center justify-between gap-4"
               >
-                {todayRecord.isHoliday ? 'Today is a Holiday' : 'Mark Today as Holiday'}
-              </button>
-              <Button onClick={() => alert("Attendance Saved!")} className="w-full py-3 text-lg">Save Attendance</Button>
+                <div className="flex items-center gap-3 text-primary">
+                  <AlertCircle size={20} />
+                  <p className="text-sm font-medium">You missed {missedDays.length} attendance entries.</p>
+                </div>
+                <Button variant="secondary" className="text-xs py-1 px-3" onClick={handleFillMissed}>Fill Now</Button>
+              </motion.div>
+            )}
+
+            <div className="grid grid-cols-1 gap-4">
+              <Card className="relative overflow-hidden">
+                <div className="relative z-10 space-y-4">
+                  <div className="flex justify-between items-end">
+                    <div>
+                      <p className="text-zinc-500 text-xs uppercase font-bold tracking-wider">{semester.title || 'Semester'} Attendance</p>
+                      <h2 className="text-4xl font-bold">{stats.percentage.toFixed(1)}%</h2>
+                      {semester.initialHeld > 0 && (
+                        <p className="text-[10px] text-primary font-bold uppercase mt-1 flex items-center gap-1">
+                          <Info size={10} /> Includes {semester.initialAttended}/{semester.initialHeld} from setup
+                        </p>
+                      )}
+                    </div>
+                    <p className="text-zinc-400 font-medium">{stats.totalAttended} / {stats.totalHeld}</p>
+                  </div>
+                  <div className="h-3 bg-zinc-800 rounded-full overflow-hidden">
+                    <motion.div 
+                      initial={{ width: 0 }}
+                      animate={{ width: `${Math.min(100, stats.percentage)}%` }}
+                      className={`h-full ${stats.percentage < semester.targetAttendance ? 'bg-red-500' : 'bg-primary'}`}
+                    />
+                  </div>
+                </div>
+              </Card>
+
+              <div className="grid grid-cols-2 gap-4">
+                <Card className="space-y-2">
+                  <p className="text-zinc-500 text-xs uppercase font-bold tracking-wider">{format(new Date(), 'MMMM')}</p>
+                  <h3 className="text-2xl font-bold">{monthlyStats.percentage.toFixed(1)}%</h3>
+                  <p className="text-zinc-500 text-xs">{monthlyStats.attended} / {monthlyStats.held} classes</p>
+                </Card>
+                <Card className="space-y-2">
+                  <p className="text-zinc-500 text-xs uppercase font-bold tracking-wider">Target</p>
+                  <h3 className="text-2xl font-bold text-primary">{semester.targetAttendance}%</h3>
+                  <p className="text-zinc-500 text-xs">Current Goal</p>
+                </Card>
+              </div>
+
+              <Card className={`border-l-4 ${bunkInfo.status === 'SAFE' ? 'border-l-primary' : 'border-l-red-500'}`}>
+                <div className="flex items-start gap-4">
+                  <div className={`p-3 rounded-2xl ${bunkInfo.status === 'SAFE' ? 'bg-primary/10 text-primary' : 'bg-red-500/10 text-red-500'}`}>
+                    {bunkInfo.status === 'SAFE' ? <CheckCircle2 size={24} /> : <AlertCircle size={24} />}
+                  </div>
+                  <div className="space-y-1">
+                    <h3 className="font-bold text-lg">
+                      {bunkInfo.status === 'SAFE' 
+                        ? `You can bunk ${bunkInfo.canBunk} classes safely.` 
+                        : `Attend next ${bunkInfo.mustAttend} classes to reach ${semester.targetAttendance}%.`}
+                    </h3>
+                    <p className="text-zinc-500 text-sm">
+                      {bunkInfo.status === 'SAFE' 
+                        ? "Enjoy your free time, but stay above target!" 
+                        : "Time to get serious and hit those lectures."}
+                    </p>
+                  </div>
+                </div>
+              </Card>
             </div>
-          </Card>
-        </div>
+
+            <div className="space-y-4">
+              <h3 className="text-lg font-bold flex items-center gap-2">
+                Daily Entry <span className="text-zinc-500 text-sm font-normal">— {format(new Date(), 'PPP')}</span>
+              </h3>
+              <Card className="space-y-8">
+                {/* Held Section */}
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-1">
+                      <p className="font-bold">Total Available Attendance Today</p>
+                      <p className="text-xs text-zinc-500">Theory: 1 | Labs: 2, 3, or 4 units</p>
+                    </div>
+                    <div className="flex items-center gap-4">
+                      <Button variant="secondary" className="p-2" onClick={() => updateAttendance(today, Math.max(0, todayRecord.held - 1), Math.min(todayRecord.attended, Math.max(0, todayRecord.held - 1)), false)}><Minus size={18}/></Button>
+                      <span className="text-2xl font-bold w-6 text-center">{todayRecord.held}</span>
+                      <Button variant="secondary" className="p-2" onClick={() => updateAttendance(today, todayRecord.held + 1, todayRecord.attended, false)}><Plus size={18}/></Button>
+                    </div>
+                  </div>
+                  <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
+                    {[1, 2, 3, 4, 5, 6].map(num => (
+                      <button
+                        key={`held-${num}`}
+                        onClick={() => updateAttendance(today, num, Math.min(todayRecord.attended, num), false)}
+                        className={`px-4 py-2 rounded-xl border text-sm font-bold transition-all shrink-0 ${todayRecord.held === num ? 'bg-primary border-primary text-white' : 'bg-zinc-800 border-zinc-700 text-zinc-400'}`}
+                      >
+                        {num}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Attended Section */}
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-1">
+                      <p className="font-bold">Classes Attended</p>
+                      <p className="text-xs text-zinc-500">How many did you go to?</p>
+                    </div>
+                    <div className="flex items-center gap-4">
+                      <Button variant="secondary" className="p-2" onClick={() => updateAttendance(today, todayRecord.held, Math.max(0, todayRecord.attended - 1), false)}><Minus size={18}/></Button>
+                      <span className="text-2xl font-bold w-6 text-center text-primary">{todayRecord.attended}</span>
+                      <Button variant="secondary" className="p-2" onClick={() => updateAttendance(today, todayRecord.held, Math.min(todayRecord.held, todayRecord.attended + 1), false)}><Plus size={18}/></Button>
+                    </div>
+                  </div>
+                  <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
+                    {Array.from({ length: todayRecord.held + 1 }, (_, i) => i).map(num => (
+                      <button
+                        key={`attended-${num}`}
+                        onClick={() => updateAttendance(today, todayRecord.held, num, false)}
+                        className={`px-4 py-2 rounded-xl border text-sm font-bold transition-all shrink-0 ${todayRecord.attended === num ? 'bg-primary border-primary text-white' : 'bg-zinc-800 border-zinc-700 text-zinc-400'}`}
+                      >
+                        {num}
+                      </button>
+                    ))}
+                    {todayRecord.held > 0 && (
+                      <button
+                        onClick={() => updateAttendance(today, todayRecord.held, todayRecord.held, false)}
+                        className="px-4 py-2 rounded-xl bg-primary/10 border border-primary/20 text-primary text-sm font-bold shrink-0"
+                      >
+                        All
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                <div className="space-y-4 pt-4 border-t border-zinc-800">
+                  <button 
+                    onClick={() => updateAttendance(today, 0, 0, !todayRecord.isHoliday)}
+                    className={`w-full py-3 rounded-lg font-bold transition-all active:scale-95 flex items-center justify-center gap-2 shadow-lg ${
+                      todayRecord.isHoliday 
+                        ? 'bg-amber-500 text-black shadow-amber-500/40 ring-2 ring-white/20' 
+                        : 'bg-primary text-white opacity-90 hover:opacity-100 shadow-primary/40'
+                    }`}
+                  >
+                    {todayRecord.isHoliday ? 'Today is a Holiday' : 'Mark Today as Holiday'}
+                  </button>
+                  <Button onClick={() => alert("Attendance Saved!")} className="w-full py-3 text-lg">Save Attendance</Button>
+                </div>
+              </Card>
+            </div>
+          </>
+        )}
       </div>
     );
   };
@@ -1817,23 +1864,6 @@ export default function App() {
           </div>
         </Card>
 
-        <Card className="bg-zinc-900 border-zinc-800">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-primary/20 rounded-lg text-primary">
-                <Download size={18} />
-              </div>
-              <div>
-                <h3 className="font-bold text-sm">Attendance Report</h3>
-                <p className="text-[10px] text-zinc-500">Download your {format(new Date(), 'MMMM')} report as PDF</p>
-              </div>
-            </div>
-            <Button onClick={handleDownloadReport} variant="secondary" className="text-xs py-1.5 px-3">
-              Download
-            </Button>
-          </div>
-        </Card>
-
         <div className="space-y-4">
           <h3 className="font-bold">Semester History</h3>
           {history.length === 0 ? (
@@ -1845,11 +1875,14 @@ export default function App() {
             history.map(h => (
               <Card key={h.id} className="flex justify-between items-center">
                 <div>
-                  <p className="font-bold">{format(parseISO(h.startDate), 'MMM yyyy')} - {format(parseISO(h.endDate), 'MMM yyyy')}</p>
-                  <p className="text-xs text-zinc-500">{h.totalAttended} / {h.totalHeld} classes</p>
+                  <p className="font-bold">{h.title || 'Past Semester'}</p>
+                  <p className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold">
+                    {format(parseISO(h.startDate), 'MMM dd, yyyy')} - {format(parseISO(h.endDate), 'MMM dd, yyyy')}
+                  </p>
+                  <p className="text-xs text-zinc-400 mt-1">{h.totalAttended} / {h.totalHeld} classes</p>
                 </div>
                 <div className="text-right">
-                  <p className="text-xl font-bold text-primary">{h.finalPercentage.toFixed(1)}%</p>
+                  <p className="text-xl font-black text-primary">{h.finalPercentage.toFixed(1)}%</p>
                 </div>
               </Card>
             ))
@@ -1911,79 +1944,6 @@ export default function App() {
                 className="flex-1 bg-zinc-800 border border-zinc-700 rounded-lg px-3 text-xs font-mono text-zinc-100 focus:outline-none focus:border-primary"
               />
             </div>
-          </div>
-        </Card>
-        
-        {/* Monthly Report Section */}
-        <Card className="space-y-4">
-          <div className="flex items-center gap-2">
-            <div className="p-2 bg-blue-500/20 rounded-lg text-blue-500">
-              <Mail size={18} />
-            </div>
-            <h3 className="font-bold text-sm uppercase tracking-wider">Monthly Report</h3>
-          </div>
-          <p className="text-xs text-zinc-500">Get a detailed PDF report of your {format(new Date(), 'MMMM')} attendance via email.</p>
-          
-          <div className="space-y-3">
-            <Button 
-              onClick={handleDownloadReport} 
-              variant="secondary"
-              className="w-full py-3 flex items-center justify-center gap-2 border-zinc-700 hover:bg-zinc-800"
-            >
-              <Download size={18} />
-              Download Report (PDF)
-            </Button>
-
-            <div className="relative pt-2">
-              <div className="absolute inset-0 flex items-center" aria-hidden="true">
-                <div className="w-full border-t border-zinc-800"></div>
-              </div>
-              <div className="relative flex justify-center text-[10px] uppercase font-bold tracking-widest">
-                <span className="bg-zinc-900 px-2 text-zinc-500">Or Send via Email</span>
-              </div>
-            </div>
-
-            <div className="relative">
-              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" size={16} />
-              <input 
-                type="email" 
-                value={reportEmail}
-                onChange={(e) => setReportEmail(e.target.value)}
-                placeholder="Enter your email"
-                className="w-full bg-zinc-800 border border-zinc-700 rounded-xl pl-10 pr-4 py-3 text-sm text-zinc-100 focus:outline-none focus:border-primary transition-all"
-              />
-            </div>
-            
-            <Button 
-              onClick={handleEmailReport} 
-              disabled={isSendingReport}
-              className="w-full py-3 flex items-center justify-center gap-2"
-            >
-              {isSendingReport ? (
-                <>
-                  <Loader2 size={18} className="animate-spin" />
-                  Sending...
-                </>
-              ) : (
-                <>
-                  <Mail size={18} />
-                  Email Me The Report
-                </>
-              )}
-            </Button>
-
-            {reportStatus && (
-              <motion.div 
-                initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: 1, y: 0 }}
-                className={`p-3 rounded-lg text-xs font-medium flex items-center gap-2 ${
-                  reportStatus.type === 'success' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-red-500/10 text-red-500'
-                }`}
-              >
-                {reportStatus.type === 'success' ? <CheckCircle2 size={14} /> : <AlertCircle size={14} />}
-                {reportStatus.message}
-              </motion.div>
-            )}
           </div>
         </Card>
 
@@ -2187,8 +2147,32 @@ export default function App() {
         </header>
 
         <div className="flex flex-col items-center gap-4 py-6">
-          <div className="w-24 h-24 bg-primary rounded-full flex items-center justify-center text-4xl font-bold text-white shadow-xl shadow-primary/20">
-            {profile.name.charAt(0)}
+          <div className="relative group">
+            <div className="w-24 h-24 bg-primary rounded-full flex items-center justify-center text-4xl font-bold text-white shadow-xl shadow-primary/20 overflow-hidden border-4 border-zinc-900">
+              {profile.avatar ? (
+                <img src={profile.avatar} alt="Profile" className="w-full h-full object-cover" />
+              ) : (
+                profile.name.charAt(0)
+              )}
+            </div>
+            <label className="absolute bottom-0 right-0 bg-primary text-white p-2 rounded-full cursor-pointer shadow-lg active:scale-90 transition-all">
+              <Edit2 size={14} />
+              <input 
+                type="file" 
+                className="hidden" 
+                accept="image/*" 
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) {
+                    const reader = new FileReader();
+                    reader.onloadend = () => {
+                      setProfile({ ...profile, avatar: reader.result as string });
+                    };
+                    reader.readAsDataURL(file);
+                  }
+                }}
+              />
+            </label>
           </div>
           <div className="text-center">
             <h2 className="text-xl font-bold">{profile.name}</h2>
@@ -2260,8 +2244,9 @@ export default function App() {
         </div>
 
         <div className="space-y-4">
-          <h3 className="text-zinc-500 uppercase text-xs font-bold tracking-widest">Semester Dates</h3>
+          <h3 className="text-zinc-500 uppercase text-xs font-bold tracking-widest">Semester Info</h3>
           <Card className="space-y-4">
+            <Input label="Semester Title / Number" value={semester.title} onChange={(v: string) => setSemester({...semester, title: v})} placeholder="e.g. Semester 3" />
             <Input type="date" label="Start Date" value={semester.startDate} onChange={(v: string) => setSemester({...semester, startDate: v})} />
             <Input type="date" label="End Date" value={semester.endDate} onChange={(v: string) => setSemester({...semester, endDate: v})} />
           </Card>
@@ -2271,6 +2256,7 @@ export default function App() {
            <Button variant="danger" className="w-full py-4 flex items-center justify-center gap-2" onClick={() => {
              const h: SemesterHistory = {
                id: Date.now().toString(),
+               title: semester.title,
                startDate: semester.startDate,
                endDate: semester.endDate,
                finalPercentage: stats.percentage,
@@ -2278,7 +2264,7 @@ export default function App() {
                totalAttended: stats.totalAttended
              };
              setHistory([h, ...history]);
-             setSemester({ startDate: '', endDate: '', targetAttendance: 75, isInitialized: false });
+             setSemester({ title: '', startDate: '', endDate: '', targetAttendance: 75, isInitialized: false });
              setRecords({});
              setAppState('SEMESTER_SETUP');
            }}>
