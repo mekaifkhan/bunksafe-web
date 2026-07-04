@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#09090b" />
+      <stop offset="100%" stop-color="#18181b" />
+    </linearGradient>
+    <linearGradient id="accent" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#eab308" />
+      <stop offset="100%" stop-color="#ca8a04" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Rounded App Icon Background -->
+  <rect width="512" height="512" rx="112" fill="url(#bg)" />
+  <rect x="8" y="8" width="496" height="496" rx="104" fill="none" stroke="#27272a" stroke-width="8" />
+  
+  <!-- Sleek Calendar + Checkmark Symbol (BunkSafe Theme) -->
+  <g transform="translate(116, 116)">
+    <!-- Calendar Body Outline -->
+    <rect x="0" y="40" width="280" height="240" rx="32" fill="none" stroke="url(#accent)" stroke-width="24" stroke-linejoin="round" />
+    <!-- Calendar Header Line -->
+    <line x1="0" y1="110" x2="280" y2="110" stroke="url(#accent)" stroke-width="20" stroke-linecap="round" />
+    <!-- Calendar Binder Rings -->
+    <rect x="60" y="10" width="24" height="50" rx="12" fill="#fafafa" />
+    <rect x="196" y="10" width="24" height="50" rx="12" fill="#fafafa" />
+    
+    <!-- Bold Elegant checkmark inside representing high attendance -->
+    <path d="M 70 180 L 120 230 L 210 140" fill="none" stroke="#fafafa" stroke-width="28" stroke-linecap="round" stroke-linejoin="round" />
+  </g>
+</svg>
