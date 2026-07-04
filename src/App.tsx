@@ -342,6 +342,7 @@ export default function App() {
             onClick={() => {
               const h: SemesterHistory = {
                 id: Date.now().toString(),
+                title: semester.title || `Semester ${history.length + 1}`,
                 startDate: semester.startDate,
                 endDate: semester.endDate,
                 finalPercentage: stats.percentage,
@@ -349,10 +350,18 @@ export default function App() {
                 totalAttended: stats.totalAttended
               };
               setHistory([h, ...history]);
-              setSemester({ startDate: '', endDate: '', targetAttendance: 75, isInitialized: false });
+              setSemester({
+                title: `Semester ${history.length + 2}`,
+                startDate: '',
+                endDate: '',
+                targetAttendance: 75,
+                isInitialized: false,
+                initialHeld: 0,
+                initialAttended: 0
+              });
               setRecords({});
               setExams([]); // Clear exams for new semester
-              setAppState('SEMESTER_SETUP');
+              setAppState('MAIN');
             }}
           >
             Start New Semester
@@ -846,7 +855,85 @@ export default function App() {
     );
   };
 
+  const renderSemesterSetup = () => {
+    return (
+      <div className="space-y-6 pb-24">
+        <div className="space-y-2 text-center py-6">
+          <h2 className="text-3xl font-black tracking-tight animate-pulse text-primary">New Semester Setup</h2>
+          <p className="text-zinc-500 text-sm">Fill in the details to start tracking your new semester.</p>
+        </div>
+
+        <Card className="space-y-4 p-6">
+          <Input 
+            label="Semester Title / Number" 
+            value={semester.title || ''} 
+            onChange={(v: string) => setSemester({ ...semester, title: v })} 
+            placeholder="e.g. Semester 2, 3rd Sem" 
+          />
+          <Input 
+            type="date" 
+            label="Start Date" 
+            value={semester.startDate} 
+            onChange={(v: string) => setSemester({ ...semester, startDate: v })} 
+          />
+          <Input 
+            type="date" 
+            label="End Date" 
+            value={semester.endDate} 
+            onChange={(v: string) => setSemester({ ...semester, endDate: v })} 
+          />
+          
+          <div className="space-y-2 pt-2">
+            <label className="text-xs font-bold text-zinc-500 uppercase tracking-widest block">Attendance Goal (%)</label>
+            <div className="grid grid-cols-3 gap-2">
+              {[60, 70, 75, 80, 85, 90].map(t => (
+                <button 
+                  key={t}
+                  type="button"
+                  onClick={() => setSemester({...semester, targetAttendance: t})}
+                  className={`p-3 rounded-xl border text-sm transition-all font-bold ${semester.targetAttendance === t ? 'bg-primary border-primary text-white' : 'bg-zinc-900 border-zinc-800 text-zinc-400'}`}
+                >
+                  {t}%
+                </button>
+              ))}
+            </div>
+            <Input 
+              type="number" 
+              placeholder="Custom Target" 
+              value={semester.targetAttendance} 
+              onChange={(v: string) => setSemester({...semester, targetAttendance: parseInt(v) || 75})} 
+            />
+          </div>
+        </Card>
+
+        <Button 
+          className="w-full py-4 text-lg font-bold" 
+          disabled={!semester.startDate || !semester.endDate}
+          onClick={() => {
+            if (semester.startDate && semester.endDate) {
+              setSemester({
+                ...semester,
+                isInitialized: true
+              });
+            }
+          }}
+        >
+          Activate Semester
+        </Button>
+      </div>
+    );
+  };
+
   const renderDashboard = () => {
+    if (!semester.isInitialized) {
+      return renderSemesterSetup();
+    }
+
+    const isEnded = semester.isInitialized && semester.endDate && isAfter(startOfDay(new Date()), startOfDay(parseISO(semester.endDate)));
+    if (isEnded) {
+      return renderSemesterEndReport();
+    }
+
     const today = getTodayStr();
     const todayRecord = records[today] || { held: 0, attended: 0, isHoliday: false };
     const isNotStarted = semester.startDate && isBefore(startOfDay(new Date()), startOfDay(parseISO(semester.startDate)));
