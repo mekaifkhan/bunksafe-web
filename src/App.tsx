@@ -138,10 +138,18 @@ export default function App() {
 
   const [semester, setSemester] = useState<Semester>(() => {
     const saved = localStorage.getItem('bs_semester');
-    const defaultSemester = { title: '', startDate: '', endDate: '', targetAttendance: 75, isInitialized: false };
+    const defaultSemester = {
+      title: 'Semester 1',
+      startDate: '2026-05-01',
+      endDate: '2026-10-31',
+      targetAttendance: 75,
+      isInitialized: true,
+      initialHeld: 0,
+      initialAttended: 0
+    };
     if (!saved) return defaultSemester;
     const parsed = JSON.parse(saved);
-    return { ...defaultSemester, ...parsed };
+    return { ...defaultSemester, ...parsed, isInitialized: true };
   });
 
   const [records, setRecords] = useState<Record<string, AttendanceRecord>>(() => {
@@ -162,15 +170,7 @@ export default function App() {
   const [showExamModal, setShowExamModal] = useState(false);
   const [editingExam, setEditingExam] = useState<Exam | null>(null);
 
-  const [appState, setAppState] = useState<AppState>(() => {
-    if (!semester.isInitialized) return 'SEMESTER_SETUP';
-    if (semester.endDate) {
-      const end = startOfDay(parseISO(semester.endDate));
-      const today = startOfDay(new Date());
-      if (isAfter(today, end)) return 'SEMESTER_END_REPORT';
-    }
-    return 'MAIN';
-  });
+  const [appState, setAppState] = useState<AppState>('MAIN');
 
   const [isSplashVisible, setIsSplashVisible] = useState(true);
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -211,16 +211,7 @@ export default function App() {
   const stats = useMemo(() => calculateAttendance(records, semester.initialHeld, semester.initialAttended, semester.startDate, exams), [records, semester, exams]);
   const bunkInfo = useMemo(() => calculateBunkInfo(stats.totalHeld, stats.totalAttended, semester.targetAttendance), [stats, semester]);
 
-  // Auto-end semester check
-  useEffect(() => {
-    if (semester.isInitialized && semester.endDate && appState === 'MAIN') {
-      const end = startOfDay(parseISO(semester.endDate));
-      const today = startOfDay(new Date());
-      if (isAfter(today, end)) {
-        setAppState('SEMESTER_END_REPORT');
-      }
-    }
-  }, [semester, appState]);
+
 
   const generatePDF = () => {
     const doc = new jsPDF();
@@ -618,99 +609,6 @@ export default function App() {
 
   // --- Handlers ---
 
-  const handleSemesterSubmit = () => {
-    if (semester.startDate && semester.endDate) {
-      const start = startOfDay(parseISO(semester.startDate));
-      const today = startOfDay(new Date());
-
-      if (isBefore(start, today)) {
-        setAppState('LATE_DETECTION');
-      } else {
-        setSemester(prev => ({ ...prev, isInitialized: true }));
-        setAppState('MAIN');
-      }
-    }
-  };
-
-  const startFromToday = () => {
-    setSemester(prev => ({ 
-      ...prev, 
-      isInitialized: true,
-      lockedUntil: formatDate(subDays(new Date(), 1))
-    }));
-    setAppState('MAIN');
-  };
-
-  const handleManualPastAttendance = (held: number, attended: number) => {
-    setSemester(prev => ({ 
-      ...prev, 
-      isInitialized: true, 
-      initialHeld: held, 
-      initialAttended: attended,
-      lockedUntil: formatDate(subDays(new Date(), 1))
-    }));
-    setAppState('MAIN');
-  };
-
-  const handleWizardComplete = () => {
-    // Estimate classes held
-    const start = parseISO(semester.startDate);
-    const until = parseISO(wizardData.untilDate);
-    const days = eachDayOfInterval({ start, end: until });
-    
-    let estimatedHeld = 0;
-    days.forEach(day => {
-      const dateStr = formatDate(day);
-      const dayOfWeek = getDay(day);
-      // Check if it's a fixed holiday OR an extra holiday
-      if (!wizardData.holidays.includes(dayOfWeek) && !wizardData.extraHolidays.includes(dateStr)) {
-        estimatedHeld += wizardData.schedule[dayOfWeek];
-      }
-    });
-
-    const estimatedAttended = Math.round((wizardData.percentage / 100) * estimatedHeld);
-    
-    // Check for gaps
-    const today = startOfDay(new Date());
-    const nextDay = addDays(until, 1);
-    
-    if (isBefore(until, subDays(today, 1))) {
-      const gap = eachDayOfInterval({ start: nextDay, end: subDays(today, 1) });
-      setGapDays(gap.map(d => formatDate(d)));
-      setSemester(prev => ({ 
-        ...prev, 
-        initialHeld: estimatedHeld, 
-        initialAttended: estimatedAttended,
-        lockedUntil: formatDate(until)
-      }));
-      setAppState('GAP_HANDLING');
-    } else {
-      setSemester(prev => ({ 
-        ...prev, 
-        isInitialized: true, 
-        initialHeld: estimatedHeld, 
-        initialAttended: estimatedAttended,
-        lockedUntil: formatDate(until)
-      }));
-      setAppState('MAIN');
-    }
-  };
-
-  const saveGapAttendance = (held: number, attended: number) => {
-    const date = gapDays[currentGapIndex];
-    setRecords(prev => ({
-      ...prev,
-      [date]: { date, held, attended, isHoliday: false, isLocked: true }
-    }));
-
-    if (currentGapIndex < gapDays.length - 1) {
-      setCurrentGapIndex(prev => prev + 1);
-    } else {
-      setSemester(prev => ({ ...prev, isInitialized: true, lockedUntil: getTodayStr() }));
-      setAppState('MAIN');
-    }
-  };
-
   const updateAttendance = (date: string, held: number, attended: number, isHoliday: boolean) => {
     setRecords(prev => ({
       ...prev,
@@ -744,355 +642,6 @@ export default function App() {
           transition={{ duration: 2, ease: "easeInOut" }}
           className="h-1 bg-primary rounded-full mt-12 opacity-50"
         />
-      </div>
-    );
-  }
-
-  if (appState === 'SEMESTER_SETUP') {
-    return (
-      <div className="min-h-screen bg-zinc-950 text-zinc-100 p-6 flex flex-col justify-center gap-8">
-        <div className="space-y-2">
-          <h2 className="text-3xl font-bold tracking-tight">Semester Setup</h2>
-          <p className="text-zinc-500">Give your semester a name and set the dates.</p>
-        </div>
-        <div className="space-y-6">
-          <Input label="Semester Title / Number" value={semester.title} onChange={(v: string) => setSemester({ ...semester, title: v })} placeholder="e.g. Semester 3" />
-          <Input type="date" label="Start Date" value={semester.startDate} onChange={(v: string) => setSemester({ ...semester, startDate: v })} />
-          <Input type="date" label="End Date" value={semester.endDate} onChange={(v: string) => setSemester({ ...semester, endDate: v })} />
-          <Button onClick={handleSemesterSubmit} className="w-full py-4 text-lg">Continue</Button>
-        </div>
-      </div>
-    );
-  }
-
-  if (appState === 'LATE_DETECTION') {
-    return (
-      <div className="min-h-screen bg-zinc-950 text-zinc-100 p-6 flex flex-col justify-center gap-6">
-        <div className="bg-primary/10 border border-primary/20 p-6 rounded-3xl space-y-4">
-          <div className="flex items-center gap-3 text-primary">
-            <Info size={24} />
-            <h3 className="text-xl font-bold">Late Start Detected</h3>
-          </div>
-          <p className="text-zinc-400">
-            Your semester started on {format(parseISO(semester.startDate), 'PPP')}. 
-            You are tracking late by {differenceInDays(new Date(), parseISO(semester.startDate))} days.
-          </p>
-        </div>
-        
-        <div className="space-y-3">
-          <Button variant="secondary" className="w-full py-4 text-left flex flex-col gap-1" onClick={() => setAppState('WIZARD')}>
-            <span className="font-bold">Help me calculate past attendance</span>
-            <span className="text-xs text-zinc-500">Step-by-step wizard to estimate records</span>
-          </Button>
-          
-          <Button variant="secondary" className="w-full py-4 text-left flex flex-col gap-1" onClick={() => {
-            const held = prompt("Total classes held so far?");
-            const attended = prompt("Total classes attended?");
-            if (held && attended) handleManualPastAttendance(parseInt(held), parseInt(attended));
-          }}>
-            <span className="font-bold">I know my past attendance</span>
-            <span className="text-xs text-zinc-500">Enter total held and attended classes manually</span>
-          </Button>
-
-          <Button 
-            className="w-full py-4 bg-primary text-white font-bold hover:bg-primary-hover transition-all active:scale-95 rounded-xl" 
-            onClick={() => setAppState('TODAY_CONFIRMATION')}
-          >
-            Start tracking from today
-          </Button>
-        </div>
-      </div>
-    );
-  }
-
-  if (appState === 'TODAY_CONFIRMATION') {
-    return (
-      <div className="min-h-screen bg-zinc-950 text-zinc-100 p-6 flex flex-col justify-center gap-8">
-        <div className="space-y-4 text-center">
-          <div className="w-20 h-20 bg-primary/10 border border-primary/20 rounded-full mx-auto flex items-center justify-center text-primary">
-            <AlertCircle size={40} />
-          </div>
-          <div className="space-y-2">
-            <h2 className="text-2xl font-bold tracking-tight">Important Note</h2>
-            <p className="text-zinc-400 text-sm leading-relaxed">
-              Your past attendance and classes will not be counted and this may not include cumulative semester attendance.
-            </p>
-          </div>
-        </div>
-
-        <div className="space-y-3">
-          <Button 
-            variant="secondary" 
-            className="w-full py-4 flex flex-col gap-1 items-center" 
-            onClick={() => setWizardStep(1) || setAppState('WIZARD')}
-          >
-            <span className="font-bold">Help me calculate</span>
-            <span className="text-xs text-zinc-500">Estimate records using percentage</span>
-          </Button>
-
-          <Button 
-            className="w-full py-4 bg-zinc-800 text-zinc-100 hover:bg-zinc-700 rounded-xl" 
-            onClick={startFromToday}
-          >
-            Continue without past attendance
-          </Button>
-
-          <Button 
-            variant="ghost" 
-            className="w-full py-2" 
-            onClick={() => setAppState('LATE_DETECTION')}
-          >
-            Go Back
-          </Button>
-        </div>
-      </div>
-    );
-  }
-
-  if (appState === 'WIZARD') {
-    const handleWizardBack = () => {
-      if (wizardStep > 1) {
-        setWizardStep(prev => prev - 1);
-      } else {
-        setAppState('LATE_DETECTION');
-      }
-    };
-
-    return (
-      <div className="min-h-screen bg-zinc-950 text-zinc-100 p-6 flex flex-col gap-8">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" onClick={handleWizardBack} className="p-2"><ChevronLeft /></Button>
-          <div className="flex-1">
-            <h2 className="text-2xl font-bold">Attendance Wizard</h2>
-            <p className="text-xs text-zinc-500">Step {wizardStep} of 5</p>
-          </div>
-        </div>
-
-        <div className="flex-1 space-y-8">
-          {wizardStep === 1 && (
-            <div className="space-y-6">
-              <p className="text-zinc-400">What is your current attendance percentage?</p>
-              <div className="flex items-center gap-4">
-                <input 
-                  type="range" min="0" max="100" value={wizardData.percentage} 
-                  onChange={(e) => setWizardData({...wizardData, percentage: parseInt(e.target.value)})}
-                  className="flex-1 accent-primary"
-                />
-                <span className="text-2xl font-bold w-16 text-right">{wizardData.percentage}%</span>
-              </div>
-              <Button onClick={() => setWizardStep(2)} className="w-full py-4">Next</Button>
-            </div>
-          )}
-
-          {wizardStep === 2 && (
-            <div className="space-y-6">
-              <p className="text-zinc-400">Until what date do you know this percentage?</p>
-              <Input type="date" value={wizardData.untilDate} onChange={(v: string) => setWizardData({...wizardData, untilDate: v})} />
-              <div className="flex gap-3">
-                <Button variant="secondary" onClick={() => setWizardStep(1)} className="flex-1 py-4">Previous</Button>
-                <Button onClick={() => setWizardStep(3)} className="flex-2 py-4">Next</Button>
-              </div>
-            </div>
-          )}
-
-          {wizardStep === 3 && (
-            <div className="space-y-6">
-              <p className="text-zinc-400">Weekly Class Schedule (Classes per day)</p>
-              <div className="space-y-3">
-                {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day, i) => (
-                  <div key={day} className="flex items-center justify-between bg-zinc-900 p-4 rounded-2xl border border-zinc-800">
-                    <span className="font-medium">{day}</span>
-                    <div className="flex items-center gap-4">
-                      <Button variant="secondary" className="p-1" onClick={() => {
-                        const s = [...wizardData.schedule];
-                        s[i] = Math.max(0, s[i] - 1);
-                        setWizardData({...wizardData, schedule: s});
-                      }}><Minus size={16}/></Button>
-                      <span className="w-4 text-center">{wizardData.schedule[i]}</span>
-                      <Button variant="secondary" className="p-1" onClick={() => {
-                        const s = [...wizardData.schedule];
-                        s[i] = s[i] + 1;
-                        setWizardData({...wizardData, schedule: s});
-                      }}><Plus size={16}/></Button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-              <div className="flex gap-3">
-                <Button variant="secondary" onClick={() => setWizardStep(2)} className="flex-1 py-4">Previous</Button>
-                <Button onClick={() => setWizardStep(4)} className="flex-2 py-4">Next</Button>
-              </div>
-            </div>
-          )}
-
-          {wizardStep === 4 && (
-            <div className="space-y-6">
-              <p className="text-zinc-400">Fixed Holidays (Select days with no classes)</p>
-              <div className="grid grid-cols-2 gap-3">
-                {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day, i) => (
-                  <button 
-                    key={day}
-                    onClick={() => {
-                      const h = wizardData.holidays.includes(i) 
-                        ? wizardData.holidays.filter(x => x !== i)
-                        : [...wizardData.holidays, i];
-                      setWizardData({...wizardData, holidays: h});
-                    }}
-                    className={`p-4 rounded-2xl border transition-all ${wizardData.holidays.includes(i) ? 'bg-primary/10 border-primary text-primary' : 'bg-zinc-900 border-zinc-800 text-zinc-400'}`}
-                  >
-                    {day}
-                  </button>
-                ))}
-              </div>
-              <div className="flex gap-3">
-                <Button variant="secondary" onClick={() => setWizardStep(3)} className="flex-1 py-4">Previous</Button>
-                <Button onClick={() => setWizardStep(5)} className="flex-2 py-4">Next</Button>
-              </div>
-            </div>
-          )}
-
-          {wizardStep === 5 && (
-            <div className="space-y-6">
-              <div className="space-y-2">
-                <p className="text-zinc-400">Other Holidays / Bunks in between</p>
-                <p className="text-xs text-zinc-500">Add specific dates where you had no classes or bunked.</p>
-              </div>
-              
-              <div className="flex gap-2">
-                <input 
-                  type="date" 
-                  value={extraHolidayInput}
-                  onChange={(e) => setExtraHolidayInput(e.target.value)}
-                  className="flex-1 bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-2 text-zinc-100 outline-none focus:border-primary transition-all"
-                />
-                <Button onClick={() => {
-                  if (extraHolidayInput && !wizardData.extraHolidays.includes(extraHolidayInput)) {
-                    setWizardData({...wizardData, extraHolidays: [...wizardData.extraHolidays, extraHolidayInput]});
-                    setExtraHolidayInput('');
-                  }
-                }} className="px-4"><Plus size={20}/></Button>
-              </div>
-
-              <div className="space-y-2 max-h-48 overflow-y-auto pr-2">
-                {wizardData.extraHolidays.length === 0 ? (
-                  <p className="text-center py-4 text-zinc-600 text-sm">No extra holidays added.</p>
-                ) : (
-                  wizardData.extraHolidays.sort().map(date => (
-                    <div key={date} className="flex items-center justify-between bg-zinc-900 p-3 rounded-xl border border-zinc-800">
-                      <span className="text-sm">{format(parseISO(date), 'PPP')}</span>
-                      <button onClick={() => setWizardData({...wizardData, extraHolidays: wizardData.extraHolidays.filter(d => d !== date)})} className="text-red-500 p-1">
-                        <Trash2 size={16}/>
-                      </button>
-                    </div>
-                  ))
-                )}
-              </div>
-
-              <div className="flex gap-3">
-                <Button variant="secondary" onClick={() => setWizardStep(4)} className="flex-1 py-4">Previous</Button>
-                <Button onClick={handleWizardComplete} className="flex-2 py-4">Finish Calculation</Button>
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-    );
-  }
-
-  if (appState === 'GAP_HANDLING') {
-    const date = gapDays[currentGapIndex];
-    return (
-      <div className="min-h-screen bg-zinc-950 text-zinc-100 p-6 flex flex-col gap-8">
-        <div className="space-y-2">
-          <h2 className="text-2xl font-bold">Fill Gap Attendance</h2>
-          <p className="text-zinc-500">Entry {currentGapIndex + 1} of {gapDays.length}</p>
-        </div>
-
-        <Card className="flex-1 flex flex-col justify-center gap-12">
-          <div className="text-center space-y-2">
-            <h3 className="text-3xl font-bold">{format(parseISO(date), 'EEEE')}</h3>
-            <p className="text-zinc-500 text-xl">{format(parseISO(date), 'PPP')}</p>
-          </div>
-
-          <div className="space-y-8">
-             <div className="space-y-4">
-                <p className="text-center text-zinc-500 uppercase tracking-widest text-xs font-bold">Total Available Attendance</p>
-                <p className="text-center text-[10px] text-zinc-600 -mt-2">Theory: 1 | Labs: 2, 3, or 4 units</p>
-                <div className="flex items-center justify-center gap-8">
-                  <Button variant="secondary" className="p-4 rounded-full" onClick={() => {
-                    const r = records[date] || { held: 0, attended: 0 };
-                    updateAttendance(date, Math.max(0, r.held - 1), Math.min(r.attended, Math.max(0, r.held - 1)), false);
-                  }}><Minus /></Button>
-                  <span className="text-5xl font-bold w-12 text-center">{records[date]?.held || 0}</span>
-                  <Button variant="secondary" className="p-4 rounded-full" onClick={() => {
-                    const r = records[date] || { held: 0, attended: 0 };
-                    updateAttendance(date, r.held + 1, r.attended, false);
-                  }}><Plus /></Button>
-                </div>
-                <div className="flex gap-2 justify-center overflow-x-auto pb-1 scrollbar-hide">
-                  {[1, 2, 3, 4, 5, 6].map(num => (
-                    <button
-                      key={`gap-held-${num}`}
-                      onClick={() => updateAttendance(date, num, Math.min(records[date]?.attended || 0, num), false)}
-                      className={`px-4 py-2 rounded-xl border text-sm font-bold transition-all shrink-0 ${records[date]?.held === num ? 'bg-primary border-primary text-white' : 'bg-zinc-800 border-zinc-700 text-zinc-400'}`}
-                    >
-                      {num}
-                    </button>
-                  ))}
-                </div>
-             </div>
-
-             <div className="space-y-4">
-                <p className="text-center text-zinc-500 uppercase tracking-widest text-xs font-bold">Attended</p>
-                <div className="flex items-center justify-center gap-8">
-                  <Button variant="secondary" className="p-4 rounded-full" onClick={() => {
-                    const r = records[date] || { held: 0, attended: 0 };
-                    updateAttendance(date, r.held, Math.max(0, r.attended - 1), false);
-                  }}><Minus /></Button>
-                  <span className="text-5xl font-bold w-12 text-center text-primary">{records[date]?.attended || 0}</span>
-                  <Button variant="secondary" className="p-4 rounded-full" onClick={() => {
-                    const r = records[date] || { held: 0, attended: 0 };
-                    updateAttendance(date, r.held, Math.min(r.held, r.attended + 1), false);
-                  }}><Plus /></Button>
-                </div>
-                <div className="flex gap-2 justify-center overflow-x-auto pb-1 scrollbar-hide">
-                  {Array.from({ length: (records[date]?.held || 0) + 1 }, (_, i) => i).map(num => (
-                    <button
-                      key={`gap-attended-${num}`}
-                      onClick={() => updateAttendance(date, records[date]?.held || 0, num, false)}
-                      className={`px-4 py-2 rounded-xl border text-sm font-bold transition-all shrink-0 ${records[date]?.attended === num ? 'bg-primary border-primary text-white' : 'bg-zinc-800 border-zinc-700 text-zinc-400'}`}
-                    >
-                      {num}
-                    </button>
-                  ))}
-                </div>
-             </div>
-          </div>
-
-          <div className="space-y-4 pt-4 border-t border-zinc-800">
-            <button 
-              onClick={() => {
-                const date = gapDays[currentGapIndex];
-                updateAttendance(date, 0, 0, true);
-                saveGapAttendance(0, 0);
-              }}
-              className="w-full py-3 rounded-lg font-bold transition-all active:scale-95 flex items-center justify-center gap-2 bg-primary/10 border border-primary/30 text-primary hover:bg-primary-hover"
-            >
-              Mark as Holiday
-            </button>
-            <Button onClick={() => saveGapAttendance(records[date]?.held || 0, records[date]?.attended || 0)} className="w-full py-4 text-lg">
-              Save & Next
-            </Button>
-          </div>
-        </Card>
-      </div>
-    );
-  }
-
-  if (appState === 'SEMESTER_END_REPORT') {
-    return (
-      <div className="min-h-screen bg-zinc-950 text-zinc-100 font-sans p-4">
-        {renderSemesterEndReport()}
       </div>
     );
   }
@@ -1313,7 +862,7 @@ export default function App() {
               )}
             </div>
             <div>
-              <p className="text-zinc-500 text-sm">Welcome back,</p>
+              <p className="text-zinc-500 text-sm">Aur Kaisi Chal Rahi Padhaiyaan </p>
               <h1 className="text-2xl font-bold">{profile.name}</h1>
             </div>
           </div>
@@ -2195,9 +1744,17 @@ export default function App() {
                totalAttended: stats.totalAttended
              };
              setHistory([h, ...history]);
-             setSemester({ title: '', startDate: '', endDate: '', targetAttendance: 75, isInitialized: false });
+             setSemester({
+               title: 'Semester 1',
+               startDate: '2026-05-01',
+               endDate: '2026-10-31',
+               targetAttendance: 75,
+               isInitialized: true,
+               initialHeld: 0,
+               initialAttended: 0
+             });
              setRecords({});
-             setAppState('SEMESTER_SETUP');
+             setAppState('MAIN');
            }}>
              <LogOut size={20} /> End Current Semester
            </Button>
