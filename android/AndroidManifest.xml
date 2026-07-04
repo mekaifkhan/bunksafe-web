@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.bunksafe.app">
+
+    <!-- Permissions required for WebView wrapper -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+
+    <application
+        android:allowBackup="true"
+        android:icon="@mipmap/ic_launcher"
+        android:label="BunkSafe"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.AppCompat.NoActionBar">
+
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:launchMode="singleTask"
+            android:configChanges="orientation|screenSize|keyboardHidden">
+            
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.category.LAUNCHER" />
+            </intent-filter>
+
+            <!-- Intent Filter to intercept BunkSafe OAuth completion deep links from Chrome Custom Tabs -->
+            <intent-filter android:label="BunkSafe OAuth Callback">
+                <action android:name="android.intent.action.VIEW" />
+                
+                <category android:name="android.category.DEFAULT" />
+                <category android:name="android.category.BROWSABLE" />
+                
+                <!-- Matches bunksafe://auth_success -->
+                <data android:scheme="bunksafe" />
+                <data android:host="auth_success" />
+            </intent-filter>
+
+        </activity>
+
+    </application>
+
+</manifest>

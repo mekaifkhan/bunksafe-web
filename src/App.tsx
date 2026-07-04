@@ -62,7 +62,7 @@ import {
   calculateBunkInfo 
 } from './utils/dateUtils';
 import { auth, googleProvider, db } from './firebase';
-import { signInWithPopup, signOut, onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
+import { signInWithPopup, signOut, onAuthStateChanged, User as FirebaseUser, signInWithRedirect, GoogleAuthProvider, signInWithCredential } from 'firebase/auth';
 import { doc, setDoc, getDoc } from 'firebase/firestore';
 
 // --- Shared Tailwind Components ---
@@ -234,6 +234,58 @@ export default function App() {
 
     return () => clearTimeout(timeoutId);
   }, [user, profile, semester, records, history, exams, isDataLoaded]);
+
+  // Android WebView & Chrome Custom Tabs Sign-In Bridge
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    // Expose global method for Android App WebView to inject ID Token
+    (window as any).signInWithGoogleToken = async (idToken: string) => {
+      try {
+        setLoadingAuth(true);
+        const credential = GoogleAuthProvider.credential(idToken);
+        const result = await signInWithCredential(auth, credential);
+        if (result.user) {
+          const firebaseUser = result.user;
+          const updatedProfile = {
+            ...profile,
+            name: firebaseUser.displayName || 'BunkSafe User',
+            email: firebaseUser.email || '',
+            avatar: firebaseUser.photoURL || '',
+          };
+          setProfile(updatedProfile);
+        }
+      } catch (err: any) {
+        console.error("Token sign-in failed in WebView:", err);
+        setLoginError(err?.message || "Failed to sign in via Android native bridge.");
+      } finally {
+        setLoadingAuth(false);
+      }
+    };
+
+    // Parse URL parameters
+    const urlParams = new URLSearchParams(window.location.search);
+    const isCustomTab = urlParams.get('login_mode') === 'custom_tab';
+
+    // Flow A: If user is loaded in Chrome Custom Tabs with login_mode=custom_tab and authenticated,
+    // immediately deep link back to the Android WebView wrapper passing the secure ID token.
+    if (isCustomTab && user) {
+      const redirectWithToken = async () => {
+        try {
+          const idToken = await user.getIdToken();
+          window.location.href = `bunksafe://auth_success?idToken=${encodeURIComponent(idToken)}`;
+        } catch (err) {
+          console.error("Error retrieving ID Token for custom tab deep link:", err);
+        }
+      };
+      redirectWithToken();
+    }
+
+    // Flow B: If loaded in Chrome Custom Tabs without user authenticated, auto-trigger Google redirect.
+    if (isCustomTab && !user && !loadingAuth) {
+      signInWithRedirect(auth, googleProvider);
+    }
+  }, [user, loadingAuth, profile]);
 
   // Splash Screen 2-second Timer
   useEffect(() => {
@@ -612,6 +664,17 @@ export default function App() {
 
   const handleGoogleLogin = async () => {
     setLoginError(null);
+    
+    // Intercept Google Sign-In click inside Android WebView wrapper
+    if (typeof window !== 'undefined' && (window as any).AndroidBridge) {
+      try {
+        (window as any).AndroidBridge.onGoogleLoginClick();
+        return;
+      } catch (err) {
+        console.error("AndroidBridge invocation failed, falling back to standard popup:", err);
+      }
+    }
+
     try {
       const result = await signInWithPopup(auth, googleProvider);
       if (result.user) {
