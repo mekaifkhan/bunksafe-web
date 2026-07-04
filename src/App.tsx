@@ -130,7 +130,7 @@ export default function App() {
   // Persistence
   const [profile, setProfile] = useState<Profile>(() => {
     const saved = localStorage.getItem('bs_profile');
-    const defaultProfile = { name: '', email: '', college: '', department: '', semester: '', mobile: '', avatar: '' };
+    const defaultProfile = { name: 'Kaif Khan', email: 'kaif@example.com', college: 'IIT Delhi', department: 'Computer Science', semester: 'Semester 1', mobile: '', avatar: '' };
     if (!saved) return defaultProfile;
     const parsed = JSON.parse(saved);
     return { ...defaultProfile, ...parsed };
@@ -163,8 +163,6 @@ export default function App() {
   const [editingExam, setEditingExam] = useState<Exam | null>(null);
 
   const [appState, setAppState] = useState<AppState>(() => {
-    if (!profile.name) return 'WELCOME';
-    if (!profile.email) return 'EMAIL_COLLECTION';
     if (!semester.isInitialized) return 'SEMESTER_SETUP';
     if (semester.endDate) {
       const end = startOfDay(parseISO(semester.endDate));
@@ -777,42 +775,6 @@ export default function App() {
           transition={{ duration: 2, ease: "easeInOut" }}
           className="h-1 bg-primary rounded-full mt-12 opacity-50"
         />
-      </div>
-    );
-  }
-
-  if (appState === 'EMAIL_COLLECTION') {
-    return (
-      <div className="min-h-screen bg-zinc-950 text-zinc-100 p-6 flex flex-col justify-center gap-8">
-        <div className="space-y-2">
-          <h2 className="text-3xl font-bold tracking-tight">One Last Thing</h2>
-          <p className="text-zinc-500">Please provide your email to complete the setup.</p>
-        </div>
-        <div className="space-y-6">
-          <Input 
-            type="email" 
-            label="Email Address" 
-            value={profile.email} 
-            onChange={(v: string) => setProfile({ ...profile, email: v })} 
-            placeholder="e.g. kaif@example.com" 
-          />
-          <Button onClick={handleEmailSubmit} className="w-full py-4 text-lg">Complete Setup</Button>
-        </div>
-      </div>
-    );
-  }
-  if (appState === 'WELCOME') {
-    return (
-      <div className="min-h-screen bg-zinc-950 text-zinc-100 p-6 flex flex-col justify-center gap-8">
-        <div className="space-y-2">
-          <h1 className="text-4xl font-bold tracking-tight">BunkSafe</h1>
-          <p className="text-zinc-500">by Kaif Khan</p>
-        </div>
-        <div className="space-y-6">
-          <Input label="Your Name" value={profile.name} onChange={(v: string) => setProfile({ ...profile, name: v })} placeholder="e.g. Kaif Khan" />
-          <Input label="College Name" value={profile.college} onChange={(v: string) => setProfile({ ...profile, college: v })} placeholder="e.g. IIT Delhi" />
-          <Button onClick={handleWelcomeSubmit} className="w-full py-4 text-lg">Get Started</Button>
-        </div>
       </div>
     );
   }
