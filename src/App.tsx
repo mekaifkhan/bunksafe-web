@@ -83,14 +83,16 @@ const Button = ({
   variant = 'primary', 
   className = "", 
   disabled = false,
-  type = 'button'
+  type = 'button',
+  style
 }: { 
   children: React.ReactNode, 
   onClick?: () => void, 
   variant?: 'primary' | 'secondary' | 'danger' | 'ghost',
   className?: string,
   disabled?: boolean,
-  type?: 'button' | 'submit' | 'reset'
+  type?: 'button' | 'submit' | 'reset',
+  style?: React.CSSProperties
 }) => {
   const variants = {
     primary: 'bg-primary text-white hover:bg-primary-hover',
@@ -104,6 +106,7 @@ const Button = ({
       onClick={onClick}
       disabled={disabled}
       type={type}
+      style={style}
       className={`px-4 py-2 rounded-xl font-medium transition-all active:scale-95 disabled:opacity-50 disabled:active:scale-100 ${variants[variant]} ${className}`}
     >
       {children}
@@ -1053,6 +1056,7 @@ export default function App() {
                 <div className="space-y-4 pt-4 border-t border-zinc-800">
                   <button 
                     onClick={() => updateAttendance(today, 0, 0, !todayRecord.isHoliday)}
+                    style={{ backgroundColor: '#afb910' }}
                     className={`w-full py-3 rounded-lg font-bold transition-all active:scale-95 flex items-center justify-center gap-2 shadow-lg ${
                       todayRecord.isHoliday 
                         ? 'bg-amber-500 text-black shadow-amber-500/40 ring-2 ring-white/20' 
@@ -1061,7 +1065,13 @@ export default function App() {
                   >
                     {todayRecord.isHoliday ? 'Today is a Holiday' : 'Mark Today as Holiday'}
                   </button>
-                  <Button onClick={() => alert("Attendance Saved!")} className="w-full py-3 text-lg">Save Attendance</Button>
+                  <Button 
+                    onClick={() => alert("Attendance Saved!")} 
+                    style={{ backgroundColor: '#b91010' }}
+                    className="w-full py-3 text-lg"
+                  >
+                    Save Attendance
+                  </Button>
                 </div>
               </Card>
             </div>
