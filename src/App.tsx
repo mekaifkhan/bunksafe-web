@@ -618,41 +618,10 @@ export default function App() {
 
   // --- Handlers ---
 
-  const notifySetup = async (p: Profile) => {
-    try {
-      await fetch('/api/notify-setup', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(p)
-      });
-    } catch (e) {
-      console.error("Failed to notify setup", e);
-    }
-  };
-
-  const handleWelcomeSubmit = () => {
-    if (profile.name && profile.college) {
-      setAppState('EMAIL_COLLECTION');
-    }
-  };
-
-  const handleEmailSubmit = () => {
-    if (profile.email && profile.email.includes('@')) {
-      if (semester.isInitialized) {
-        notifySetup(profile);
-        setAppState('MAIN');
-      } else {
-        setAppState('SEMESTER_SETUP');
-      }
-    }
-  };
-
   const handleSemesterSubmit = () => {
     if (semester.startDate && semester.endDate) {
       const start = startOfDay(parseISO(semester.startDate));
       const today = startOfDay(new Date());
-
-      notifySetup(profile);
 
       if (isBefore(start, today)) {
         setAppState('LATE_DETECTION');
