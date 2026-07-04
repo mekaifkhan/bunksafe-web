@@ -1370,7 +1370,7 @@ export default function App() {
                 updateAttendance(date, 0, 0, true);
                 saveGapAttendance(0, 0);
               }}
-              className="w-full py-3 rounded-xl font-bold transition-all active:scale-95 bg-amber-500/10 border border-amber-500/30 text-amber-400 hover:bg-amber-500/20 text-sm"
+              className="w-full py-3 rounded-xl font-bold transition-all active:scale-95 bg-yellow-500/10 border border-yellow-500/30 text-yellow-500 hover:bg-yellow-500/20 text-sm"
             >
               Mark as Holiday
             </button>
@@ -1661,7 +1661,7 @@ export default function App() {
                     onClick={() => updateAttendance(today, 0, 0, !todayRecord.isHoliday)}
                     className={`w-full py-3 rounded-xl font-bold transition-all flex items-center justify-center gap-2 text-sm shadow-md ${
                       todayRecord.isHoliday 
-                        ? 'bg-amber-500 text-zinc-950 shadow-amber-500/20 font-black' 
+                        ? 'bg-yellow-500 text-zinc-950 shadow-yellow-500/20 font-black' 
                         : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
                     }`}
                   >
@@ -1726,7 +1726,7 @@ export default function App() {
               let statusClasses = 'border-zinc-800 text-zinc-400 hover:border-zinc-700 bg-zinc-900/30';
               if (rec) {
                 if (rec.isHoliday) {
-                  statusClasses = 'border-amber-500/40 bg-amber-500/5 text-amber-500';
+                  statusClasses = 'border-yellow-500/40 bg-yellow-500/5 text-yellow-500';
                 } else if (rec.held > 0) {
                   const pct = rec.attended / rec.held;
                   if (pct >= 1) {
@@ -1796,7 +1796,7 @@ export default function App() {
                 onClick={() => updateAttendance(selectedDate, 0, 0, !activeRecord.isHoliday)}
                 className={`w-full py-2.5 rounded-xl text-xs font-bold transition-all ${
                   activeRecord.isHoliday 
-                    ? 'bg-amber-500 text-zinc-950 font-black' 
+                    ? 'bg-yellow-500 text-zinc-950 font-black' 
                     : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
                 }`}
               >
