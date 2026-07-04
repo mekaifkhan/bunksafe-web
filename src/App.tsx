@@ -212,11 +212,11 @@ export default function App() {
 
     const syncToFirestore = async () => {
       try {
-        const docRef = doc(db, 'users', user.uid, 'appData');
+        const docRef = doc(db, 'users', user.uid);
         await setDoc(docRef, {
           profile,
           semester,
-          records,
+          attendance: records,
           history,
           exams,
           lastUpdated: new Date().toISOString()
@@ -315,7 +315,7 @@ export default function App() {
 
       if (firebaseUser) {
         try {
-          const docRef = doc(db, 'users', firebaseUser.uid, 'appData');
+          const docRef = doc(db, 'users', firebaseUser.uid);
           const docSnap = await getDoc(docRef);
 
           // Get current local state from localStorage before merging
@@ -375,7 +375,7 @@ export default function App() {
             };
 
             // Records merge
-            const cloudRecords = cloudData.records || {};
+            const cloudRecords = cloudData.attendance || cloudData.records || {};
             for (const date in cloudRecords) {
               const fRec = cloudRecords[date];
               const lRec = finalRecords[date];
@@ -418,7 +418,7 @@ export default function App() {
             await setDoc(docRef, {
               profile: finalProfile,
               semester: finalSemester,
-              records: finalRecords,
+              attendance: finalRecords,
               history: finalHistory,
               exams: finalExams,
               lastUpdated: new Date().toISOString()
