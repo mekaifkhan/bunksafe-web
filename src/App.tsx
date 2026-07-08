@@ -184,7 +184,7 @@ export default function App() {
   const [onboardingStep, setOnboardingStep] = useState<number>(1);
   const [isJamiaStudent, setIsJamiaStudent] = useState<boolean | null>(null);
 
-  const [onboardName, setOnboardName] = useState('Kaif Khan');
+  const [onboardName, setOnboardName] = useState('');
   const [onboardDept, setOnboardDept] = useState('Computer Engineering');
   const [onboardSem, setOnboardSem] = useState('Semester 3');
 
@@ -1088,7 +1088,15 @@ export default function App() {
                   <Button variant="secondary" className="flex-1" onClick={() => setOnboardingStep(1)}>
                     Back
                   </Button>
-                  <Button className="flex-1" onClick={() => setOnboardingStep(3)}>
+                  <Button 
+                    className="flex-1" 
+                    onClick={() => {
+                      if (onboardName.trim()) {
+                        setOnboardingStep(3);
+                      }
+                    }}
+                    disabled={!onboardName.trim()}
+                  >
                     Next
                   </Button>
                 </div>
