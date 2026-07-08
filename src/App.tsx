@@ -295,7 +295,7 @@ export default function App() {
       const dateStr = formatDate(day);
       const record = records[dateStr];
       return [
-        format(day, 'MMM dd (EEE)'),
+        format(day, 'dd/MM/yyyy (EEE)'),
         record ? (record.isHoliday ? 'Holiday' : record.held) : '-',
         record ? (record.isHoliday ? '-' : record.attended) : '-',
         record ? (record.isHoliday ? '-' : (record.held > 0 ? `${((record.attended / record.held) * 100).toFixed(0)}%` : '-')) : '-'
@@ -1317,7 +1317,7 @@ export default function App() {
               <div className="space-y-2">
                 <h2 className="text-xl font-bold">Semester Not Started</h2>
                 <p className="text-zinc-400 text-sm max-w-[250px] mx-auto leading-relaxed">
-                  Your "{semester.title || 'Next Semester'}" is scheduled to begin on <span className="text-primary font-bold">{format(parseISO(semester.startDate), 'PPP')}</span>.
+                  Your "{semester.title || 'Next Semester'}" is scheduled to begin on <span className="text-primary font-bold">{format(parseISO(semester.startDate), 'dd/MM/yyyy')}</span>.
                 </p>
                 <div className="pt-4">
                   <span className="bg-primary/20 text-primary text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-widest">Entries are locked</span>
@@ -1330,11 +1330,11 @@ export default function App() {
               <div className="space-y-2">
                 <div className="flex justify-between items-center py-2 border-b border-zinc-800/50">
                   <span className="text-sm text-zinc-400">Start Date</span>
-                  <span className="text-sm font-bold text-zinc-100">{format(parseISO(semester.startDate), 'MMM dd, yyyy')}</span>
+                  <span className="text-sm font-bold text-zinc-100">{format(parseISO(semester.startDate), 'dd/MM/yyyy')}</span>
                 </div>
                 <div className="flex justify-between items-center py-2">
                   <span className="text-sm text-zinc-400">End Date</span>
-                  <span className="text-sm font-bold text-zinc-100">{format(parseISO(semester.endDate), 'MMM dd, yyyy')}</span>
+                  <span className="text-sm font-bold text-zinc-100">{format(parseISO(semester.endDate), 'dd/MM/yyyy')}</span>
                 </div>
               </div>
             </Card>
@@ -1420,7 +1420,7 @@ export default function App() {
 
             <div className="space-y-4">
               <h3 className="text-lg font-bold flex items-center gap-2">
-                Daily Entry <span className="text-zinc-500 text-sm font-normal">— {format(new Date(), 'PPP')}</span>
+                Daily Entry <span className="text-zinc-500 text-sm font-normal">— {format(new Date(), 'dd/MM/yyyy')}</span>
               </h3>
               <Card className="space-y-8">
                 {/* Held Section */}
@@ -1614,7 +1614,7 @@ export default function App() {
               <Card className="border-t-4 border-t-primary">
                 <div className="flex justify-between items-start mb-4">
                   <div>
-                    <h3 className="text-lg font-bold">{format(parseISO(selectedDate), 'EEEE, MMM do')}</h3>
+                    <h3 className="text-lg font-bold">{format(parseISO(selectedDate), 'EEEE, dd/MM/yyyy')}</h3>
                     <p className="text-zinc-500 text-xs uppercase tracking-wider font-bold">
                       {getExamForDate(parseISO(selectedDate)) ? `Exam: ${getExamForDate(parseISO(selectedDate))?.label}` : records[selectedDate]?.isHoliday ? 'Holiday' : 'Regular Class Day'}
                     </p>
@@ -1797,7 +1797,7 @@ export default function App() {
                 <div>
                   <p className="font-bold">{h.title || 'Past Semester'}</p>
                   <p className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold">
-                    {format(parseISO(h.startDate), 'MMM dd, yyyy')} - {format(parseISO(h.endDate), 'MMM dd, yyyy')}
+                    {format(parseISO(h.startDate), 'dd/MM/yyyy')} - {format(parseISO(h.endDate), 'dd/MM/yyyy')}
                   </p>
                   <p className="text-xs text-zinc-400 mt-1">{h.totalAttended} / {h.totalHeld} classes</p>
                 </div>
@@ -1903,7 +1903,7 @@ export default function App() {
                     <div>
                       <h4 className="font-bold text-sm">{exam.label}</h4>
                       <p className="text-[10px] text-zinc-500 font-medium uppercase tracking-wider">
-                        {format(parseISO(exam.startDate), 'MMM dd')} - {format(parseISO(exam.endDate), 'MMM dd')}
+                        {format(parseISO(exam.startDate), 'dd/MM/yyyy')} - {format(parseISO(exam.endDate), 'dd/MM/yyyy')}
                       </p>
                     </div>
                   </div>
