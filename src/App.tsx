@@ -976,8 +976,8 @@ export default function App() {
                 className="space-y-4"
               >
                 <div className="text-center pb-2">
-                  <h2 className="text-xl font-bold">Welcome! Are you a Jamia Student?</h2>
-                  <p className="text-zinc-500 text-sm mt-1">Select your profile to initialize your calendar.</p>
+                  <h2 className="text-xl font-bold">Choose Setup Option</h2>
+                  <p className="text-zinc-500 text-sm mt-1">Select an option to initialize your academic calendar.</p>
                 </div>
 
                 <button
@@ -992,9 +992,9 @@ export default function App() {
                     <GraduationCap size={24} />
                   </div>
                   <div className="flex-1 space-y-1">
-                    <h3 className="font-bold text-zinc-200 group-hover:text-white transition-all">Yes, Jamia BTech Student</h3>
+                    <h3 className="font-bold text-zinc-200 group-hover:text-white transition-all">Jamia BTech Student</h3>
                     <p className="text-xs text-zinc-500 leading-relaxed">
-                      Fetch official Jamia academic calendar, including mid-sem & end-sem exams instantly.
+                      Auto-load Jamia academic calendar, mid-sems & end-sem dates instantly.
                     </p>
                   </div>
                 </button>
@@ -1021,9 +1021,9 @@ export default function App() {
                     <Settings size={24} />
                   </div>
                   <div className="flex-1 space-y-1">
-                    <h3 className="font-bold text-zinc-300">No, Custom College Setup</h3>
+                    <h3 className="font-bold text-zinc-300">Manual College Setup</h3>
                     <p className="text-xs text-zinc-500 leading-relaxed">
-                      Manually enter your own semester start/end dates, holidays, and customize track goals.
+                      Manually enter your own semester start/end dates and customize attendance goals.
                     </p>
                   </div>
                 </button>
