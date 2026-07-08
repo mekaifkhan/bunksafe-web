@@ -31,7 +31,9 @@ import {
   Download,
   BookOpen,
   CalendarDays,
-  Edit2
+  Edit2,
+  GraduationCap,
+  Check
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { jsPDF } from 'jspdf';
@@ -146,13 +148,13 @@ export default function App() {
       startDate: '2026-05-01',
       endDate: '2026-10-31',
       targetAttendance: 75,
-      isInitialized: true,
+      isInitialized: false,
       initialHeld: 0,
       initialAttended: 0
     };
     if (!saved) return defaultSemester;
     const parsed = JSON.parse(saved);
-    return { ...defaultSemester, ...parsed, isInitialized: true };
+    return { ...defaultSemester, ...parsed };
   });
 
   const [records, setRecords] = useState<Record<string, AttendanceRecord>>(() => {
@@ -176,6 +178,27 @@ export default function App() {
   const [appState, setAppState] = useState<AppState>('MAIN');
 
   const [isSplashVisible, setIsSplashVisible] = useState(true);
+  const [onboardingCompleted, setOnboardingCompleted] = useState<boolean>(() => {
+    return localStorage.getItem('bs_onboarding_completed') === 'true' || localStorage.getItem('bs_semester') !== null;
+  });
+  const [onboardingStep, setOnboardingStep] = useState<number>(1);
+  const [isJamiaStudent, setIsJamiaStudent] = useState<boolean | null>(null);
+
+  const [onboardName, setOnboardName] = useState('Kaif Khan');
+  const [onboardDept, setOnboardDept] = useState('Computer Engineering');
+  const [onboardSem, setOnboardSem] = useState('Semester 3');
+
+  const [onboardStartDate, setOnboardStartDate] = useState('2026-07-17');
+  const [onboardEndDate, setOnboardEndDate] = useState('2026-11-20');
+
+  const [onboardMid1Start, setOnboardMid1Start] = useState('2026-09-14');
+  const [onboardMid1End, setOnboardMid1End] = useState('2026-09-18');
+
+  const [onboardMid2Start, setOnboardMid2Start] = useState('2026-11-02');
+  const [onboardMid2End, setOnboardMid2End] = useState('2026-11-06');
+
+  const [onboardEndSemStart, setOnboardEndSemStart] = useState('2026-11-25');
+  const [onboardEndSemEnd, setOnboardEndSemEnd] = useState('2026-12-20');
   const [activeTab, setActiveTab] = useState('dashboard');
   const [showLatePopup, setShowLatePopup] = useState(false);
   const [notificationPermission, setNotificationPermission] = useState<NotificationPermission>(
@@ -361,6 +384,9 @@ export default function App() {
               });
               setRecords({});
               setExams([]); // Clear exams for new semester
+              localStorage.removeItem('bs_onboarding_completed');
+              setOnboardingCompleted(false);
+              setOnboardingStep(1);
               setAppState('MAIN');
             }}
           >
@@ -658,6 +684,10 @@ export default function App() {
     );
   }
 
+  if (!onboardingCompleted) {
+    return renderOnboarding();
+  }
+
   // --- Main Dashboard ---
 
 
@@ -920,6 +950,311 @@ export default function App() {
         >
           Activate Semester
         </Button>
+      </div>
+    );
+  };
+
+  function renderOnboarding() {
+    return (
+      <div className="min-h-screen bg-zinc-950 text-zinc-100 flex items-center justify-center p-4">
+        <div className="w-full max-w-md space-y-6">
+          <div className="text-center space-y-2">
+            <div className="w-16 h-16 bg-primary rounded-2xl mx-auto flex items-center justify-center text-white shadow-xl shadow-primary/20 animate-bounce">
+              <CalendarIcon size={32} />
+            </div>
+            <h1 className="text-3xl font-black tracking-tight text-white">BunkSafe</h1>
+            <p className="text-zinc-500 text-xs uppercase tracking-widest font-bold">Smart Attendance Planner</p>
+          </div>
+
+          <AnimatePresence mode="wait">
+            {onboardingStep === 1 && (
+              <motion.div
+                key="step1"
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 20 }}
+                className="space-y-4"
+              >
+                <div className="text-center pb-2">
+                  <h2 className="text-xl font-bold">Welcome! Are you a Jamia Student?</h2>
+                  <p className="text-zinc-500 text-sm mt-1">Select your profile to initialize your calendar.</p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsJamiaStudent(true);
+                    setOnboardingStep(2);
+                  }}
+                  className="w-full text-left p-5 rounded-2xl bg-zinc-900 border border-zinc-800 hover:border-primary/50 transition-all hover:bg-zinc-900/80 group flex gap-4 items-center"
+                >
+                  <div className="p-3 bg-primary/10 text-primary rounded-xl group-hover:bg-primary group-hover:text-white transition-all">
+                    <GraduationCap size={24} />
+                  </div>
+                  <div className="flex-1 space-y-1">
+                    <h3 className="font-bold text-zinc-200 group-hover:text-white transition-all">Yes, Jamia BTech Student</h3>
+                    <p className="text-xs text-zinc-500 leading-relaxed">
+                      Fetch official Jamia academic calendar, including mid-sem & end-sem exams instantly.
+                    </p>
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsJamiaStudent(false);
+                    localStorage.setItem('bs_onboarding_completed', 'true');
+                    setSemester({
+                      title: 'Semester 1',
+                      startDate: '',
+                      endDate: '',
+                      targetAttendance: 75,
+                      isInitialized: false,
+                      initialHeld: 0,
+                      initialAttended: 0
+                    });
+                    setOnboardingCompleted(true);
+                  }}
+                  className="w-full text-left p-5 rounded-2xl bg-zinc-900 border border-zinc-800 hover:border-zinc-700 transition-all hover:bg-zinc-900/80 group flex gap-4 items-center"
+                >
+                  <div className="p-3 bg-zinc-800 text-zinc-400 rounded-xl group-hover:bg-zinc-700 group-hover:text-zinc-200 transition-all">
+                    <Settings size={24} />
+                  </div>
+                  <div className="flex-1 space-y-1">
+                    <h3 className="font-bold text-zinc-300">No, Custom College Setup</h3>
+                    <p className="text-xs text-zinc-500 leading-relaxed">
+                      Manually enter your own semester start/end dates, holidays, and customize track goals.
+                    </p>
+                  </div>
+                </button>
+              </motion.div>
+            )}
+
+            {onboardingStep === 2 && (
+              <motion.div
+                key="step2"
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 20 }}
+                className="space-y-5"
+              >
+                <div className="text-center">
+                  <h2 className="text-xl font-bold">Your Details</h2>
+                  <p className="text-zinc-500 text-sm mt-1">Please enter your academic information.</p>
+                </div>
+
+                <Card className="space-y-4 p-5">
+                  <Input 
+                    label="Full Name" 
+                    value={onboardName} 
+                    onChange={setOnboardName} 
+                    placeholder="Enter your name" 
+                  />
+                  
+                  <div className="space-y-1 text-left">
+                    <label className="text-xs font-bold text-zinc-500 uppercase tracking-widest block">Department</label>
+                    <select
+                      value={onboardDept}
+                      onChange={(e) => setOnboardDept(e.target.value)}
+                      className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3 text-zinc-100 focus:outline-none focus:border-primary transition-colors"
+                    >
+                      <option value="Computer Engineering">Computer Engineering</option>
+                      <option value="Electronics & Communication Engineering">Electronics & Communication Engg</option>
+                      <option value="Electrical Engineering">Electrical Engineering</option>
+                      <option value="Mechanical Engineering">Mechanical Engineering</option>
+                      <option value="Civil Engineering">Civil Engineering</option>
+                      <option value="Applied Sciences">Applied Sciences & Humanities</option>
+                    </select>
+                  </div>
+
+                  <div className="space-y-2 text-left">
+                    <label className="text-xs font-bold text-zinc-500 uppercase tracking-widest block">Semester</label>
+                    <div className="grid grid-cols-4 gap-2">
+                      {Array.from({ length: 8 }, (_, i) => `Semester ${i + 1}`).map(sem => (
+                        <button
+                          key={sem}
+                          type="button"
+                          onClick={() => setOnboardSem(sem)}
+                          className={`py-2 px-1 rounded-lg text-xs font-bold border transition-all ${onboardSem === sem ? 'bg-primary border-primary text-white font-black' : 'bg-zinc-800 border-zinc-700/60 text-zinc-400'}`}
+                        >
+                          Sem {sem.split(' ')[1]}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </Card>
+
+                <div className="flex gap-3">
+                  <Button variant="secondary" className="flex-1" onClick={() => setOnboardingStep(1)}>
+                    Back
+                  </Button>
+                  <Button className="flex-1" onClick={() => setOnboardingStep(3)}>
+                    Next
+                  </Button>
+                </div>
+              </motion.div>
+            )}
+
+            {onboardingStep === 3 && (
+              <motion.div
+                key="step3"
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 20 }}
+                className="space-y-5"
+              >
+                <div className="text-center space-y-1">
+                  <h2 className="text-xl font-bold text-primary">Academic Calendar</h2>
+                  <p className="text-zinc-500 text-sm">Review & customize dates loaded from Jamia calendar.</p>
+                </div>
+
+                <div className="bg-primary/10 border border-primary/25 rounded-2xl p-4 flex gap-3 items-start text-left">
+                  <Info size={18} className="text-primary shrink-0 mt-0.5" />
+                  <p className="text-xs text-primary/90 leading-relaxed font-medium">
+                    We have fetched these details as per Jamia academic calendar. Feel free to edit them now, or you can modify them anytime in the app settings later.
+                  </p>
+                </div>
+
+                <Card className="space-y-4 p-5 max-h-[350px] overflow-y-auto custom-scrollbar text-left">
+                  <div>
+                    <h3 className="text-xs font-black text-zinc-500 uppercase tracking-widest mb-3">Semester Timeline</h3>
+                    <div className="grid grid-cols-2 gap-2">
+                      <Input 
+                        type="date" 
+                        label="Start Date" 
+                        value={onboardStartDate} 
+                        onChange={setOnboardStartDate} 
+                      />
+                      <Input 
+                        type="date" 
+                        label="End Date" 
+                        value={onboardEndDate} 
+                        onChange={setOnboardEndDate} 
+                      />
+                    </div>
+                  </div>
+
+                  <hr className="border-zinc-800" />
+
+                  <div>
+                    <h3 className="text-xs font-black text-zinc-500 uppercase tracking-widest mb-3">1st Mid Sem Exam</h3>
+                    <div className="grid grid-cols-2 gap-2">
+                      <Input 
+                        type="date" 
+                        label="Start Date" 
+                        value={onboardMid1Start} 
+                        onChange={setOnboardMid1Start} 
+                      />
+                      <Input 
+                        type="date" 
+                        label="End Date" 
+                        value={onboardMid1End} 
+                        onChange={setOnboardMid1End} 
+                      />
+                    </div>
+                  </div>
+
+                  <hr className="border-zinc-800" />
+
+                  <div>
+                    <h3 className="text-xs font-black text-zinc-500 uppercase tracking-widest mb-3">2nd Mid Sem Exam</h3>
+                    <div className="grid grid-cols-2 gap-2">
+                      <Input 
+                        type="date" 
+                        label="Start Date" 
+                        value={onboardMid2Start} 
+                        onChange={setOnboardMid2Start} 
+                      />
+                      <Input 
+                        type="date" 
+                        label="End Date" 
+                        value={onboardMid2End} 
+                        onChange={setOnboardMid2End} 
+                      />
+                    </div>
+                  </div>
+
+                  <hr className="border-zinc-800" />
+
+                  <div>
+                    <h3 className="text-xs font-black text-zinc-500 uppercase tracking-widest mb-3">End Sem Exam</h3>
+                    <div className="grid grid-cols-2 gap-2">
+                      <Input 
+                        type="date" 
+                        label="Start Date" 
+                        value={onboardEndSemStart} 
+                        onChange={setOnboardEndSemStart} 
+                      />
+                      <Input 
+                        type="date" 
+                        label="End Date" 
+                        value={onboardEndSemEnd} 
+                        onChange={setOnboardEndSemEnd} 
+                      />
+                    </div>
+                  </div>
+                </Card>
+
+                <div className="flex gap-3">
+                  <Button variant="secondary" className="flex-1" onClick={() => setOnboardingStep(2)}>
+                    Back
+                  </Button>
+                  <Button className="flex-1" onClick={() => {
+                    setProfile({
+                      name: onboardName,
+                      email: profile.email || 'student@jmi.ac.in',
+                      college: 'Jamia Millia Islamia',
+                      department: onboardDept,
+                      semester: onboardSem,
+                      mobile: '',
+                      avatar: ''
+                    });
+
+                    setSemester({
+                      title: onboardSem,
+                      startDate: onboardStartDate,
+                      endDate: onboardEndDate,
+                      targetAttendance: 75,
+                      isInitialized: true,
+                      initialHeld: 0,
+                      initialAttended: 0
+                    });
+
+                    const preparedExams: Exam[] = [
+                      {
+                        id: 'j_mid1',
+                        type: 'Mid-sem',
+                        label: '1st Mid Sem',
+                        startDate: onboardMid1Start,
+                        endDate: onboardMid1End
+                      },
+                      {
+                        id: 'j_mid2',
+                        type: 'Mid-sem',
+                        label: '2nd Mid Sem',
+                        startDate: onboardMid2Start,
+                        endDate: onboardMid2End
+                      },
+                      {
+                        id: 'j_endsem',
+                        type: 'End-sem',
+                        label: 'End-sem Exam',
+                        startDate: onboardEndSemStart,
+                        endDate: onboardEndSemEnd
+                      }
+                    ];
+                    setExams(preparedExams);
+
+                    localStorage.setItem('bs_onboarding_completed', 'true');
+                    setOnboardingCompleted(true);
+                  }}>
+                    Finish & Activate
+                  </Button>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
       </div>
     );
   };
@@ -1843,14 +2178,18 @@ export default function App() {
              setHistory([h, ...history]);
              setSemester({
                title: 'Semester 1',
-               startDate: '2026-05-01',
-               endDate: '2026-10-31',
+               startDate: '',
+               endDate: '',
                targetAttendance: 75,
-               isInitialized: true,
+               isInitialized: false,
                initialHeld: 0,
                initialAttended: 0
              });
              setRecords({});
+             setExams([]); // Clear exams for new semester
+             localStorage.removeItem('bs_onboarding_completed');
+             setOnboardingCompleted(false);
+             setOnboardingStep(1);
              setAppState('MAIN');
            }}>
              <LogOut size={20} /> End Current Semester
