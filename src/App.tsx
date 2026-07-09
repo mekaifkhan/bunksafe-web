@@ -33,7 +33,9 @@ import {
   CalendarDays,
   Edit2,
   GraduationCap,
-  Check
+  Check,
+  Clock,
+  X
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { jsPDF } from 'jspdf';
@@ -62,22 +64,32 @@ import {
   AttendanceRecord, 
   SemesterHistory, 
   AppState,
-  Exam
+  Exam,
+  SubjectGradeConfig,
+  Subject,
+  formatSubjectName
 } from './types';
+import SettingsTab from './components/SettingsTab';
+import ExamsTab from './components/ExamsTab';
 import { 
   formatDate, 
   getTodayStr, 
   calculateAttendance, 
-  calculateBunkInfo 
+  calculateBunkInfo,
+  safeParse,
+  parseTimeRange
 } from './utils/dateUtils';
 
 // --- Components ---
 
-const Card = ({ children, className = "" }: { children: React.ReactNode, className?: string, key?: string | number }) => (
-  <div className={`bg-zinc-900 border border-zinc-800 rounded-2xl p-4 ${className}`}>
-    {children}
-  </div>
-);
+const Card = ({ children, className = "" }: { children: React.ReactNode, className?: string, key?: string | number }) => {
+  const hasPadding = className.includes('p-') || className.includes('px-') || className.includes('py-');
+  return (
+    <div className={`bg-zinc-900 border border-zinc-800 rounded-2xl ${hasPadding ? '' : 'p-4'} ${className}`}>
+      {children}
+    </div>
+  );
+};
 
 const Button = ({ 
   children, 
@@ -172,6 +184,11 @@ export default function App() {
     return saved ? JSON.parse(saved) : [];
   });
 
+  const [gradeSubjects, setGradeSubjects] = useState<SubjectGradeConfig[]>(() => {
+    const saved = localStorage.getItem('bs_grade_planner_subjects');
+    return saved ? JSON.parse(saved) : [];
+  });
+
   const [showExamModal, setShowExamModal] = useState(false);
   const [editingExam, setEditingExam] = useState<Exam | null>(null);
 
@@ -200,6 +217,8 @@ export default function App() {
   const [onboardEndSemStart, setOnboardEndSemStart] = useState('2026-11-25');
   const [onboardEndSemEnd, setOnboardEndSemEnd] = useState('2026-12-20');
   const [activeTab, setActiveTab] = useState('dashboard');
+  const [scheduleSubTab, setScheduleSubTab] = useState<'schedule' | 'calendar'>('schedule');
+  const [selectedScheduleDay, setSelectedScheduleDay] = useState<'Monday' | 'Tuesday' | 'Wednesday' | 'Thursday' | 'Friday'>('Monday');
   const [showLatePopup, setShowLatePopup] = useState(false);
   const [notificationPermission, setNotificationPermission] = useState<NotificationPermission>(
     typeof Notification !== 'undefined' ? Notification.permission : 'default'
@@ -223,6 +242,211 @@ export default function App() {
   const [themeColor, setThemeColor] = useState(() => {
     return localStorage.getItem('bs_theme_color') || '#10b981';
   });
+
+  // Daily Class Schedule States
+  const [classSchedule, setClassSchedule] = useState<Record<string, Record<number, string>>>(() => {
+    const saved = localStorage.getItem('bs_class_schedule');
+    return saved ? JSON.parse(saved) : {
+      'Monday': {},
+      'Tuesday': {},
+      'Wednesday': {},
+      'Thursday': {},
+      'Friday': {}
+    };
+  });
+
+  const [enableLiveWidget, setEnableLiveWidget] = useState<boolean>(() => {
+    const saved = localStorage.getItem('bs_enable_live_widget');
+    return saved ? JSON.parse(saved) : false;
+  });
+
+  const [customClassTimes, setCustomClassTimes] = useState<Record<number, string>>(() => {
+    const saved = localStorage.getItem('bs_custom_class_times');
+    return saved ? JSON.parse(saved) : {
+      0: '09:00 AM - 10:00 AM',
+      1: '10:00 AM - 11:00 AM',
+      2: '11:00 AM - 12:00 PM',
+      3: '12:00 PM - 01:00 PM',
+      [-1]: '01:00 PM - 02:00 PM',
+      4: '02:00 PM - 03:00 PM',
+      5: '03:00 PM - 04:00 PM',
+      6: '04:00 PM - 05:00 PM'
+    };
+  });
+
+  const [subjects, setSubjects] = useState<Subject[]>(() => {
+    const saved = localStorage.getItem('bs_subjects');
+    return saved ? JSON.parse(saved) : [];
+  });
+
+  const [isSubjectPopupDismissed, setIsSubjectPopupDismissed] = useState(false);
+
+  useEffect(() => {
+    localStorage.setItem('bs_subjects', JSON.stringify(subjects));
+  }, [subjects]);
+
+  const [subjectAttendance, setSubjectAttendance] = useState<Record<string, { attended: number; held: number }>>(() => {
+    const saved = localStorage.getItem('bs_subject_attendance');
+    return saved ? JSON.parse(saved) : {};
+  });
+
+  // Automatic Master Subject List Migration
+  useEffect(() => {
+    const savedSubjects = localStorage.getItem('bs_subjects');
+    if (!savedSubjects || JSON.parse(savedSubjects).length === 0) {
+      const uniqueNames = new Set<string>();
+      
+      // 1. Gather names from classSchedule
+      const savedSchedule = localStorage.getItem('bs_class_schedule');
+      if (savedSchedule) {
+        try {
+          const parsedSchedule = JSON.parse(savedSchedule);
+          Object.values(parsedSchedule).forEach((daySlots: any) => {
+            Object.values(daySlots).forEach((subName: any) => {
+              if (subName && typeof subName === 'string' && subName.trim() && !subName.startsWith('sub_')) {
+                uniqueNames.add(formatSubjectName(subName));
+              }
+            });
+          });
+        } catch (e) { console.error(e); }
+      }
+
+      // 2. Gather names from gradeSubjects
+      const savedGradePlanner = localStorage.getItem('bs_grade_planner_subjects');
+      if (savedGradePlanner) {
+        try {
+          const parsedGradePlanner = JSON.parse(savedGradePlanner);
+          parsedGradePlanner.forEach((item: any) => {
+            if (item.name && typeof item.name === 'string' && item.name.trim()) {
+              uniqueNames.add(formatSubjectName(item.name));
+            }
+          });
+        } catch (e) { console.error(e); }
+      }
+
+      // 3. Gather keys from subjectAttendance
+      const savedAttendance = localStorage.getItem('bs_subject_attendance');
+      if (savedAttendance) {
+        try {
+          const parsedAttendance = JSON.parse(savedAttendance);
+          Object.keys(parsedAttendance).forEach(key => {
+            if (key && typeof key === 'string' && key.trim() && !key.startsWith('sub_')) {
+              uniqueNames.add(formatSubjectName(key));
+            }
+          });
+        } catch (e) { console.error(e); }
+      }
+
+      if (uniqueNames.size > 0) {
+        const migratedSubjects: Subject[] = Array.from(uniqueNames).map((name, index) => {
+          const isLab = /lab|practical|workshop|project/i.test(name);
+          return {
+            id: `sub_${Date.now()}_${index}_${Math.random().toString(36).substr(2, 5)}`,
+            name,
+            type: isLab ? 'Lab' : 'Theory',
+            credits: isLab ? 1 : 3
+          };
+        });
+
+        // Save subjects
+        localStorage.setItem('bs_subjects', JSON.stringify(migratedSubjects));
+        setSubjects(migratedSubjects);
+
+        // Migrate class_schedule
+        if (savedSchedule) {
+          try {
+            const parsedSchedule = JSON.parse(savedSchedule);
+            const migratedSchedule: any = {};
+            Object.entries(parsedSchedule).forEach(([day, slots]: [string, any]) => {
+              migratedSchedule[day] = {};
+              Object.entries(slots).forEach(([slotId, subName]: [string, any]) => {
+                if (subName && typeof subName === 'string') {
+                  const formatted = formatSubjectName(subName);
+                  const foundSub = migratedSubjects.find(s => s.name === formatted);
+                  migratedSchedule[day][slotId] = foundSub ? foundSub.id : subName;
+                } else {
+                  migratedSchedule[day][slotId] = subName;
+                }
+              });
+            });
+            localStorage.setItem('bs_class_schedule', JSON.stringify(migratedSchedule));
+            setClassSchedule(migratedSchedule);
+          } catch (e) { console.error(e); }
+        }
+
+        // Migrate grade_planner_subjects
+        if (savedGradePlanner) {
+          try {
+            const parsedGradePlanner = JSON.parse(savedGradePlanner);
+            const migratedGradePlanner = parsedGradePlanner.map((item: any) => {
+              const formatted = formatSubjectName(item.name);
+              const foundSub = migratedSubjects.find(s => s.name === formatted);
+              if (foundSub) {
+                return {
+                  ...item,
+                  id: foundSub.id,
+                  name: foundSub.name
+                };
+              }
+              return item;
+            });
+            localStorage.setItem('bs_grade_planner_subjects', JSON.stringify(migratedGradePlanner));
+            setGradeSubjects(migratedGradePlanner);
+          } catch (e) { console.error(e); }
+        }
+
+        // Migrate subject_attendance
+        if (savedAttendance) {
+          try {
+            const parsedAttendance = JSON.parse(savedAttendance);
+            const migratedAttendance: any = {};
+            Object.entries(parsedAttendance).forEach(([key, val]) => {
+              const formatted = formatSubjectName(key);
+              const foundSub = migratedSubjects.find(s => s.name === formatted);
+              if (foundSub) {
+                migratedAttendance[foundSub.id] = val;
+              } else {
+                migratedAttendance[key] = val;
+              }
+            });
+            localStorage.setItem('bs_subject_attendance', JSON.stringify(migratedAttendance));
+            setSubjectAttendance(migratedAttendance);
+          } catch (e) { console.error(e); }
+        }
+      }
+    }
+  }, []);
+
+  const [markedScheduleSlots, setMarkedScheduleSlots] = useState<Record<string, 'present' | 'absent'>>(() => {
+    const saved = localStorage.getItem('bs_marked_schedule_slots');
+    return saved ? JSON.parse(saved) : {};
+  });
+
+  const CLASS_SLOTS = useMemo(() => [
+    { id: 0, time: customClassTimes[0] || '09:00 AM - 10:00 AM', label: '09:00 AM' },
+    { id: 1, time: customClassTimes[1] || '10:00 AM - 11:00 AM', label: '10:00 AM' },
+    { id: 2, time: customClassTimes[2] || '11:00 AM - 12:00 PM', label: '11:00 AM' },
+    { id: 3, time: customClassTimes[3] || '12:00 PM - 01:00 PM', label: '12:00 PM' },
+    { id: -1, time: customClassTimes[-1] || '01:00 PM - 02:00 PM', label: '01:00 PM', isLunch: true },
+    { id: 4, time: customClassTimes[4] || '02:00 PM - 03:00 PM', label: '02:00 PM' },
+    { id: 5, time: customClassTimes[5] || '03:00 PM - 04:00 PM', label: '03:00 PM' },
+    { id: 6, time: customClassTimes[6] || '04:00 PM - 05:00 PM', label: '04:00 PM' },
+  ], [customClassTimes]);
+
+  const uniqueSubjects = useMemo(() => {
+    if (subjects && subjects.length > 0) {
+      return subjects.map(s => s.name);
+    }
+    const subjectsSet = new Set<string>();
+    Object.values(classSchedule).forEach(daySlots => {
+      Object.values(daySlots).forEach(subject => {
+        if (subject && subject.trim()) {
+          subjectsSet.add(subject.trim());
+        }
+      });
+    });
+    return Array.from(subjectsSet).sort();
+  }, [subjects, classSchedule]);
   const [reportEmail, setReportEmail] = useState(profile.email || '');
   const [isSendingReport, setIsSendingReport] = useState(false);
   const [reportStatus, setReportStatus] = useState<{ type: 'success' | 'error', message: string } | null>(null);
@@ -247,6 +471,76 @@ export default function App() {
   // Calculations
   const stats = useMemo(() => calculateAttendance(records, semester.initialHeld, semester.initialAttended, semester.startDate, exams), [records, semester, exams]);
   const bunkInfo = useMemo(() => calculateBunkInfo(stats.totalHeld, stats.totalAttended, semester.targetAttendance), [stats, semester]);
+
+  const liveClassInfo = useMemo(() => {
+    if (!enableLiveWidget) return null;
+    
+    const now = new Date();
+    const currentMinutes = now.getHours() * 60 + now.getMinutes();
+    const currentDayName = format(now, 'EEEE');
+    
+    const isWeekend = ['Saturday', 'Sunday'].includes(currentDayName);
+    if (isWeekend) {
+      return {
+        isWeekend: true,
+        live: null,
+        next: null
+      };
+    }
+    
+    const daySchedule = classSchedule[currentDayName] || {};
+    
+    let live: { subject: string; time: string; isLunch?: boolean } | null = null;
+    let next: { subject: string; time: string; isLunch?: boolean } | null = null;
+    
+    const activeSlots = CLASS_SLOTS.map(slot => {
+      const timeRange = parseTimeRange(slot.time);
+      let subject = '';
+      if (slot.isLunch) {
+        subject = 'Lunch Break';
+      } else {
+        const subId = (daySchedule[slot.id] || '').trim();
+        const foundSub = subjects.find(s => s.id === subId);
+        subject = foundSub ? foundSub.name : subId;
+      }
+      return {
+        id: slot.id,
+        isLunch: slot.isLunch,
+        time: slot.time,
+        subject,
+        range: timeRange
+      };
+    }).filter(s => s.range);
+    
+    // Find active class
+    const liveSlot = activeSlots.find(s => currentMinutes >= s.range!.start && currentMinutes < s.range!.end);
+    if (liveSlot && liveSlot.subject) {
+      live = {
+        subject: liveSlot.subject,
+        time: liveSlot.time,
+        isLunch: liveSlot.isLunch
+      };
+    }
+    
+    // Find next class (first non-empty slot after currentMinutes)
+    const upcomingSlots = activeSlots
+      .filter(s => s.range!.start > currentMinutes && s.subject)
+      .sort((a, b) => a.range!.start - b.range!.start);
+      
+    if (upcomingSlots.length > 0) {
+      next = {
+        subject: upcomingSlots[0].subject,
+        time: upcomingSlots[0].time,
+        isLunch: upcomingSlots[0].isLunch
+      };
+    }
+    
+    return {
+      isWeekend: false,
+      live,
+      next
+    };
+  }, [enableLiveWidget, classSchedule, CLASS_SLOTS, subjects]);
 
 
 
@@ -418,8 +712,9 @@ export default function App() {
   const semesterMonthlyStats = useMemo(() => {
     if (!semester.startDate) return [];
     
-    const start = startOfDay(parseISO(semester.startDate));
-    if (isNaN(start.getTime())) return [];
+    const parsedStart = safeParse(semester.startDate);
+    if (!parsedStart) return [];
+    const start = startOfDay(parsedStart);
     
     const end = endOfMonth(new Date());
     
@@ -430,7 +725,7 @@ export default function App() {
     const currentMonthStart = startOfMonth(now);
     
     // Total initial data
-    const lockedUntil = semester.lockedUntil ? parseISO(semester.lockedUntil) : null;
+    const lockedUntil = semester.lockedUntil ? safeParse(semester.lockedUntil) : null;
     const initialPeriodDays = (lockedUntil && start <= lockedUntil) ? differenceInDays(lockedUntil, start) + 1 : 0;
     
     return months.map(month => {
@@ -441,19 +736,21 @@ export default function App() {
       
       // Actual records for this month
       const monthRecords = Object.entries(records).filter(([date]) => {
-        const d = parseISO(date);
-        const sDate = startOfDay(parseISO(semester.startDate));
-        return d >= mStart && d <= mEnd && !isBefore(d, sDate);
+        const d = safeParse(date);
+        const sDate = safeParse(semester.startDate);
+        if (!d || !sDate) return false;
+        return d >= mStart && d <= mEnd && !isBefore(d, startOfDay(sDate));
       }) as [string, AttendanceRecord][];
       
       let held = 0;
       let attended = 0;
       monthRecords.forEach(([date, r]) => {
         const isExam = exams.some(e => {
-          const start = startOfDay(parseISO(e.startDate));
-          const end = startOfDay(parseISO(e.endDate));
-          const d = startOfDay(parseISO(date));
-          return d >= start && d <= end;
+          const estart = safeParse(e.startDate);
+          const eend = safeParse(e.endDate);
+          const d = safeParse(date);
+          if (!estart || !eend || !d) return false;
+          return startOfDay(d) >= startOfDay(estart) && startOfDay(d) <= startOfDay(eend);
         });
         if (!r.isHoliday && !isExam) {
           held += r.held;
@@ -473,7 +770,7 @@ export default function App() {
         isCurrent
       };
     });
-  }, [records, semester]);
+  }, [records, semester, exams]);
 
   const combiStats = useMemo(() => {
     const selectedData = semesterMonthlyStats.filter(s => combiSelectedMonths.includes(s.month));
@@ -515,6 +812,12 @@ export default function App() {
   useEffect(() => localStorage.setItem('bs_records', JSON.stringify(records)), [records]);
   useEffect(() => localStorage.setItem('bs_history', JSON.stringify(history)), [history]);
   useEffect(() => localStorage.setItem('bs_exams', JSON.stringify(exams)), [exams]);
+  useEffect(() => localStorage.setItem('bs_class_schedule', JSON.stringify(classSchedule)), [classSchedule]);
+  useEffect(() => localStorage.setItem('bs_custom_class_times', JSON.stringify(customClassTimes)), [customClassTimes]);
+  useEffect(() => localStorage.setItem('bs_subject_attendance', JSON.stringify(subjectAttendance)), [subjectAttendance]);
+  useEffect(() => localStorage.setItem('bs_marked_schedule_slots', JSON.stringify(markedScheduleSlots)), [markedScheduleSlots]);
+  useEffect(() => localStorage.setItem('bs_enable_live_widget', JSON.stringify(enableLiveWidget)), [enableLiveWidget]);
+  useEffect(() => localStorage.setItem('bs_grade_planner_subjects', JSON.stringify(gradeSubjects)), [gradeSubjects]);
 
   // Splash Screen Timer
   useEffect(() => {
@@ -528,10 +831,13 @@ export default function App() {
     const now = new Date();
     const start = startOfMonth(now);
     const end = endOfMonth(now);
-    const sDate = semester.startDate ? startOfDay(parseISO(semester.startDate)) : null;
+    
+    const parsedSDate = safeParse(semester.startDate);
+    const sDate = parsedSDate ? startOfDay(parsedSDate) : null;
 
     const monthRecords = Object.entries(records).filter(([date]) => {
-      const d = parseISO(date);
+      const d = safeParse(date);
+      if (!d) return false;
       return d >= start && d <= end && (!sDate || !isBefore(d, sDate));
     }) as [string, AttendanceRecord][];
     
@@ -550,21 +856,36 @@ export default function App() {
   const missedDays = useMemo(() => {
     if (!semester.startDate) return [];
     
-    // Start from the day after lockedUntil, or from startDate
-    const start = semester.lockedUntil 
-      ? addDays(parseISO(semester.lockedUntil), 1)
-      : parseISO(semester.startDate);
+    const parsedStartDate = safeParse(semester.startDate);
+    if (!parsedStartDate) return [];
+    
+    let start: Date | null = null;
+    if (semester.lockedUntil) {
+      const parsedLocked = safeParse(semester.lockedUntil);
+      if (parsedLocked) {
+        start = addDays(parsedLocked, 1);
+      }
+    }
+    if (!start) {
+      start = parsedStartDate;
+    }
+      
+    if (!start || isNaN(start.getTime())) return [];
       
     const today = startOfDay(new Date());
     const yesterday = subDays(today, 1);
     
-    if (isAfter(start, yesterday)) return [];
+    if (isNaN(yesterday.getTime()) || isAfter(start, yesterday)) return [];
     
-    const days = eachDayOfInterval({ start, end: yesterday });
-    return days.filter(day => {
-      const dateStr = formatDate(day);
-      return !records[dateStr];
-    }).map(d => formatDate(d));
+    try {
+      const days = eachDayOfInterval({ start, end: yesterday });
+      return days.filter(day => {
+        const dateStr = formatDate(day);
+        return !records[dateStr];
+      }).map(d => formatDate(d));
+    } catch (e) {
+      return [];
+    }
   }, [records, semester.startDate, semester.lockedUntil]);
 
   // Notification Logic
@@ -687,6 +1008,98 @@ export default function App() {
     setCurrentGapIndex(0);
   };
 
+  const handleMarkPresent = (slotId: number, subjectName: string) => {
+    const today = getTodayStr();
+    const key = `${today}_${slotId}`;
+    
+    // 1. Update subject attendance
+    setSubjectAttendance(prev => {
+      const current = prev[subjectName] || { attended: 0, held: 0 };
+      return {
+        ...prev,
+        [subjectName]: {
+          attended: current.attended + 1,
+          held: current.held + 1
+        }
+      };
+    });
+
+    // 2. Mark slot
+    setMarkedScheduleSlots(prev => ({
+      ...prev,
+      [key]: 'present'
+    }));
+
+    // 3. Update global daily attendance record
+    const todayRecord = records[today] || { date: today, held: 0, attended: 0, isHoliday: false };
+    if (!todayRecord.isHoliday) {
+      updateAttendance(today, todayRecord.held + 1, todayRecord.attended + 1, false);
+    }
+  };
+
+  const handleMarkAbsent = (slotId: number, subjectName: string) => {
+    const today = getTodayStr();
+    const key = `${today}_${slotId}`;
+    
+    // 1. Update subject attendance
+    setSubjectAttendance(prev => {
+      const current = prev[subjectName] || { attended: 0, held: 0 };
+      return {
+        ...prev,
+        [subjectName]: {
+          ...current,
+          held: current.held + 1
+        }
+      };
+    });
+
+    // 2. Mark slot
+    setMarkedScheduleSlots(prev => ({
+      ...prev,
+      [key]: 'absent'
+    }));
+
+    // 3. Update global daily attendance record
+    const todayRecord = records[today] || { date: today, held: 0, attended: 0, isHoliday: false };
+    if (!todayRecord.isHoliday) {
+      updateAttendance(today, todayRecord.held + 1, todayRecord.attended, false);
+    }
+  };
+
+  const handleUndoMark = (slotId: number, subjectName: string) => {
+    const today = getTodayStr();
+    const key = `${today}_${slotId}`;
+    const wasStatus = markedScheduleSlots[key];
+    if (!wasStatus) return;
+
+    // 1. Revert subject attendance
+    setSubjectAttendance(prev => {
+      const current = prev[subjectName] || { attended: 0, held: 0 };
+      return {
+        ...prev,
+        [subjectName]: {
+          attended: Math.max(0, current.attended - (wasStatus === 'present' ? 1 : 0)),
+          held: Math.max(0, current.held - 1)
+        }
+      };
+    });
+
+    // 2. Unmark slot
+    setMarkedScheduleSlots(prev => {
+      const copy = { ...prev };
+      delete copy[key];
+      return copy;
+    });
+
+    // 3. Revert global daily attendance record
+    const todayRecord = records[today];
+    if (todayRecord && !todayRecord.isHoliday) {
+      const nextHeld = Math.max(0, todayRecord.held - 1);
+      const nextAttended = Math.max(0, todayRecord.attended - (wasStatus === 'present' ? 1 : 0));
+      updateAttendance(today, nextHeld, nextAttended, false);
+    }
+  };
+
   // --- Handlers ---
 
   const updateAttendance = (date: string, held: number, attended: number, isHoliday: boolean) => {
@@ -788,12 +1201,15 @@ export default function App() {
   };
 
   const getExamForDate = (date: Date) => {
+    if (!date || isNaN(date.getTime())) return undefined;
     const dateStr = formatDate(date);
+    if (!dateStr) return undefined;
     return exams.find(e => {
-      const start = startOfDay(parseISO(e.startDate));
-      const end = startOfDay(parseISO(e.endDate));
-      const d = startOfDay(parseISO(dateStr));
-      return d >= start && d <= end;
+      const estart = safeParse(e.startDate);
+      const eend = safeParse(e.endDate);
+      const d = safeParse(dateStr);
+      if (!estart || !eend || !d) return false;
+      return startOfDay(d) >= startOfDay(estart) && startOfDay(d) <= startOfDay(eend);
     });
   };
 
@@ -1312,7 +1728,8 @@ export default function App() {
   const renderGapHandling = () => {
     if (gapDays.length === 0 || currentGapIndex >= gapDays.length) return null;
     const currentDateStr = gapDays[currentGapIndex];
-    const currentDate = parseISO(currentDateStr);
+    const currentDate = safeParse(currentDateStr);
+    if (!currentDate) return null;
 
     return (
       <div className="space-y-6">
@@ -1484,14 +1901,18 @@ export default function App() {
       return renderGapHandling();
     }
 
-    const isEnded = semester.isInitialized && semester.endDate && isAfter(startOfDay(new Date()), startOfDay(parseISO(semester.endDate)));
+    const parsedEndDate = semester.endDate ? parseISO(semester.endDate) : null;
+    const isEnded = semester.isInitialized && parsedEndDate && !isNaN(parsedEndDate.getTime()) && isAfter(startOfDay(new Date()), startOfDay(parsedEndDate));
     if (isEnded) {
       return renderSemesterEndReport();
     }
 
     const today = getTodayStr();
+    const currentDayName = format(new Date(), 'EEEE');
+    const isWeekday = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'].includes(currentDayName);
     const todayRecord = records[today] || { held: 0, attended: 0, isHoliday: false };
-    const isNotStarted = semester.startDate && isBefore(startOfDay(new Date()), startOfDay(parseISO(semester.startDate)));
+    const parsedStartDate = semester.startDate ? parseISO(semester.startDate) : null;
+    const isNotStarted = parsedStartDate && !isNaN(parsedStartDate.getTime()) && isBefore(startOfDay(new Date()), startOfDay(parsedStartDate));
 
     return (
       <div className="space-y-6 pb-24">
@@ -1535,8 +1956,8 @@ export default function App() {
               </div>
               <div className="space-y-2">
                 <h2 className="text-xl font-bold">Semester Not Started</h2>
-                <p className="text-zinc-400 text-sm max-w-[250px] mx-auto leading-relaxed">
-                  Your "{semester.title || 'Next Semester'}" is scheduled to begin on <span className="text-primary font-bold">{format(parseISO(semester.startDate), 'dd/MM/yyyy')}</span>.
+                 <p className="text-zinc-400 text-sm max-w-[250px] mx-auto leading-relaxed">
+                  Your "{semester.title || 'Next Semester'}" is scheduled to begin on <span className="text-primary font-bold">{semester.startDate && !isNaN(parseISO(semester.startDate).getTime()) ? format(parseISO(semester.startDate), 'dd/MM/yyyy') : 'N/A'}</span>.
                 </p>
                 <div className="pt-4">
                   <span className="bg-primary/20 text-primary text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-widest">Entries are locked</span>
@@ -1549,11 +1970,11 @@ export default function App() {
               <div className="space-y-2">
                 <div className="flex justify-between items-center py-2 border-b border-zinc-800/50">
                   <span className="text-sm text-zinc-400">Start Date</span>
-                  <span className="text-sm font-bold text-zinc-100">{format(parseISO(semester.startDate), 'dd/MM/yyyy')}</span>
+                  <span className="text-sm font-bold text-zinc-100">{semester.startDate && !isNaN(parseISO(semester.startDate).getTime()) ? format(parseISO(semester.startDate), 'dd/MM/yyyy') : 'N/A'}</span>
                 </div>
                 <div className="flex justify-between items-center py-2">
                   <span className="text-sm text-zinc-400">End Date</span>
-                  <span className="text-sm font-bold text-zinc-100">{format(parseISO(semester.endDate), 'dd/MM/yyyy')}</span>
+                  <span className="text-sm font-bold text-zinc-100">{semester.endDate && !isNaN(parseISO(semester.endDate).getTime()) ? format(parseISO(semester.endDate), 'dd/MM/yyyy') : 'N/A'}</span>
                 </div>
               </div>
             </Card>
@@ -1578,22 +1999,22 @@ export default function App() {
               </motion.div>
             )}
 
-            <div className="grid grid-cols-1 gap-4">
-              <Card className="relative overflow-hidden">
-                <div className="relative z-10 space-y-4">
+            <div className="grid grid-cols-1 gap-3">
+              <Card className="relative overflow-hidden p-2.5">
+                <div className="relative z-10 space-y-1.5">
                   <div className="flex justify-between items-end">
                     <div>
-                      <p className="text-zinc-500 text-xs uppercase font-bold tracking-wider">{semester.title || 'Semester'} Attendance</p>
-                      <h2 className="text-4xl font-bold">{stats.percentage.toFixed(1)}%</h2>
+                      <p className="text-zinc-500 text-[10px] uppercase font-bold tracking-wider">{semester.title || 'Semester'} Attendance</p>
+                      <h2 className="text-2xl font-black">{stats.percentage.toFixed(1)}%</h2>
                       {semester.initialHeld > 0 && (
-                        <p className="text-[10px] text-primary font-bold uppercase mt-1 flex items-center gap-1">
-                          <Info size={10} /> Includes {semester.initialAttended}/{semester.initialHeld} from setup
+                        <p className="text-[9px] text-primary font-bold uppercase mt-0.5 flex items-center gap-1">
+                          <Info size={9} /> Includes {semester.initialAttended}/{semester.initialHeld} from setup
                         </p>
                       )}
                     </div>
-                    <p className="text-zinc-400 font-medium">{stats.totalAttended} / {stats.totalHeld}</p>
+                    <p className="text-zinc-400 text-[11px] font-bold">{stats.totalAttended} / {stats.totalHeld}</p>
                   </div>
-                  <div className="h-3 bg-zinc-800 rounded-full overflow-hidden">
+                  <div className="h-1.5 bg-zinc-800 rounded-full overflow-hidden">
                     <motion.div 
                       initial={{ width: 0 }}
                       animate={{ width: `${Math.min(100, stats.percentage)}%` }}
@@ -1603,31 +2024,31 @@ export default function App() {
                 </div>
               </Card>
 
-              <div className="grid grid-cols-2 gap-4">
-                <Card className="space-y-2">
-                  <p className="text-zinc-500 text-xs uppercase font-bold tracking-wider">{format(new Date(), 'MMMM')}</p>
-                  <h3 className="text-2xl font-bold">{monthlyStats.percentage.toFixed(1)}%</h3>
-                  <p className="text-zinc-500 text-xs">{monthlyStats.attended} / {monthlyStats.held} classes</p>
+              <div className="grid grid-cols-2 gap-3">
+                <Card className="space-y-1 p-3">
+                  <p className="text-zinc-500 text-[10px] uppercase font-bold tracking-wider">{format(new Date(), 'MMMM')}</p>
+                  <h3 className="text-xl font-extrabold">{monthlyStats.percentage.toFixed(1)}%</h3>
+                  <p className="text-zinc-500 text-[11px] font-medium">{monthlyStats.attended} / {monthlyStats.held} classes</p>
                 </Card>
-                <Card className="space-y-2">
-                  <p className="text-zinc-500 text-xs uppercase font-bold tracking-wider">Target</p>
-                  <h3 className="text-2xl font-bold text-primary">{semester.targetAttendance}%</h3>
-                  <p className="text-zinc-500 text-xs">Current Goal</p>
+                <Card className="space-y-1 p-3">
+                  <p className="text-zinc-500 text-[10px] uppercase font-bold tracking-wider">Target</p>
+                  <h3 className="text-xl font-extrabold text-primary">{semester.targetAttendance}%</h3>
+                  <p className="text-zinc-500 text-[11px] font-medium">Current Goal</p>
                 </Card>
               </div>
 
-              <Card className={`border-l-4 ${bunkInfo.status === 'SAFE' ? 'border-l-primary' : 'border-l-red-500'}`}>
-                <div className="flex items-start gap-4">
-                  <div className={`p-3 rounded-2xl ${bunkInfo.status === 'SAFE' ? 'bg-primary/10 text-primary' : 'bg-red-500/10 text-red-500'}`}>
-                    {bunkInfo.status === 'SAFE' ? <CheckCircle2 size={24} /> : <AlertCircle size={24} />}
+              <Card className={`border-l-4 ${bunkInfo.status === 'SAFE' ? 'border-l-primary' : 'border-l-red-500'} p-4`}>
+                <div className="flex items-start gap-3">
+                  <div className={`p-2.5 rounded-xl shrink-0 ${bunkInfo.status === 'SAFE' ? 'bg-primary/10 text-primary' : 'bg-red-500/10 text-red-500'}`}>
+                    {bunkInfo.status === 'SAFE' ? <CheckCircle2 size={20} /> : <AlertCircle size={20} />}
                   </div>
-                  <div className="space-y-1">
-                    <h3 className="font-bold text-lg">
+                  <div className="space-y-1 min-w-0">
+                    <h3 className="font-extrabold text-sm text-zinc-100 leading-snug">
                       {bunkInfo.status === 'SAFE' 
                         ? `You can bunk ${bunkInfo.canBunk} classes safely.` 
                         : `Attend next ${bunkInfo.mustAttend} classes to reach ${semester.targetAttendance}%.`}
                     </h3>
-                    <p className="text-zinc-500 text-sm">
+                    <p className="text-zinc-400 text-xs font-medium leading-relaxed">
                       {bunkInfo.status === 'SAFE' 
                         ? "Enjoy your free time, but stay above target!" 
                         : "Time to get serious and hit those lectures."}
@@ -1636,6 +2057,83 @@ export default function App() {
                 </div>
               </Card>
             </div>
+
+            {/* Live & Next Class Status Widget */}
+            {enableLiveWidget && liveClassInfo && (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="space-y-1"
+              >
+                <Card className="p-2 overflow-hidden border border-zinc-800/80 bg-zinc-950/40">
+                  <div className="grid grid-cols-2 divide-x divide-zinc-900">
+                    {/* Live Class Section */}
+                    <div className="px-3 py-1 flex flex-col justify-center gap-1">
+                      <div className="flex items-center gap-1.5">
+                        <span className="relative flex h-1.5 w-1.5">
+                          {liveClassInfo.live ? (
+                            <>
+                              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+                              <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-primary"></span>
+                            </>
+                          ) : (
+                            <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-zinc-600"></span>
+                          )}
+                        </span>
+                        <span className={`text-[9px] font-black uppercase tracking-widest ${liveClassInfo.live ? 'text-primary' : 'text-zinc-500'}`}>
+                          {liveClassInfo.live ? 'LIVE NOW' : 'NO CLASS RUNNING'}
+                        </span>
+                      </div>
+                      {liveClassInfo.isWeekend ? (
+                        <div className="space-y-0.5">
+                          <h4 className="font-extrabold text-white text-xs">Weekend</h4>
+                          <p className="text-zinc-500 text-[10px] leading-tight">Enjoy your days off!</p>
+                        </div>
+                      ) : liveClassInfo.live ? (
+                        <div className="space-y-0.5">
+                          <h4 className="font-extrabold text-white text-xs truncate max-w-[130px] md:max-w-[200px]" title={liveClassInfo.live.subject}>
+                            {liveClassInfo.live.subject}
+                          </h4>
+                          <p className="text-zinc-400 text-[10px] font-medium flex items-center gap-1">
+                            <Clock size={10} className="text-primary" />
+                            {liveClassInfo.live.time}
+                          </p>
+                        </div>
+                      ) : (
+                        <div className="space-y-0.5">
+                          <h4 className="font-bold text-zinc-500 text-[11px] italic">Between lectures</h4>
+                          <p className="text-zinc-500 text-[9px]">No active class</p>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Next Class Section */}
+                    <div className="px-3 py-1 flex flex-col justify-center gap-1">
+                      <div className="flex items-center gap-1 text-zinc-500 text-[9px] font-black uppercase tracking-widest">
+                        <BookOpen size={10} className="text-primary" />
+                        <span>NEXT UP</span>
+                      </div>
+                      {liveClassInfo.next ? (
+                        <div className="space-y-0.5">
+                          <h4 className="font-extrabold text-zinc-200 text-xs truncate max-w-[130px] md:max-w-[200px]" title={liveClassInfo.next.subject}>
+                            {liveClassInfo.next.subject}
+                          </h4>
+                          <p className="text-zinc-400 text-[10px] font-medium flex items-center gap-1">
+                            <Clock size={10} className="text-primary" />
+                            {liveClassInfo.next.time}
+                          </p>
+                        </div>
+                      ) : (
+                        <div className="space-y-0.5">
+                          <h4 className="font-bold text-zinc-500 text-[11px] italic">No more classes</h4>
+                          <p className="text-zinc-500 text-[9px]">All done today</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </Card>
+              </motion.div>
+            )}
 
             <div className="space-y-4">
               <h3 className="text-lg font-bold flex items-center gap-2">
@@ -1724,6 +2222,124 @@ export default function App() {
                 </div>
               </Card>
             </div>
+
+            {/* Today's Class Schedule */}
+            {isWeekday && (
+              <div className="space-y-4">
+                <h3 className="text-lg font-bold flex items-center gap-2">
+                  Today's Classes <span className="text-zinc-500 text-sm font-normal">— {currentDayName}</span>
+                </h3>
+                <Card className="space-y-4">
+                  <div className="space-y-3">
+                    {(() => {
+                      const daySchedule = classSchedule[currentDayName] || {};
+                      const hasScheduledClasses = Object.values(daySchedule).some(sub => typeof sub === 'string' && sub.trim());
+
+                      if (!hasScheduledClasses) {
+                        return (
+                          <div className="text-center py-6">
+                            <Clock className="mx-auto mb-2 text-zinc-700 opacity-30" size={32} />
+                            <p className="text-zinc-500 text-xs italic">No classes scheduled for {currentDayName}.</p>
+                            <button
+                              onClick={() => { setActiveTab('calendar'); setScheduleSubTab('schedule'); }}
+                              className="text-primary text-xs font-bold mt-2 hover:underline"
+                            >
+                              Configure Weekly Schedule →
+                            </button>
+                          </div>
+                        );
+                      }
+
+                      return CLASS_SLOTS.map(slot => {
+                        if (slot.isLunch) {
+                          return (
+                            <div key="today-lunch" className="bg-zinc-900/40 border border-zinc-800/40 rounded-xl px-4 py-3 flex items-center justify-between text-zinc-500 text-xs">
+                              <div className="flex items-center gap-2 font-bold uppercase tracking-wider">
+                                <Clock size={14} className="opacity-60" />
+                                <span>{slot.time}</span>
+                              </div>
+                              <span className="font-black text-[10px] tracking-widest text-primary bg-primary/10 px-2 py-0.5 rounded-md">🍱 LUNCH BREAK</span>
+                            </div>
+                          );
+                        }
+
+                        const subId = daySchedule[slot.id];
+                        if (!subId || !subId.trim()) {
+                          return null; // Don't show empty slots on the dashboard for cleaner UI
+                        }
+                        const foundSub = subjects.find(s => s.id === subId);
+                        const subjectName = foundSub ? foundSub.name : subId;
+
+                        return (
+                          <div key={slot.id} className="bg-zinc-900/30 border border-zinc-800/50 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                            <div className="space-y-1">
+                              <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider block">{slot.time}</span>
+                              <h4 className="font-extrabold text-white text-sm">{subjectName}</h4>
+                            </div>
+                            <span className="text-[10px] font-black uppercase tracking-widest text-primary/80 bg-primary/5 px-2.5 py-1 rounded-lg border border-primary/10 self-start sm:self-auto">
+                              Active
+                            </span>
+                          </div>
+                        );
+                      });
+                    })()}
+                  </div>
+                </Card>
+              </div>
+            )}
+
+            {/* Master Subject Setup Floating Card Popup */}
+            {subjects.length === 0 && !isSubjectPopupDismissed && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.9, y: 30 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.9, y: 30 }}
+                className="fixed bottom-24 left-4 right-4 md:left-auto md:right-4 md:max-w-xs z-40 bg-zinc-900/95 border border-primary/40 rounded-3xl p-5 shadow-2xl backdrop-blur-xl space-y-4"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-center gap-2.5">
+                    <div className="p-2.5 bg-primary/20 text-primary rounded-2xl">
+                      <GraduationCap size={20} />
+                    </div>
+                    <div>
+                      <h4 className="font-black text-xs text-zinc-100 uppercase tracking-wider">Configure Subjects</h4>
+                      <p className="text-[10px] text-zinc-500">First-time semester setup</p>
+                    </div>
+                  </div>
+                  <button 
+                    onClick={() => setIsSubjectPopupDismissed(true)}
+                    className="text-zinc-500 hover:text-zinc-300 p-1"
+                  >
+                    <X size={14} />
+                  </button>
+                </div>
+                <p className="text-[11px] text-zinc-400 leading-relaxed">
+                  Every semester should have one master list of subjects. Create yours once to track attendance, timetable slots, and predict grades effortlessly.
+                </p>
+                <div className="flex gap-2 text-[10px]">
+                  <button
+                    onClick={() => {
+                      setIsSubjectPopupDismissed(true);
+                      setActiveTab('settings');
+                      // Wait a brief moment for the tab to render, then open the manager modal
+                      setTimeout(() => {
+                        const btn = document.getElementById('btn-manage-subjects');
+                        if (btn) btn.click();
+                      }, 150);
+                    }}
+                    className="flex-1 py-2.5 bg-primary hover:bg-primary/95 text-white font-extrabold uppercase rounded-xl transition-all shadow-lg shadow-primary/20 text-center"
+                  >
+                    Set Up Now
+                  </button>
+                  <button
+                    onClick={() => setIsSubjectPopupDismissed(true)}
+                    className="px-3 py-2.5 bg-zinc-800 hover:bg-zinc-750 text-zinc-400 rounded-xl font-bold uppercase transition-all"
+                  >
+                    Maybe Later
+                  </button>
+                </div>
+              </motion.div>
+            )}
           </>
         )}
       </div>
@@ -1741,197 +2357,422 @@ export default function App() {
 
     return (
       <div className="space-y-6 pb-24">
-        <header className="flex justify-between items-center">
-          <h1 className="text-2xl font-bold">Calendar</h1>
-          <div className="flex items-center gap-2">
-            <Button variant="secondary" className="p-2" onClick={() => setViewDate(subDays(startOfMonth(viewDate), 1))}><ChevronLeft /></Button>
-            <span className="font-bold min-w-32 text-center">{format(viewDate, 'MMMM yyyy')}</span>
-            <Button variant="secondary" className="p-2" onClick={() => setViewDate(addDays(endOfMonth(viewDate), 1))}><ChevronRight /></Button>
+        <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div>
+            <h1 className="text-2xl font-bold">Schedule</h1>
+            <p className="text-xs text-zinc-500">Track your weekly classes and monthly attendance calendar</p>
+          </div>
+          
+          {/* Sub-tab Switcher */}
+          <div className="flex bg-zinc-900/80 p-1 rounded-xl border border-zinc-800 gap-1 w-full sm:w-auto shrink-0">
+            <button
+              onClick={() => setScheduleSubTab('schedule')}
+              className={`flex-1 sm:px-4 py-2 rounded-lg text-xs font-bold transition-all ${
+                scheduleSubTab === 'schedule'
+                  ? 'bg-primary text-white shadow-md font-extrabold'
+                  : 'text-zinc-400 hover:text-white'
+              }`}
+            >
+              Schedule
+            </button>
+            <button
+              onClick={() => setScheduleSubTab('calendar')}
+              className={`flex-1 sm:px-4 py-2 rounded-lg text-xs font-bold transition-all ${
+                scheduleSubTab === 'calendar'
+                  ? 'bg-primary text-white shadow-md font-extrabold'
+                  : 'text-zinc-400 hover:text-white'
+              }`}
+            >
+              Calendar
+            </button>
           </div>
         </header>
 
-        <div className="grid grid-cols-7 gap-2">
-          {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((d, i) => (
-            <div key={`${d}-${i}`} className="text-center text-xs font-bold text-zinc-500 py-2">{d}</div>
-          ))}
-          {blanks.map((_, i) => <div key={`blank-${i}`} />)}
-          {days.map(day => {
-            const dateStr = formatDate(day);
-            const record = records[dateStr];
-            const sDate = semester.startDate ? startOfDay(parseISO(semester.startDate)) : null;
-            const isBeforeSemester = sDate && isBefore(day, sDate);
-            const isLocked = semester.lockedUntil && !isAfter(day, parseISO(semester.lockedUntil));
-            const exam = getExamForDate(day);
-            
-            let bgColor = 'bg-zinc-900';
-            let borderColor = 'border-zinc-800';
-            let textColor = 'text-zinc-100';
-
-            if (exam) {
-              bgColor = 'bg-amber-500/20';
-              borderColor = 'border-amber-500/30';
-              textColor = 'text-amber-500';
-            } else if (record && !isBeforeSemester) {
-              if (record.isHoliday) {
-                bgColor = 'bg-blue-500/20';
-                borderColor = 'border-blue-500/30';
-                textColor = 'text-blue-500';
-              } else if (record.held > 0) {
-                if (record.attended === record.held) {
-                  bgColor = 'bg-primary/20';
-                  borderColor = 'border-primary/30';
-                  textColor = 'text-primary';
-                } else if (record.attended === 0) {
-                  bgColor = 'bg-red-500/20';
-                  borderColor = 'border-red-500/30';
-                  textColor = 'text-red-500';
-                } else {
-                  bgColor = 'bg-yellow-500/20';
-                  borderColor = 'border-yellow-500/30';
-                  textColor = 'text-yellow-500';
-                }
-              }
-            } else if (!isBeforeSemester && isBefore(day, startOfDay(new Date()))) {
-              bgColor = 'bg-zinc-800/50';
-              borderColor = 'border-zinc-700/50';
-              textColor = 'text-zinc-600';
-            }
-
-            return (
-              <button 
-                key={dateStr}
-                onClick={() => {
-                  setSelectedDate(dateStr);
-                }}
-                className={`aspect-square rounded-xl border flex flex-col items-center justify-center relative transition-all active:scale-95 ${bgColor} ${borderColor} ${textColor} ${isToday(day) ? 'ring-2 ring-primary ring-offset-2 ring-offset-zinc-950' : ''} ${selectedDate === dateStr ? 'ring-2 ring-white ring-offset-2 ring-offset-zinc-950' : ''}`}
-              >
-                <span className="text-sm font-bold">{format(day, 'd')}</span>
-                {record && record.held > 0 && !record.isHoliday && (
-                  <span className="text-[9px] font-black mt-0.5 opacity-80">{record.attended}/{record.held}</span>
-                )}
-                {record && record.isHoliday && (
-                  <span className="text-[8px] font-bold mt-0.5 opacity-60">H</span>
-                )}
-                {exam && (
-                  <span className="text-[8px] font-bold mt-0.5 opacity-80">EXAM</span>
-                )}
-                {isLocked && <Lock size={10} className="absolute top-1 right-1 opacity-50" />}
-              </button>
-            );
-          })}
-        </div>
-
         <AnimatePresence mode="wait">
-          {selectedDate && (
+          {scheduleSubTab === 'schedule' ? (
             <motion.div
-              key={selectedDate}
-              initial={{ opacity: 0, y: 10 }}
+              key="schedule-subtab"
+              initial={{ opacity: 0, y: 15 }}
               animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              className="mt-4"
+              exit={{ opacity: 0, y: -15 }}
+              className="space-y-6"
             >
-              <Card className="border-t-4 border-t-primary">
-                <div className="flex justify-between items-start mb-4">
-                  <div>
-                    <h3 className="text-lg font-bold">{format(parseISO(selectedDate), 'EEEE, dd/MM/yyyy')}</h3>
-                    <p className="text-zinc-500 text-xs uppercase tracking-wider font-bold">
-                      {getExamForDate(parseISO(selectedDate)) ? `Exam: ${getExamForDate(parseISO(selectedDate))?.label}` : records[selectedDate]?.isHoliday ? 'Holiday' : 'Regular Class Day'}
+              {/* Weekly Class Schedule Manager */}
+              <Card className="space-y-6">
+                <div className="flex items-center gap-2">
+                  <div className="p-2 bg-primary/20 rounded-lg text-primary">
+                    <Clock size={18} />
+                  </div>
+                  <h3 className="font-bold text-sm uppercase tracking-wider">Weekly Class Schedule</h3>
+                </div>
+                <p className="text-xs text-zinc-500">
+                  Set up your 1-hour classes (starting from 9:00 AM) for Monday to Friday. 1:00 PM - 2:00 PM is Lunch Break.
+                </p>
+
+                {/* Live and Next Class Toggle Option */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 bg-zinc-950/60 border border-zinc-800/80 rounded-2xl">
+                  <div className="space-y-1">
+                    <span className="text-xs font-black text-zinc-100 flex items-center gap-1.5 uppercase tracking-wider">
+                      <Sparkles size={14} className="text-primary" />
+                      Live & Next Class Status
+                    </span>
+                    <p className="text-[11px] text-zinc-500 max-w-md">
+                      Show your active class and upcoming class in real-time directly on the Home screen dashboard.
                     </p>
                   </div>
-                  <div className="flex gap-2">
-                    <Button 
-                      variant="secondary" 
-                      className="text-xs py-1.5 px-3" 
-                      onClick={() => {
-                        const record = records[selectedDate];
-                        const isLocked = semester.lockedUntil && !isAfter(parseISO(selectedDate), parseISO(semester.lockedUntil));
-                        if (isLocked) {
-                          alert("This attendance data was initialized during setup and cannot be edited.");
-                          return;
-                        }
-                        const held = prompt("Total classes?", record?.held.toString() || "0");
-                        const attended = prompt("Attended classes?", record?.attended.toString() || "0");
-                        if (held !== null && attended !== null) {
-                          updateAttendance(selectedDate, parseInt(held), parseInt(attended), false);
-                        }
-                      }}
-                    >
-                      Edit
-                    </Button>
-                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setEnableLiveWidget(!enableLiveWidget)}
+                    className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                      enableLiveWidget ? 'bg-primary' : 'bg-zinc-800'
+                    }`}
+                  >
+                    <span
+                      className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                        enableLiveWidget ? 'translate-x-5' : 'translate-x-0'
+                      }`}
+                    />
+                  </button>
                 </div>
-                
-                {records[selectedDate] && !records[selectedDate].isHoliday && records[selectedDate].held > 0 ? (
-                  <div className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="bg-zinc-800/50 p-4 rounded-2xl text-center border border-zinc-800">
-                        <p className="text-zinc-500 text-[10px] uppercase font-bold tracking-widest mb-1">Attended</p>
-                        <p className="text-3xl font-black text-primary">{records[selectedDate].attended}</p>
-                      </div>
-                      <div className="bg-zinc-800/50 p-4 rounded-2xl text-center border border-zinc-800">
-                        <p className="text-zinc-500 text-[10px] uppercase font-bold tracking-widest mb-1">Total Held</p>
-                        <p className="text-3xl font-black text-zinc-100">{records[selectedDate].held}</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-3 bg-primary/5 border border-primary/10 p-3 rounded-xl">
-                      <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center text-primary">
-                        <BarChart3 size={20} />
-                      </div>
-                      <div>
-                        <p className="text-xs font-bold text-primary/80 uppercase tracking-wider">Daily Percentage</p>
-                        <p className="text-lg font-bold text-primary">
-                          {((records[selectedDate].attended / records[selectedDate].held) * 100).toFixed(1)}%
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                ) : records[selectedDate]?.isHoliday ? (
-                  <div className="bg-zinc-800/50 border border-zinc-700 p-6 rounded-2xl text-center">
-                    <Info className="mx-auto mb-2 text-zinc-500" size={32} />
-                    <p className="text-zinc-400 font-bold">This day is marked as a holiday.</p>
-                    <p className="text-zinc-500 text-xs mt-1">No classes were held on this date.</p>
-                  </div>
-                ) : (
-                  <div className="bg-zinc-800/50 p-8 rounded-2xl text-center border border-zinc-800 border-dashed">
-                    <AlertCircle className="mx-auto mb-2 text-zinc-700" size={32} />
-                    <p className="text-zinc-500 font-medium italic">No attendance data recorded for this date.</p>
-                    <Button 
-                      variant="ghost" 
-                      className="mt-4 text-xs text-primary"
-                      onClick={() => {
-                        const held = prompt("Total classes?", "0");
-                        const attended = prompt("Attended classes?", "0");
-                        if (held !== null && attended !== null) {
-                          updateAttendance(selectedDate, parseInt(held), parseInt(attended), false);
-                        }
-                      }}
+
+                {/* Day Selector */}
+                <div className="flex bg-zinc-900 p-1 rounded-xl border border-zinc-800 overflow-x-auto gap-1">
+                  {(['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'] as const).map(day => (
+                    <button
+                      key={day}
+                      onClick={() => setSelectedScheduleDay(day)}
+                      className={`flex-1 min-w-[70px] text-center py-2 rounded-lg text-xs font-bold transition-all ${
+                        selectedScheduleDay === day 
+                          ? 'bg-primary text-white shadow-md font-extrabold' 
+                          : 'text-zinc-400 hover:text-white'
+                      }`}
                     >
-                      + Add Record
-                    </Button>
-                  </div>
-                )}
+                      {day.substring(0, 3)}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Time Slots List */}
+                <div className="space-y-3 pt-1">
+                  {CLASS_SLOTS.map(slot => {
+                    if (slot.isLunch) {
+                      return (
+                        <div key="lunch-break" className="bg-zinc-900/40 border border-zinc-800/40 rounded-xl px-4 py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-zinc-500 text-xs">
+                          <div className="flex items-center gap-2 font-bold uppercase tracking-wider">
+                            <Clock size={14} className="opacity-60 shrink-0" />
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-zinc-500 text-[10px] font-medium uppercase shrink-0">Time:</span>
+                              <input
+                                type="text"
+                                value={customClassTimes[-1] ?? '01:00 PM - 02:00 PM'}
+                                onChange={(e) => {
+                                  const newTime = e.target.value;
+                                  setCustomClassTimes(prev => ({
+                                    ...prev,
+                                    [-1]: newTime
+                                  }));
+                                }}
+                                className="bg-zinc-900/80 border border-zinc-800/80 rounded-lg px-2.5 py-1 text-xs font-bold text-zinc-400 focus:border-primary focus:outline-none transition-all w-48"
+                                placeholder="01:00 PM - 02:00 PM"
+                              />
+                            </div>
+                          </div>
+                          <span className="font-black text-[10px] tracking-widest text-primary bg-primary/10 px-2 py-0.5 rounded-md self-start sm:self-auto">🍱 LUNCH BREAK</span>
+                        </div>
+                      );
+                    }
+
+                    const subId = (classSchedule[selectedScheduleDay]?.[slot.id] || '').trim();
+                    const foundSub = subjects.find(s => s.id === subId);
+                    const subjectName = foundSub ? foundSub.name : subId;
+
+                    return (
+                      <div key={slot.id} className="bg-zinc-900/20 border border-zinc-800/60 rounded-xl p-3.5 flex flex-col gap-2.5">
+                        <div className="flex justify-between items-center gap-4">
+                          <div className="flex items-center gap-1.5 w-full max-w-[240px]">
+                            <Clock size={12} className="text-zinc-500 shrink-0" />
+                            <span className="text-[10px] text-zinc-500 font-bold uppercase shrink-0">Time:</span>
+                            <input
+                              type="text"
+                              value={customClassTimes[slot.id] ?? ''}
+                              onChange={(e) => {
+                                const newTime = e.target.value;
+                                setCustomClassTimes(prev => ({
+                                  ...prev,
+                                  [slot.id]: newTime
+                                }));
+                              }}
+                              className="bg-zinc-900/50 border border-zinc-800/80 rounded-lg px-2.5 py-1 text-xs font-bold text-zinc-300 focus:border-primary focus:outline-none transition-all w-full"
+                              placeholder="Enter time range"
+                            />
+                          </div>
+                          {subjectName && (
+                            <button
+                              onClick={() => {
+                                setClassSchedule(prev => {
+                                  const daySlots = { ...prev[selectedScheduleDay] };
+                                  delete daySlots[slot.id];
+                                  return { ...prev, [selectedScheduleDay]: daySlots };
+                                });
+                              }}
+                              className="text-[10px] text-red-500/80 hover:text-red-500 font-bold uppercase transition-colors shrink-0"
+                            >
+                              Clear
+                            </button>
+                          )}
+                        </div>
+                        <div className="space-y-1.5">
+                          <span className="text-[10px] text-zinc-500 font-bold uppercase block mb-1">Select Master Subject</span>
+                          {subjects.length === 0 ? (
+                            <div className="bg-zinc-950 border border-zinc-800 border-dashed rounded-xl px-3 py-2.5 flex items-center justify-between gap-3 text-[11px] text-zinc-400">
+                              <span>No subjects defined yet. Configure them first in Settings.</span>
+                              <button
+                                type="button"
+                                onClick={() => { setActiveTab('settings'); setTimeout(() => { const btn = document.getElementById('btn-manage-subjects'); if (btn) btn.click(); }, 150); }}
+                                className="text-primary font-black uppercase tracking-wider shrink-0 hover:underline"
+                              >
+                                Setup
+                              </button>
+                            </div>
+                          ) : (
+                            <select
+                              value={classSchedule[selectedScheduleDay]?.[slot.id] || ''}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                setClassSchedule(prev => ({
+                                  ...prev,
+                                  [selectedScheduleDay]: {
+                                    ...prev[selectedScheduleDay],
+                                    [slot.id]: val
+                                  }
+                                }));
+                              }}
+                              className="w-full bg-zinc-900 border border-zinc-800 focus:border-primary focus:outline-none rounded-xl px-3 py-2.5 text-xs text-white font-bold tracking-wide transition-colors cursor-pointer"
+                            >
+                              <option value="">-- Choose Subject --</option>
+                              {subjects.map(s => (
+                                <option key={s.id} value={s.id}>
+                                  {s.name} ({s.type})
+                                </option>
+                              ))}
+                            </select>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
               </Card>
+            </motion.div>
+          ) : (
+            <motion.div
+              key="calendar-subtab"
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -15 }}
+              className="space-y-6"
+            >
+              {/* Calendar Month Header Controller */}
+              <div className="flex justify-between items-center bg-zinc-900/50 border border-zinc-800 p-4 rounded-2xl">
+                <span className="font-black text-sm text-zinc-200 uppercase tracking-wider">{format(viewDate, 'MMMM yyyy')}</span>
+                <div className="flex items-center gap-2">
+                  <Button variant="secondary" className="p-2" onClick={() => setViewDate(subDays(startOfMonth(viewDate), 1))}><ChevronLeft /></Button>
+                  <Button variant="secondary" className="p-2" onClick={() => setViewDate(addDays(endOfMonth(viewDate), 1))}><ChevronRight /></Button>
+                </div>
+              </div>
+
+              {/* Monthly Calendar Grid */}
+              <div className="grid grid-cols-7 gap-2">
+                {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((d, i) => (
+                  <div key={`${d}-${i}`} className="text-center text-xs font-bold text-zinc-500 py-2">{d}</div>
+                ))}
+                {blanks.map((_, i) => <div key={`blank-${i}`} />)}
+                {days.map(day => {
+                  const dateStr = formatDate(day);
+                  const record = records[dateStr];
+                  const parsedSDate = semester.startDate ? parseISO(semester.startDate) : null;
+                  const sDate = parsedSDate && !isNaN(parsedSDate.getTime()) ? startOfDay(parsedSDate) : null;
+                  const isBeforeSemester = sDate && isBefore(day, sDate);
+                  const parsedLocked = semester.lockedUntil ? parseISO(semester.lockedUntil) : null;
+                  const isLocked = parsedLocked && !isNaN(parsedLocked.getTime()) && !isAfter(day, parsedLocked);
+                  const exam = getExamForDate(day);
+                  
+                  let bgColor = 'bg-zinc-900';
+                  let borderColor = 'border-zinc-800';
+                  let textColor = 'text-zinc-100';
+
+                  if (exam) {
+                    bgColor = 'bg-amber-500/20';
+                    borderColor = 'border-amber-500/30';
+                    textColor = 'text-amber-500';
+                  } else if (record && !isBeforeSemester) {
+                    if (record.isHoliday) {
+                      bgColor = 'bg-blue-500/20';
+                      borderColor = 'border-blue-500/30';
+                      textColor = 'text-blue-500';
+                    } else if (record.held > 0) {
+                      if (record.attended === record.held) {
+                        bgColor = 'bg-primary/20';
+                        borderColor = 'border-primary/30';
+                        textColor = 'text-primary';
+                      } else if (record.attended === 0) {
+                        bgColor = 'bg-red-500/20';
+                        borderColor = 'border-red-500/30';
+                        textColor = 'text-red-500';
+                      } else {
+                        bgColor = 'bg-yellow-500/20';
+                        borderColor = 'border-yellow-500/30';
+                        textColor = 'text-yellow-500';
+                      }
+                    }
+                  } else if (!isBeforeSemester && isBefore(day, startOfDay(new Date()))) {
+                    bgColor = 'bg-zinc-800/50';
+                    borderColor = 'border-zinc-700/50';
+                    textColor = 'text-zinc-600';
+                  }
+
+                  return (
+                    <button 
+                      key={dateStr}
+                      onClick={() => {
+                        setSelectedDate(dateStr);
+                      }}
+                      className={`aspect-square rounded-xl border flex flex-col items-center justify-center relative transition-all active:scale-95 ${bgColor} ${borderColor} ${textColor} ${isToday(day) ? 'ring-2 ring-primary ring-offset-2 ring-offset-zinc-950' : ''} ${selectedDate === dateStr ? 'ring-2 ring-white ring-offset-2 ring-offset-zinc-950' : ''}`}
+                    >
+                      <span className="text-sm font-bold">{format(day, 'd')}</span>
+                      {record && record.held > 0 && !record.isHoliday && (
+                        <span className="text-[9px] font-black mt-0.5 opacity-80">{record.attended}/{record.held}</span>
+                      )}
+                      {record && record.isHoliday && (
+                        <span className="text-[8px] font-bold mt-0.5 opacity-60">H</span>
+                      )}
+                      {exam && (
+                        <span className="text-[8px] font-bold mt-0.5 opacity-80">EXAM</span>
+                      )}
+                      {isLocked && <Lock size={10} className="absolute top-1 right-1 opacity-50" />}
+                    </button>
+                  );
+                })}
+              </div>
+
+              <AnimatePresence mode="wait">
+                {selectedDate && (
+                  <motion.div
+                    key={selectedDate}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    className="mt-4"
+                  >
+                    <Card className="border-t-4 border-t-primary">
+                      <div className="flex justify-between items-start mb-4">
+                        <div>
+                          <h3 className="text-lg font-bold">
+                            {selectedDate && !isNaN(parseISO(selectedDate).getTime()) ? format(parseISO(selectedDate), 'EEEE, dd/MM/yyyy') : 'N/A'}
+                          </h3>
+                          <p className="text-zinc-500 text-xs uppercase tracking-wider font-bold">
+                            {selectedDate && !isNaN(parseISO(selectedDate).getTime()) && getExamForDate(parseISO(selectedDate)) ? `Exam: ${getExamForDate(parseISO(selectedDate))?.label}` : records[selectedDate]?.isHoliday ? 'Holiday' : 'Regular Class Day'}
+                          </p>
+                        </div>
+                        <div className="flex gap-2">
+                          <Button 
+                            variant="secondary" 
+                            className="text-xs py-1.5 px-3" 
+                            onClick={() => {
+                              const record = records[selectedDate];
+                              const parsedSelDate = selectedDate ? parseISO(selectedDate) : null;
+                              const parsedLocked = semester.lockedUntil ? parseISO(semester.lockedUntil) : null;
+                              const isLocked = semester.lockedUntil && parsedSelDate && !isNaN(parsedSelDate.getTime()) && parsedLocked && !isNaN(parsedLocked.getTime()) && !isAfter(parsedSelDate, parsedLocked);
+                              if (isLocked) {
+                                alert("This attendance data was initialized during setup and cannot be edited.");
+                                return;
+                              }
+                              const held = prompt("Total classes?", record?.held.toString() || "0");
+                              const attended = prompt("Attended classes?", record?.attended.toString() || "0");
+                              if (held !== null && attended !== null) {
+                                updateAttendance(selectedDate, parseInt(held), parseInt(attended), false);
+                              }
+                            }}
+                          >
+                            Edit
+                          </Button>
+                        </div>
+                      </div>
+                      
+                      {records[selectedDate] && !records[selectedDate].isHoliday && records[selectedDate].held > 0 ? (
+                        <div className="space-y-4">
+                          <div className="grid grid-cols-2 gap-4">
+                            <div className="bg-zinc-800/50 p-4 rounded-2xl text-center border border-zinc-800">
+                              <p className="text-zinc-500 text-[10px] uppercase font-bold tracking-widest mb-1">Attended</p>
+                              <p className="text-3xl font-black text-primary">{records[selectedDate].attended}</p>
+                            </div>
+                            <div className="bg-zinc-800/50 p-4 rounded-2xl text-center border border-zinc-800">
+                              <p className="text-zinc-500 text-[10px] uppercase font-bold tracking-widest mb-1">Total Held</p>
+                              <p className="text-3xl font-black text-zinc-100">{records[selectedDate].held}</p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-3 bg-primary/5 border border-primary/10 p-3 rounded-xl">
+                            <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center text-primary">
+                              <BarChart3 size={20} />
+                            </div>
+                            <div>
+                              <p className="text-xs font-bold text-primary/80 uppercase tracking-wider">Daily Percentage</p>
+                              <p className="text-lg font-bold text-primary">
+                                {((records[selectedDate].attended / records[selectedDate].held) * 100).toFixed(1)}%
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      ) : records[selectedDate]?.isHoliday ? (
+                        <div className="bg-zinc-800/50 border border-zinc-700 p-6 rounded-2xl text-center">
+                          <Info className="mx-auto mb-2 text-zinc-500" size={32} />
+                          <p className="text-zinc-400 font-bold">This day is marked as a holiday.</p>
+                          <p className="text-zinc-500 text-xs mt-1">No classes were held on this date.</p>
+                        </div>
+                      ) : (
+                        <div className="bg-zinc-800/50 p-8 rounded-2xl text-center border border-zinc-800 border-dashed">
+                          <AlertCircle className="mx-auto mb-2 text-zinc-700" size={32} />
+                          <p className="text-zinc-500 font-medium italic">No attendance data recorded for this date.</p>
+                          <Button 
+                            variant="ghost" 
+                            className="mt-4 text-xs text-primary"
+                            onClick={() => {
+                              const held = prompt("Total classes?", "0");
+                              const attended = prompt("Attended classes?", "0");
+                              if (held !== null && attended !== null) {
+                                updateAttendance(selectedDate, parseInt(held), parseInt(attended), false);
+                              }
+                            }}
+                          >
+                            + Add Record
+                          </Button>
+                        </div>
+                      )}
+                    </Card>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              <div className="grid grid-cols-2 gap-3 mt-4">
+                <div className="flex items-center gap-2 text-xs text-zinc-500">
+                  <div className="w-3 h-3 rounded-full bg-primary/20 border border-primary/30" /> Full Attendance
+                </div>
+                <div className="flex items-center gap-2 text-xs text-zinc-500">
+                  <div className="w-3 h-3 rounded-full bg-red-500/20 border border-red-500/30" /> Missed All
+                </div>
+                <div className="flex items-center gap-2 text-xs text-zinc-500">
+                  <div className="w-3 h-3 rounded-full bg-yellow-500/20 border border-yellow-500/30" /> Partial
+                </div>
+                <div className="flex items-center gap-2 text-xs text-zinc-500">
+                  <div className="w-3 h-3 rounded-full bg-blue-500/20 border border-blue-500/30" /> Holiday
+                </div>
+                <div className="flex items-center gap-2 text-xs text-zinc-500">
+                  <div className="w-3 h-3 rounded-full bg-zinc-900 border border-zinc-800" /> No Data
+                </div>
+              </div>
             </motion.div>
           )}
         </AnimatePresence>
-
-        <div className="grid grid-cols-2 gap-3">
-          <div className="flex items-center gap-2 text-xs text-zinc-500">
-            <div className="w-3 h-3 rounded-full bg-primary/20 border border-primary/30" /> Full Attendance
-          </div>
-          <div className="flex items-center gap-2 text-xs text-zinc-500">
-            <div className="w-3 h-3 rounded-full bg-red-500/20 border border-red-500/30" /> Missed All
-          </div>
-          <div className="flex items-center gap-2 text-xs text-zinc-500">
-            <div className="w-3 h-3 rounded-full bg-yellow-500/20 border border-yellow-500/30" /> Partial
-          </div>
-          <div className="flex items-center gap-2 text-xs text-zinc-500">
-            <div className="w-3 h-3 rounded-full bg-blue-500/20 border border-blue-500/30" /> Holiday
-          </div>
-          <div className="flex items-center gap-2 text-xs text-zinc-500">
-            <div className="w-3 h-3 rounded-full bg-zinc-900 border border-zinc-800" /> No Data
-          </div>
-        </div>
       </div>
     );
   };
@@ -2016,7 +2857,7 @@ export default function App() {
                 <div>
                   <p className="font-bold">{h.title || 'Past Semester'}</p>
                   <p className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold">
-                    {format(parseISO(h.startDate), 'dd/MM/yyyy')} - {format(parseISO(h.endDate), 'dd/MM/yyyy')}
+                    {h.startDate && safeParse(h.startDate) ? format(safeParse(h.startDate)!, 'dd/MM/yyyy') : 'N/A'} - {h.endDate && safeParse(h.endDate) ? format(safeParse(h.endDate)!, 'dd/MM/yyyy') : 'N/A'}
                   </p>
                   <p className="text-xs text-zinc-400 mt-1">{h.totalAttended} / {h.totalHeld} classes</p>
                 </div>
@@ -2083,67 +2924,6 @@ export default function App() {
                 className="flex-1 bg-zinc-800 border border-zinc-700 rounded-lg px-3 text-xs font-mono text-zinc-100 focus:outline-none focus:border-primary"
               />
             </div>
-          </div>
-        </Card>
-
-        {/* Exams Schedule Section */}
-        <Card className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <div className="p-2 bg-amber-500/20 rounded-lg text-amber-500">
-                <BookOpen size={18} />
-              </div>
-              <h3 className="font-bold text-sm uppercase tracking-wider">Exam Schedule</h3>
-            </div>
-            <Button 
-              onClick={() => { setEditingExam(null); setShowExamModal(true); }} 
-              variant="ghost" 
-              className="text-xs text-primary"
-            >
-              <Plus size={14} className="mr-1" /> Add Exam
-            </Button>
-          </div>
-          
-          <p className="text-xs text-zinc-500">Add your Mid-sem or End-sem exams to highlight them on the calendar.</p>
-
-          <div className="space-y-3">
-            {exams.length === 0 ? (
-              <div className="text-center py-6 border border-zinc-800 border-dashed rounded-2xl">
-                <CalendarDays className="mx-auto mb-2 text-zinc-700 opacity-30" size={32} />
-                <p className="text-zinc-600 text-xs italic">No exams scheduled yet.</p>
-              </div>
-            ) : (
-              exams.sort((a, b) => a.startDate.localeCompare(b.startDate)).map(exam => (
-                <div key={exam.id} className="bg-zinc-800/50 border border-zinc-700 rounded-2xl p-4 flex justify-between items-center group">
-                  <div className="flex items-center gap-4">
-                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${exam.type === 'End-sem' ? 'bg-red-500/20 text-red-500' : 'bg-amber-500/20 text-amber-500'}`}>
-                      <BookOpen size={20} />
-                    </div>
-                    <div>
-                      <h4 className="font-bold text-sm">{exam.label}</h4>
-                      <p className="text-[10px] text-zinc-500 font-medium uppercase tracking-wider">
-                        {format(parseISO(exam.startDate), 'dd/MM/yyyy')} - {format(parseISO(exam.endDate), 'dd/MM/yyyy')}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex gap-2">
-                    <button 
-                      onClick={() => { setEditingExam(exam); setShowExamModal(true); }}
-                      className="flex items-center gap-1 px-2 py-1 rounded-lg bg-zinc-700/50 text-zinc-300 hover:text-primary hover:bg-primary/10 transition-all text-[10px] font-bold uppercase"
-                    >
-                      <Edit2 size={12} />
-                      Edit
-                    </button>
-                    <button 
-                      onClick={() => handleDeleteExam(exam.id)}
-                      className="p-2 text-zinc-500 hover:text-red-500 transition-colors"
-                    >
-                      <Trash2 size={16} />
-                    </button>
-                  </div>
-                </div>
-              ))
-            )}
           </div>
         </Card>
 
@@ -2272,158 +3052,51 @@ export default function App() {
     );
   };
 
-  const renderProfile = () => {
+  const renderExams = () => {
     return (
-      <div className="space-y-6 pb-24">
-        <header className="flex justify-between items-center">
-          <h1 className="text-2xl font-bold">Profile</h1>
-          <Button variant="danger" className="p-2" onClick={() => {
-            if (confirm("Reset all data? This cannot be undone.")) {
-              localStorage.clear();
-              window.location.reload();
-            }
-          }}><Trash2 size={20}/></Button>
-        </header>
-
-        <div className="flex flex-col items-center gap-4 py-6">
-          <div className="relative group">
-            <div className="w-24 h-24 bg-primary rounded-full flex items-center justify-center text-4xl font-bold text-white shadow-xl shadow-primary/20 overflow-hidden border-4 border-zinc-900">
-              {profile.avatar ? (
-                <img src={profile.avatar} alt="Profile" className="w-full h-full object-cover" />
-              ) : (
-                profile.name.charAt(0)
-              )}
-            </div>
-            <label className="absolute bottom-0 right-0 bg-primary text-white p-2 rounded-full cursor-pointer shadow-lg active:scale-90 transition-all">
-              <Edit2 size={14} />
-              <input 
-                type="file" 
-                className="hidden" 
-                accept="image/*" 
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (file) {
-                    const reader = new FileReader();
-                    reader.onloadend = () => {
-                      setProfile({ ...profile, avatar: reader.result as string });
-                    };
-                    reader.readAsDataURL(file);
-                  }
-                }}
-              />
-            </label>
-          </div>
-          <div className="text-center">
-            <h2 className="text-xl font-bold">{profile.name}</h2>
-            <p className="text-zinc-500">{profile.college}</p>
-          </div>
-        </div>
-
-        <Card className="space-y-4">
-          <Input label="Full Name" value={profile.name} onChange={(v: string) => setProfile({...profile, name: v})} />
-          <Input label="Email Address" value={profile.email} onChange={(v: string) => setProfile({...profile, email: v})} />
-          <Input label="College" value={profile.college} onChange={(v: string) => setProfile({...profile, college: v})} />
-          <Input label="Department" value={profile.department} onChange={(v: string) => setProfile({...profile, department: v})} />
-          <Input label="Semester" value={profile.semester} onChange={(v: string) => setProfile({...profile, semester: v})} />
-          <Input label="Mobile Number" value={profile.mobile} onChange={(v: string) => setProfile({...profile, mobile: v})} />
-        </Card>
-
-        <Button className="w-full py-4" onClick={() => alert("Profile Updated!")}>Save Changes</Button>
-      </div>
+      <ExamsTab 
+        exams={exams}
+        setExams={setExams}
+        editingExam={editingExam}
+        setEditingExam={setEditingExam}
+        showExamModal={showExamModal}
+        setShowExamModal={setShowExamModal}
+        handleDeleteExam={handleDeleteExam}
+        gradeSubjects={gradeSubjects}
+        setGradeSubjects={setGradeSubjects}
+        subjects={subjects}
+      />
     );
   };
 
   const renderSettings = () => {
     return (
-      <div className="space-y-6 pb-24">
-        <h1 className="text-2xl font-bold">Settings</h1>
-
-        <div className="space-y-4">
-          <h3 className="text-zinc-500 uppercase text-xs font-bold tracking-widest">Notifications</h3>
-          <Card className="flex justify-between items-center">
-            <div className="flex items-center gap-3">
-              <div className={`p-2 rounded-lg ${notificationPermission === 'granted' ? 'bg-primary/10 text-primary' : 'bg-zinc-800 text-zinc-500'}`}>
-                {notificationPermission === 'granted' ? <Bell size={20} /> : <BellOff size={20} />}
-              </div>
-              <div>
-                <p className="font-bold">Reminders</p>
-                <p className="text-xs text-zinc-500">8 AM & 6 PM Alerts</p>
-              </div>
-            </div>
-            <Button 
-              variant={notificationPermission === 'granted' ? 'secondary' : 'primary'} 
-              className="text-xs py-1 px-3"
-              onClick={requestNotificationPermission}
-              disabled={notificationPermission === 'granted'}
-            >
-              {notificationPermission === 'granted' ? 'Enabled' : 'Enable'}
-            </Button>
-          </Card>
-        </div>
-        
-        <div className="space-y-4">
-          <h3 className="text-zinc-500 uppercase text-xs font-bold tracking-widest">Attendance Goal</h3>
-          <div className="grid grid-cols-3 gap-3">
-            {[60, 70, 75, 80, 85, 90].map(t => (
-              <button 
-                key={t}
-                onClick={() => setSemester({...semester, targetAttendance: t})}
-                className={`p-4 rounded-2xl border transition-all font-bold ${semester.targetAttendance === t ? 'bg-primary border-primary text-white' : 'bg-zinc-900 border-zinc-800 text-zinc-400'}`}
-              >
-                {t}%
-              </button>
-            ))}
-          </div>
-          <Input 
-            type="number" 
-            label="Custom Target %" 
-            value={semester.targetAttendance} 
-            onChange={(v: string) => setSemester({...semester, targetAttendance: parseInt(v)})} 
-          />
-        </div>
-
-        <div className="space-y-4">
-          <h3 className="text-zinc-500 uppercase text-xs font-bold tracking-widest">Semester Info</h3>
-          <Card className="space-y-4">
-            <Input label="Semester Title / Number" value={semester.title} onChange={(v: string) => setSemester({...semester, title: v})} placeholder="e.g. Semester 3" />
-            <Input type="date" label="Start Date" value={semester.startDate} onChange={(v: string) => setSemester({...semester, startDate: v})} />
-            <Input type="date" label="End Date" value={semester.endDate} onChange={(v: string) => setSemester({...semester, endDate: v})} />
-          </Card>
-        </div>
-
-        <div className="pt-6">
-           <Button variant="danger" className="w-full py-4 flex items-center justify-center gap-2" onClick={() => {
-             const h: SemesterHistory = {
-               id: Date.now().toString(),
-               title: semester.title,
-               startDate: semester.startDate,
-               endDate: semester.endDate,
-               finalPercentage: stats.percentage,
-               totalHeld: stats.totalHeld,
-               totalAttended: stats.totalAttended
-             };
-             setHistory([h, ...history]);
-             setSemester({
-               title: 'Semester 1',
-               startDate: '',
-               endDate: '',
-               targetAttendance: 75,
-               isInitialized: false,
-               initialHeld: 0,
-               initialAttended: 0
-             });
-             setRecords({});
-             setExams([]); // Clear exams for new semester
-             localStorage.removeItem('bs_onboarding_completed');
-             setOnboardingCompleted(false);
-             setOnboardingStep(1);
-             setAppState('MAIN');
-           }}>
-             <LogOut size={20} /> End Current Semester
-           </Button>
-           <p className="text-center text-zinc-500 text-xs mt-4">This will archive current data and start a new semester.</p>
-        </div>
-      </div>
+      <SettingsTab 
+        profile={profile}
+        setProfile={setProfile}
+        semester={semester}
+        setSemester={setSemester}
+        records={records}
+        setRecords={setRecords}
+        history={history}
+        setHistory={setHistory}
+        setExams={setExams}
+        setOnboardingCompleted={setOnboardingCompleted}
+        setOnboardingStep={setOnboardingStep}
+        setAppState={setAppState}
+        notificationPermission={notificationPermission}
+        requestNotificationPermission={requestNotificationPermission}
+        stats={stats}
+        updateAttendance={updateAttendance}
+        subjects={subjects}
+        setSubjects={setSubjects}
+        classSchedule={classSchedule}
+        setClassSchedule={setClassSchedule}
+        gradeSubjects={gradeSubjects}
+        setGradeSubjects={setGradeSubjects}
+        subjectAttendance={subjectAttendance}
+        setSubjectAttendance={setSubjectAttendance}
+      />
     );
   };
 
@@ -2441,8 +3114,7 @@ export default function App() {
             {activeTab === 'dashboard' && renderDashboard()}
             {activeTab === 'calendar' && renderCalendar()}
             {activeTab === 'special' && renderSpecial()}
-            {activeTab === 'analytics' && renderAnalytics()}
-            {activeTab === 'profile' && renderProfile()}
+            {activeTab === 'exams' && renderExams()}
             {activeTab === 'settings' && renderSettings()}
           </motion.div>
         </AnimatePresence>
@@ -2458,11 +3130,10 @@ export default function App() {
       <nav className="fixed bottom-0 left-0 right-0 bg-zinc-950/80 backdrop-blur-xl border-t border-zinc-800 px-6 py-3 z-50">
         <div className="max-w-md mx-auto flex justify-between items-center">
           <NavButton active={activeTab === 'dashboard'} onClick={() => setActiveTab('dashboard')} icon={<LayoutDashboard size={24} />} label="Home" />
-          <NavButton active={activeTab === 'calendar'} onClick={() => setActiveTab('calendar')} icon={<CalendarIcon size={24} />} label="Calendar" />
+          <NavButton active={activeTab === 'calendar'} onClick={() => { setActiveTab('calendar'); setScheduleSubTab('schedule'); }} icon={<CalendarIcon size={24} />} label="Schedule" />
           <NavButton active={activeTab === 'special'} onClick={() => setActiveTab('special')} icon={<Sparkles size={24} />} label="Special" />
-          <NavButton active={activeTab === 'analytics'} onClick={() => setActiveTab('analytics')} icon={<BarChart3 size={24} />} label="Stats" />
-          <NavButton active={activeTab === 'profile'} onClick={() => setActiveTab('profile')} icon={<User size={24} />} label="Profile" />
-          <NavButton active={activeTab === 'settings'} onClick={() => setActiveTab('settings')} icon={<Settings size={24} />} label="Setup" />
+          <NavButton active={activeTab === 'exams'} onClick={() => setActiveTab('exams')} icon={<GraduationCap size={24} />} label="Exams" />
+          <NavButton active={activeTab === 'settings'} onClick={() => setActiveTab('settings')} icon={<Settings size={24} />} label="Settings" />
         </div>
       </nav>
 

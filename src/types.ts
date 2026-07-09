@@ -6,6 +6,7 @@ export interface Profile {
   semester: string;
   mobile: string;
   avatar?: string;
+  academicSession?: string;
 }
 
 export interface Semester {
@@ -46,3 +47,43 @@ export interface Exam {
   startDate: string; // YYYY-MM-DD
   endDate: string; // YYYY-MM-DD
 }
+
+export interface SubjectGradeConfig {
+  id: string;
+  name: string;
+  maxMid1: number;
+  maxMid2: number;
+  hasAssignment: boolean;
+  maxAssignment?: number;
+  maxEndSem: number;
+  obtainedMid1?: number;
+  obtainedMid2?: number;
+  obtainedAssignment?: number;
+  obtainedEndSem?: number;
+  targetGrade: string; // O, A+, A, B+, B, C, Pass
+  obtainedInternalLab?: number;
+  maxInternalLab?: number;
+  obtainedExternalLab?: number;
+  maxExternalLab?: number;
+}
+
+export interface Subject {
+  id: string;
+  name: string;
+  type: 'Theory' | 'Lab';
+  credits: number;
+}
+
+export function formatSubjectName(name: string): string {
+  return name
+    .trim()
+    .replace(/\s+/g, ' ')
+    .split(' ')
+    .map(word => {
+      if (!word) return '';
+      return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
+    })
+    .join(' ');
+}
+
+

@@ -1,8 +1,53 @@
 import { format, parseISO, differenceInDays, isAfter, isBefore, startOfDay, eachDayOfInterval } from 'date-fns';
 
+export const safeParse = (date: Date | string | null | undefined): Date | null => {
+  if (!date) return null;
+  if (date instanceof Date) {
+    return isNaN(date.getTime()) ? null : date;
+  }
+  try {
+    const parsed = parseISO(date);
+    if (parsed && !isNaN(parsed.getTime())) {
+      return parsed;
+    }
+  } catch (e) {}
+  return null;
+};
+
+export const parseTimeToMinutes = (timePart: string): number => {
+  const clean = timePart.trim().toUpperCase();
+  const match = clean.match(/(\d+):(\d+)\s*(AM|PM)/);
+  if (!match) return 0;
+  let hours = parseInt(match[1], 10);
+  const minutes = parseInt(match[2], 10);
+  const ampm = match[3];
+  
+  if (ampm === 'PM' && hours < 12) {
+    hours += 12;
+  } else if (ampm === 'AM' && hours === 12) {
+    hours = 0;
+  }
+  return hours * 60 + minutes;
+};
+
+export const parseTimeRange = (rangeStr: string): { start: number, end: number } | null => {
+  if (!rangeStr) return null;
+  const parts = rangeStr.split('-');
+  if (parts.length !== 2) return null;
+  return {
+    start: parseTimeToMinutes(parts[0]),
+    end: parseTimeToMinutes(parts[1])
+  };
+};
+
 export const formatDate = (date: Date | string) => {
-  const d = typeof date === 'string' ? parseISO(date) : date;
-  return format(d, 'yyyy-MM-dd');
+  try {
+    const d = typeof date === 'string' ? safeParse(date) : date;
+    if (!d || isNaN(d.getTime())) return '';
+    return format(d, 'yyyy-MM-dd');
+  } catch (e) {
+    return '';
+  }
 };
 
 export const getTodayStr = () => formatDate(new Date());
@@ -11,21 +56,31 @@ export const calculateAttendance = (records: Record<string, any>, initialHeld = 
   let totalHeld = initialHeld;
   let totalAttended = initialAttended;
 
-  const start = startDate ? startOfDay(parseISO(startDate)) : null;
+  const start = safeParse(startDate) ? startOfDay(safeParse(startDate)!) : null;
 
   const isExamDay = (dateStr: string) => {
     return exams.some(e => {
-      const start = startOfDay(parseISO(e.startDate));
-      const end = startOfDay(parseISO(e.endDate));
-      const d = startOfDay(parseISO(dateStr));
+      if (!e.startDate || !e.endDate) return false;
+      const startParsed = safeParse(e.startDate);
+      const endParsed = safeParse(e.endDate);
+      const dParsed = safeParse(dateStr);
+      if (!startParsed || !endParsed || !dParsed) {
+        return false;
+      }
+      const start = startOfDay(startParsed);
+      const end = startOfDay(endParsed);
+      const d = startOfDay(dParsed);
       return d >= start && d <= end;
     });
   };
 
   Object.entries(records).forEach(([date, record]: [string, any]) => {
     if (start) {
-      const d = startOfDay(parseISO(date));
-      if (isBefore(d, start)) return;
+      const parsedDate = safeParse(date);
+      if (parsedDate) {
+        const d = startOfDay(parsedDate);
+        if (isBefore(d, start)) return;
+      }
     }
     
     if (!record.isHoliday && !isExamDay(date)) {
