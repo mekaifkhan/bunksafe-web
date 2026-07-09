@@ -96,7 +96,7 @@ export default function SettingsTab({
   
   const [subjNameInput, setSubjNameInput] = useState('');
   const [subjTypeInput, setSubjTypeInput] = useState<'Theory' | 'Lab'>('Theory');
-  const [subjCreditsInput, setSubjCreditsInput] = useState(3);
+  const [subjCreditsInput, setSubjCreditsInput] = useState(0);
   
   const [deleteConfirmSubjectId, setDeleteConfirmSubjectId] = useState<string | null>(null);
 
