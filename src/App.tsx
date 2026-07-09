@@ -1295,7 +1295,14 @@ export default function App() {
               )}
             </div>
             <div>
-              <p className="text-zinc-500 text-sm">Aur Kaisi Chal Rahi Padhaiyaan </p>
+              <p className="text-zinc-500 text-sm">
+                {(() => {
+                  const hours = new Date().getHours();
+                  if (hours < 10) return "Good Morning";
+                  if (hours < 15) return "Good Afternoon";
+                  return "Good Evening";
+                })()}
+              </p>
               <h1 className="text-2xl font-bold">{profile.name}</h1>
             </div>
           </div>
