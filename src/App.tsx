@@ -208,6 +208,17 @@ export default function App() {
   const [extraHolidayInput, setExtraHolidayInput] = useState('');
   const [gapDays, setGapDays] = useState<string[]>([]);
   const [currentGapIndex, setCurrentGapIndex] = useState(0);
+  const [gapHeld, setGapHeld] = useState(1);
+  const [gapAttended, setGapAttended] = useState(1);
+  const [gapIsHoliday, setGapIsHoliday] = useState(false);
+
+  useEffect(() => {
+    if (gapDays.length > 0 && currentGapIndex < gapDays.length) {
+      setGapHeld(1);
+      setGapAttended(1);
+      setGapIsHoliday(false);
+    }
+  }, [currentGapIndex, gapDays]);
 
   const [themeColor, setThemeColor] = useState(() => {
     return localStorage.getItem('bs_theme_color') || '#10b981';
@@ -643,6 +654,37 @@ export default function App() {
       setCurrentGapIndex(0);
       setAppState('GAP_HANDLING');
     }
+  };
+
+  const handleSaveGapEntry = () => {
+    const currentGapDate = gapDays[currentGapIndex];
+    if (currentGapDate) {
+      updateAttendance(currentGapDate, gapIsHoliday ? 0 : gapHeld, gapIsHoliday ? 0 : gapAttended, gapIsHoliday);
+      
+      if (currentGapIndex + 1 < gapDays.length) {
+        setCurrentGapIndex(prev => prev + 1);
+      } else {
+        setAppState('MAIN');
+        setGapDays([]);
+        setCurrentGapIndex(0);
+      }
+    }
+  };
+
+  const handleSkipGapEntry = () => {
+    if (currentGapIndex + 1 < gapDays.length) {
+      setCurrentGapIndex(prev => prev + 1);
+    } else {
+      setAppState('MAIN');
+      setGapDays([]);
+      setCurrentGapIndex(0);
+    }
+  };
+
+  const handleExitGapHandling = () => {
+    setAppState('MAIN');
+    setGapDays([]);
+    setCurrentGapIndex(0);
   };
 
   // --- Handlers ---
@@ -1267,9 +1309,179 @@ export default function App() {
     );
   };
 
+  const renderGapHandling = () => {
+    if (gapDays.length === 0 || currentGapIndex >= gapDays.length) return null;
+    const currentDateStr = gapDays[currentGapIndex];
+    const currentDate = parseISO(currentDateStr);
+
+    return (
+      <div className="space-y-6">
+        <header className="flex justify-between items-center">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-primary/10 rounded-xl flex items-center justify-center text-primary">
+              <AlertCircle size={20} />
+            </div>
+            <div>
+              <h1 className="text-xl font-bold">Missed Attendance</h1>
+              <p className="text-xs text-zinc-500 font-medium">Resolve pending class days</p>
+            </div>
+          </div>
+          <Button variant="ghost" className="text-xs px-2.5 py-1" onClick={handleExitGapHandling}>
+            Exit
+          </Button>
+        </header>
+
+        {/* Progress bar */}
+        <div className="space-y-2">
+          <div className="flex justify-between text-xs text-zinc-500 font-bold uppercase tracking-wider">
+            <span>Progress</span>
+            <span>{currentGapIndex + 1} of {gapDays.length} Days</span>
+          </div>
+          <div className="h-2 bg-zinc-900 rounded-full overflow-hidden border border-zinc-800">
+            <div 
+              className="h-full bg-primary transition-all duration-300"
+              style={{ width: `${((currentGapIndex + 1) / gapDays.length) * 100}%` }}
+            />
+          </div>
+        </div>
+
+        <Card className="p-6 space-y-6 relative overflow-hidden">
+          {/* Subtle date display banner */}
+          <div className="text-center py-4 bg-zinc-800/20 rounded-2xl border border-zinc-800/40">
+            <span className="text-[10px] font-black tracking-widest text-primary uppercase bg-primary/10 px-3 py-1 rounded-full">
+              {format(currentDate, 'EEEE')}
+            </span>
+            <h2 className="text-2xl font-black text-white mt-3">
+              {format(currentDate, 'dd/MM/yyyy')}
+            </h2>
+          </div>
+
+          {/* Toggle Choice */}
+          <div className="grid grid-cols-2 gap-3">
+            <button
+              onClick={() => setGapIsHoliday(false)}
+              className={`py-3 px-4 rounded-xl font-bold text-sm border transition-all flex flex-col items-center justify-center gap-1.5 ${
+                !gapIsHoliday 
+                  ? 'bg-primary/10 border-primary text-primary' 
+                  : 'bg-zinc-900/50 border-zinc-800 text-zinc-400 hover:border-zinc-700'
+              }`}
+            >
+              <CheckCircle2 size={18} />
+              Regular Class Day
+            </button>
+            <button
+              onClick={() => setGapIsHoliday(true)}
+              className={`py-3 px-4 rounded-xl font-bold text-sm border transition-all flex flex-col items-center justify-center gap-1.5 ${
+                gapIsHoliday 
+                  ? 'bg-blue-500/10 border-blue-500 text-blue-400' 
+                  : 'bg-zinc-900/50 border-zinc-800 text-zinc-400 hover:border-zinc-700'
+              }`}
+            >
+              <Info size={18} />
+              Holiday / No Class
+            </button>
+          </div>
+
+          {!gapIsHoliday ? (
+            <div className="space-y-6 pt-2">
+              {/* Classes Held Counter */}
+              <div className="bg-zinc-900/40 p-4 rounded-2xl border border-zinc-800 flex items-center justify-between">
+                <div>
+                  <h3 className="font-bold text-sm text-zinc-100">Classes Held</h3>
+                  <p className="text-xs text-zinc-500">Total lectures scheduled</p>
+                </div>
+                <div className="flex items-center gap-4">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const val = Math.max(1, gapHeld - 1);
+                      setGapHeld(val);
+                      if (gapAttended > val) setGapAttended(val);
+                    }}
+                    className="w-10 h-10 rounded-xl bg-zinc-800 hover:bg-zinc-700 active:scale-95 transition-all flex items-center justify-center text-zinc-300 font-bold"
+                  >
+                    <Minus size={16} />
+                  </button>
+                  <span className="text-xl font-black text-white w-6 text-center">{gapHeld}</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setGapHeld(prev => prev + 1);
+                    }}
+                    className="w-10 h-10 rounded-xl bg-zinc-800 hover:bg-zinc-700 active:scale-95 transition-all flex items-center justify-center text-zinc-300 font-bold"
+                  >
+                    <Plus size={16} />
+                  </button>
+                </div>
+              </div>
+
+              {/* Classes Attended Counter */}
+              <div className="bg-zinc-900/40 p-4 rounded-2xl border border-zinc-800 flex items-center justify-between">
+                <div>
+                  <h3 className="font-bold text-sm text-zinc-100">Classes Attended</h3>
+                  <p className="text-xs text-zinc-500">Lectures you sat in</p>
+                </div>
+                <div className="flex items-center gap-4">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setGapAttended(prev => Math.max(0, prev - 1));
+                    }}
+                    className="w-10 h-10 rounded-xl bg-zinc-800 hover:bg-zinc-700 active:scale-95 transition-all flex items-center justify-center text-zinc-300 font-bold"
+                  >
+                    <Minus size={16} />
+                  </button>
+                  <span className="text-xl font-black text-primary w-6 text-center">{gapAttended}</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const val = gapAttended + 1;
+                      setGapAttended(val);
+                      if (val > gapHeld) setGapHeld(val);
+                    }}
+                    className="w-10 h-10 rounded-xl bg-zinc-800 hover:bg-zinc-700 active:scale-95 transition-all flex items-center justify-center text-zinc-300 font-bold"
+                  >
+                    <Plus size={16} />
+                  </button>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="bg-blue-500/5 border border-blue-500/10 p-5 rounded-2xl text-center space-y-1 py-8">
+              <p className="text-blue-400 font-bold text-sm">Marked as Holiday</p>
+              <p className="text-zinc-500 text-xs">This date will be excluded from all attendance percentages.</p>
+            </div>
+          )}
+
+          {/* Action buttons */}
+          <div className="pt-2 flex gap-3">
+            <Button
+              variant="secondary"
+              className="flex-1 py-3 text-sm font-bold"
+              onClick={handleSkipGapEntry}
+            >
+              Skip Day
+            </Button>
+            <Button
+              variant="primary"
+              className="flex-1 py-3 text-sm font-bold"
+              onClick={handleSaveGapEntry}
+            >
+              Save & Next
+            </Button>
+          </div>
+        </Card>
+      </div>
+    );
+  };
+
   const renderDashboard = () => {
     if (!semester.isInitialized) {
       return renderSemesterSetup();
+    }
+
+    if (appState === 'GAP_HANDLING') {
+      return renderGapHandling();
     }
 
     const isEnded = semester.isInitialized && semester.endDate && isAfter(startOfDay(new Date()), startOfDay(parseISO(semester.endDate)));
