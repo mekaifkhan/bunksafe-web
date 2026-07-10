@@ -8,6 +8,7 @@ export interface Profile {
   avatar?: string;
   academicSession?: string;
   programme?: string;
+  firstYearPattern?: 'SetA' | 'SetB';
 }
 
 export interface Semester {

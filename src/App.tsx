@@ -1849,45 +1849,17 @@ export default function App() {
                     setExams(preparedExams);
 
                     const finalProg = (onboardSem === 'Semester 1' || onboardSem === 'Semester 2') ? 'Regular' : onboardProgramme;
-                    const isJmiECE = finalProg === 'Regular' && onboardDept === 'Electronics & Communication Engineering';
-                    const isJmiCivil = finalProg === 'Regular' && onboardDept === 'Civil Engineering';
-                    const isJmiVLSI = finalProg === 'Self-Financed' && onboardDept === 'Electronics (VLSI Design & Technology) (Self-Financed)';
-                    const isJmiElec = finalProg === 'Regular' && onboardDept === 'Electrical Engineering';
-                    const isJmiMech = finalProg === 'Regular' && onboardDept === 'Mechanical Engineering';
-                    const isJmiCsds = finalProg === 'Regular' && onboardDept === 'Computer Science & Engineering (Data Science)';
-                    const isJmiEec = finalProg === 'Regular' && onboardDept === 'Electrical & Computer Engineering';
-                    if (isJmiECE) {
-                      const { subjects: defaultSubs } = getDefaultCurriculumSubjects(onboardSem, onboardDept);
-                      if (defaultSubs && defaultSubs.length > 0) {
-                        setSubjects(defaultSubs);
-                      }
-                    } else if (isJmiCivil) {
-                      const { subjects: defaultSubs } = getDefaultCurriculumSubjects(onboardSem, onboardDept);
-                      if (defaultSubs && defaultSubs.length > 0) {
-                        setSubjects(defaultSubs);
-                      }
-                    } else if (isJmiVLSI) {
-                      const { subjects: defaultSubs } = getDefaultCurriculumSubjects(onboardSem, onboardDept);
-                      if (defaultSubs && defaultSubs.length > 0) {
-                        setSubjects(defaultSubs);
-                      }
-                    } else if (isJmiElec) {
-                      const { subjects: defaultSubs } = getDefaultCurriculumSubjects(onboardSem, onboardDept);
-                      if (defaultSubs && defaultSubs.length > 0) {
-                        setSubjects(defaultSubs);
-                      }
-                    } else if (isJmiMech) {
-                      const { subjects: defaultSubs } = getDefaultCurriculumSubjects(onboardSem, onboardDept);
-                      if (defaultSubs && defaultSubs.length > 0) {
-                        setSubjects(defaultSubs);
-                      }
-                    } else if (isJmiCsds) {
-                      const { subjects: defaultSubs } = getDefaultCurriculumSubjects(onboardSem, onboardDept);
-                      if (defaultSubs && defaultSubs.length > 0) {
-                        setSubjects(defaultSubs);
-                      }
-                    } else if (isJmiEec) {
-                      const { subjects: defaultSubs } = getDefaultCurriculumSubjects(onboardSem, onboardDept);
+                    const isJmiECE = onboardDept === 'Electronics & Communication Engineering';
+                    const isJmiCivil = onboardDept.includes('Civil Engineering');
+                    const isJmiVLSI = onboardDept.includes('VLSI Design');
+                    const isJmiElec = onboardDept === 'Electrical Engineering';
+                    const isJmiMech = onboardDept === 'Mechanical Engineering';
+                    const isJmiCsds = onboardDept.includes('Computer Science') && onboardDept.includes('Data Science');
+                    const isJmiEec = onboardDept.includes('Electrical & Computer');
+                    const isFirstYear = onboardSem === 'Semester 1' || onboardSem === 'Semester 2';
+
+                    if (isFirstYear || isJmiECE || isJmiCivil || isJmiVLSI || isJmiElec || isJmiMech || isJmiCsds || isJmiEec) {
+                      const { subjects: defaultSubs } = getDefaultCurriculumSubjects(onboardSem, onboardDept, 'SetA');
                       if (defaultSubs && defaultSubs.length > 0) {
                         setSubjects(defaultSubs);
                       }
@@ -3284,6 +3256,82 @@ export default function App() {
     );
   };
 
+  const showFirstYearPatternModal = onboardingCompleted && 
+    (profile.semester === 'Semester 1' || profile.semester === 'Semester 2') && 
+    !profile.firstYearPattern;
+
+  const renderFirstYearPatternModal = () => {
+    if (!showFirstYearPatternModal) return null;
+
+    return (
+      <div id="first-year-pattern-modal" className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-fade-in">
+        <motion.div 
+          initial={{ scale: 0.9, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          className="bg-zinc-900 border border-zinc-800 rounded-3xl p-6 w-full max-w-md space-y-6 shadow-2xl"
+        >
+          <div className="space-y-2 text-center">
+            <div className="mx-auto w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mb-2">
+              <Sparkles size={24} className="text-primary" />
+            </div>
+            <h2 className="text-xl font-extrabold text-zinc-100">First Year Syllabus Pattern</h2>
+            <p className="text-xs text-zinc-400">
+              JMI B.Tech branches have different subject allocations in the first year. Select the pattern followed by your branch.
+            </p>
+          </div>
+
+          <div className="space-y-3">
+            {/* Option 1 */}
+            <button
+              onClick={() => {
+                const pattern = 'SetA';
+                const updatedProfile = { ...profile, firstYearPattern: pattern };
+                setProfile(updatedProfile);
+                const { subjects: defaultSubs } = getDefaultCurriculumSubjects(profile.semester, profile.department, pattern);
+                if (defaultSubs && defaultSubs.length > 0) {
+                  setSubjects(defaultSubs);
+                }
+              }}
+              className="w-full text-left p-4 rounded-2xl bg-zinc-800/40 border border-zinc-800 hover:border-zinc-700/80 hover:bg-zinc-800/80 transition-all flex flex-col gap-1 group text-zinc-100 font-sans"
+            >
+              <div className="flex items-center justify-between w-full">
+                <span className="font-bold text-sm text-zinc-200 group-hover:text-primary transition-colors">Option 1: Set A → Set B</span>
+                <span className="text-[10px] bg-primary/10 text-primary font-bold px-2 py-0.5 rounded-full font-mono">Standard</span>
+              </div>
+              <p className="text-xs text-zinc-400 leading-normal mt-1">
+                <strong className="text-zinc-300">Semester 1:</strong> Physics I, Chemistry, Math I, Electrical, Computing, etc.<br />
+                <strong className="text-zinc-300">Semester 2:</strong> Physics II, Math II, Biology, ECE, Mechanical, Civil, etc.
+              </p>
+            </button>
+
+            {/* Option 2 */}
+            <button
+              onClick={() => {
+                const pattern = 'SetB';
+                const updatedProfile = { ...profile, firstYearPattern: pattern };
+                setProfile(updatedProfile);
+                const { subjects: defaultSubs } = getDefaultCurriculumSubjects(profile.semester, profile.department, pattern);
+                if (defaultSubs && defaultSubs.length > 0) {
+                  setSubjects(defaultSubs);
+                }
+              }}
+              className="w-full text-left p-4 rounded-2xl bg-zinc-800/40 border border-zinc-800 hover:border-zinc-700/80 hover:bg-zinc-800/80 transition-all flex flex-col gap-1 group text-zinc-100 font-sans"
+            >
+              <div className="flex items-center justify-between w-full">
+                <span className="font-bold text-sm text-zinc-200 group-hover:text-primary transition-colors">Option 2: Set B → Set A</span>
+                <span className="text-[10px] bg-primary/10 text-primary font-bold px-2 py-0.5 rounded-full font-mono">Alternate</span>
+              </div>
+              <p className="text-xs text-zinc-400 leading-normal mt-1">
+                <strong className="text-zinc-300">Semester 1:</strong> Physics II, Math II, Biology, ECE, Mechanical, Civil, etc.<br />
+                <strong className="text-zinc-300">Semester 2:</strong> Physics I, Chemistry, Math I, Electrical, Computing, etc.
+              </p>
+            </button>
+          </div>
+        </motion.div>
+      </div>
+    );
+  };
+
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-100 font-sans selection:bg-primary/30">
       <main className="max-w-md mx-auto p-6">
@@ -3322,6 +3370,7 @@ export default function App() {
       </nav>
 
       {showExamModal && <ExamModal />}
+      {renderFirstYearPatternModal()}
     </div>
   );
 }

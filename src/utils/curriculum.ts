@@ -654,6 +654,70 @@ export const JMI_CSE_DS_CURRICULUM: Record<string, SemesterCurriculum> = {
   }
 };
 
+export const JMI_FIRST_YEAR_SET_A: Record<string, SemesterCurriculum> = {
+  'Semester 1': {
+    subjects: [
+      { code: 'AST-101', name: 'Communication Skills', credits: 2, type: 'Theory' },
+      { code: 'ASB-101', name: 'Engineering Physics I', credits: 3, type: 'Theory' },
+      { code: 'ASB-102', name: 'Engineering Chemistry', credits: 3, type: 'Theory' },
+      { code: 'ASB-103', name: 'Engineering Mathematics I', credits: 3, type: 'Theory' },
+      { code: 'EES-101', name: 'Basics of Electrical Engineering', credits: 3, type: 'Theory' },
+      { code: 'CSS-101', name: 'Fundamentals of Computing', credits: 3, type: 'Theory' },
+      { code: 'ASL-101', name: 'Language Laboratory', credits: 1, type: 'Lab' },
+      { code: 'ASL-102', name: 'Engineering Physics Laboratory I', credits: 1, type: 'Lab' },
+      { code: 'ASL-103', name: 'Engineering Chemistry Laboratory', credits: 1, type: 'Lab' },
+      { code: 'MEL-104', name: 'Engineering Graphics & Design', credits: 2, type: 'Lab' },
+      { code: 'ECL-101', name: 'Design Thinking & Idea Lab', credits: 1, type: 'Lab' }
+    ]
+  },
+  'Semester 2': {
+    subjects: [
+      { code: 'ASB-201', name: 'Engineering Physics II', credits: 3, type: 'Theory' },
+      { code: 'ASB-202', name: 'Engineering Mathematics II', credits: 3, type: 'Theory' },
+      { code: 'ASB-203', name: 'Biology for Engineers', credits: 3, type: 'Theory' },
+      { code: 'ECS-201', name: 'Basics of Electronics & Communication Engineering', credits: 3, type: 'Theory' },
+      { code: 'MES-201', name: 'Basics of Mechanical Engineering', credits: 3, type: 'Theory' },
+      { code: 'CES-201', name: 'Basics of Civil Engineering', credits: 3, type: 'Theory' },
+      { code: 'ASM-201', name: 'Constitution of India', credits: 0, type: 'Theory' },
+      { code: 'ASL-201', name: 'Engineering Physics Laboratory II', credits: 1, type: 'Lab' },
+      { code: 'MEL-201', name: 'Workshop Practice', credits: 2, type: 'Lab' },
+      { code: 'MEL-202', name: 'Engineering Mechanics Laboratory', credits: 1, type: 'Lab' }
+    ]
+  }
+};
+
+export const JMI_FIRST_YEAR_SET_B: Record<string, SemesterCurriculum> = {
+  'Semester 1': {
+    subjects: [
+      { code: 'ASB-201', name: 'Engineering Physics II', credits: 3, type: 'Theory' },
+      { code: 'ASB-202', name: 'Engineering Mathematics II', credits: 3, type: 'Theory' },
+      { code: 'ASB-203', name: 'Biology for Engineers', credits: 3, type: 'Theory' },
+      { code: 'ECS-201', name: 'Basics of Electronics & Communication Engineering', credits: 3, type: 'Theory' },
+      { code: 'MES-201', name: 'Basics of Mechanical Engineering', credits: 3, type: 'Theory' },
+      { code: 'CES-201', name: 'Basics of Civil Engineering', credits: 3, type: 'Theory' },
+      { code: 'ASM-201', name: 'Constitution of India', credits: 0, type: 'Theory' },
+      { code: 'ASL-201', name: 'Engineering Physics Laboratory II', credits: 1, type: 'Lab' },
+      { code: 'MEL-201', name: 'Workshop Practice', credits: 2, type: 'Lab' },
+      { code: 'MEL-202', name: 'Engineering Mechanics Laboratory', credits: 1, type: 'Lab' }
+    ]
+  },
+  'Semester 2': {
+    subjects: [
+      { code: 'AST-101', name: 'Communication Skills', credits: 2, type: 'Theory' },
+      { code: 'ASB-101', name: 'Engineering Physics I', credits: 3, type: 'Theory' },
+      { code: 'ASB-102', name: 'Engineering Chemistry', credits: 3, type: 'Theory' },
+      { code: 'ASB-103', name: 'Engineering Mathematics I', credits: 3, type: 'Theory' },
+      { code: 'EES-101', name: 'Basics of Electrical Engineering', credits: 3, type: 'Theory' },
+      { code: 'CSS-101', name: 'Fundamentals of Computing', credits: 3, type: 'Theory' },
+      { code: 'ASL-101', name: 'Language Laboratory', credits: 1, type: 'Lab' },
+      { code: 'ASL-102', name: 'Engineering Physics Laboratory I', credits: 1, type: 'Lab' },
+      { code: 'ASL-103', name: 'Engineering Chemistry Laboratory', credits: 1, type: 'Lab' },
+      { code: 'MEL-104', name: 'Engineering Graphics & Design', credits: 2, type: 'Lab' },
+      { code: 'ECL-101', name: 'Design Thinking & Idea Lab', credits: 1, type: 'Lab' }
+    ]
+  }
+};
+
 export const JMI_ELECTRICAL_COMPUTER_CURRICULUM: Record<string, SemesterCurriculum> = {
   'Semester 3': {
     subjects: [
@@ -1105,27 +1169,38 @@ export const JMI_ELECTRICAL_CURRICULUM: Record<string, SemesterCurriculum> = {
  */
 export function getDefaultCurriculumSubjects(
   semesterTitle: string,
-  department: string = 'Electronics & Communication Engineering'
+  department: string = 'Electronics & Communication Engineering',
+  firstYearPattern?: 'SetA' | 'SetB'
  ): { subjects: any[]; electiveSelections: Record<string, string> } {
-  const isCivil = department === 'Civil Engineering';
-  const isVlsi = department === 'Electronics (VLSI Design & Technology) (Self-Financed)';
+  const isFirstYear = semesterTitle === 'Semester 1' || semesterTitle === 'Semester 2';
+  const isCivil = department === 'Civil Engineering' || department.includes('Civil Engineering');
+  const isVlsi = department === 'Electronics (VLSI Design & Technology) (Self-Financed)' || department.includes('VLSI Design');
   const isElec = department === 'Electrical Engineering';
   const isMech = department === 'Mechanical Engineering';
-  const isCsds = department === 'Computer Science & Engineering (Data Science)';
-  const isEec = department === 'Electrical & Computer Engineering';
-  const semData = isCivil 
-    ? JMI_CIVIL_CURRICULUM[semesterTitle] 
-    : isVlsi 
-      ? JMI_VLSI_CURRICULUM[semesterTitle] 
-      : isElec
-        ? JMI_ELECTRICAL_CURRICULUM[semesterTitle]
-        : isMech
-          ? JMI_MECHANICAL_CURRICULUM[semesterTitle]
-          : isCsds
-            ? JMI_CSE_DS_CURRICULUM[semesterTitle]
-            : isEec
-              ? JMI_ELECTRICAL_COMPUTER_CURRICULUM[semesterTitle]
-              : JMI_CURRICULUM[semesterTitle];
+  const isCsds = department.startsWith('Computer Science & Engineering (Data Science') || (department.includes('Computer Science') && department.includes('Data Science'));
+  const isEec = department === 'Electrical & Computer Engineering' || department.includes('Electrical & Computer');
+
+  let semData: SemesterCurriculum | undefined = undefined;
+  if (isFirstYear) {
+    semData = firstYearPattern === 'SetB'
+      ? JMI_FIRST_YEAR_SET_B[semesterTitle]
+      : JMI_FIRST_YEAR_SET_A[semesterTitle];
+  } else {
+    semData = isCivil 
+      ? JMI_CIVIL_CURRICULUM[semesterTitle] 
+      : isVlsi 
+        ? JMI_VLSI_CURRICULUM[semesterTitle] 
+        : isElec
+          ? JMI_ELECTRICAL_CURRICULUM[semesterTitle]
+          : isMech
+            ? JMI_MECHANICAL_CURRICULUM[semesterTitle]
+            : isCsds
+              ? JMI_CSE_DS_CURRICULUM[semesterTitle]
+              : isEec
+                ? JMI_ELECTRICAL_COMPUTER_CURRICULUM[semesterTitle]
+                : JMI_CURRICULUM[semesterTitle];
+  }
+
   if (!semData) {
     return { subjects: [], electiveSelections: {} };
   }
@@ -1135,19 +1210,21 @@ export function getDefaultCurriculumSubjects(
 
   // Add non-electives
   semData.subjects.forEach((s) => {
-    const id = isCivil 
-      ? `sub_jmi_civil_${semesterTitle.replace(/\s+/g, '_')}_${s.code.replace(/\s+/g, '_')}`
-      : isVlsi
-        ? `sub_jmi_vlsi_${semesterTitle.replace(/\s+/g, '_')}_${s.code.replace(/\s+/g, '_')}`
-        : isElec
-          ? `sub_jmi_elec_${semesterTitle.replace(/\s+/g, '_')}_${s.code.replace(/\s+/g, '_')}`
-          : isMech
-            ? `sub_jmi_mech_${semesterTitle.replace(/\s+/g, '_')}_${s.code.replace(/\s+/g, '_')}`
-            : isCsds
-              ? `sub_jmi_csds_${semesterTitle.replace(/\s+/g, '_')}_${s.code.replace(/\s+/g, '_')}`
-              : isEec
-                ? `sub_jmi_eec_${semesterTitle.replace(/\s+/g, '_')}_${s.code.replace(/\s+/g, '_')}`
-                : `sub_jmi_${semesterTitle.replace(/\s+/g, '_')}_${s.code.replace(/\s+/g, '_')}`;
+    const id = isFirstYear
+      ? `sub_jmi_firstyear_${firstYearPattern || 'SetA'}_${semesterTitle.replace(/\s+/g, '_')}_${s.code.replace(/\s+/g, '_')}`
+      : isCivil 
+        ? `sub_jmi_civil_${semesterTitle.replace(/\s+/g, '_')}_${s.code.replace(/\s+/g, '_')}`
+        : isVlsi
+          ? `sub_jmi_vlsi_${semesterTitle.replace(/\s+/g, '_')}_${s.code.replace(/\s+/g, '_')}`
+          : isElec
+            ? `sub_jmi_elec_${semesterTitle.replace(/\s+/g, '_')}_${s.code.replace(/\s+/g, '_')}`
+            : isMech
+              ? `sub_jmi_mech_${semesterTitle.replace(/\s+/g, '_')}_${s.code.replace(/\s+/g, '_')}`
+              : isCsds
+                ? `sub_jmi_csds_${semesterTitle.replace(/\s+/g, '_')}_${s.code.replace(/\s+/g, '_')}`
+                : isEec
+                  ? `sub_jmi_eec_${semesterTitle.replace(/\s+/g, '_')}_${s.code.replace(/\s+/g, '_')}`
+                  : `sub_jmi_${semesterTitle.replace(/\s+/g, '_')}_${s.code.replace(/\s+/g, '_')}`;
     subjectsList.push({
       id,
       name: `${s.code} ${s.name}`,
@@ -1165,19 +1242,21 @@ export function getDefaultCurriculumSubjects(
       if (group.options.length > 0) {
         const defaultOpt = group.options[0];
         electiveSelections[group.id] = defaultOpt.code;
-        const id = isCivil
-          ? `sub_jmi_civil_${semesterTitle.replace(/\s+/g, '_')}_elective_${group.id}`
-          : isVlsi
-            ? `sub_jmi_vlsi_${semesterTitle.replace(/\s+/g, '_')}_elective_${group.id}`
-            : isElec
-              ? `sub_jmi_elec_${semesterTitle.replace(/\s+/g, '_')}_elective_${group.id}`
-              : isMech
-                ? `sub_jmi_mech_${semesterTitle.replace(/\s+/g, '_')}_elective_${group.id}`
-                : isCsds
-                  ? `sub_jmi_csds_${semesterTitle.replace(/\s+/g, '_')}_elective_${group.id}`
-                  : isEec
-                    ? `sub_jmi_eec_${semesterTitle.replace(/\s+/g, '_')}_elective_${group.id}`
-                    : `sub_jmi_${semesterTitle.replace(/\s+/g, '_')}_elective_${group.id}`;
+        const id = isFirstYear
+          ? `sub_jmi_firstyear_${firstYearPattern || 'SetA'}_${semesterTitle.replace(/\s+/g, '_')}_elective_${group.id}`
+          : isCivil
+            ? `sub_jmi_civil_${semesterTitle.replace(/\s+/g, '_')}_elective_${group.id}`
+            : isVlsi
+              ? `sub_jmi_vlsi_${semesterTitle.replace(/\s+/g, '_')}_elective_${group.id}`
+              : isElec
+                ? `sub_jmi_elec_${semesterTitle.replace(/\s+/g, '_')}_elective_${group.id}`
+                : isMech
+                  ? `sub_jmi_mech_${semesterTitle.replace(/\s+/g, '_')}_elective_${group.id}`
+                  : isCsds
+                    ? `sub_jmi_csds_${semesterTitle.replace(/\s+/g, '_')}_elective_${group.id}`
+                    : isEec
+                      ? `sub_jmi_eec_${semesterTitle.replace(/\s+/g, '_')}_elective_${group.id}`
+                      : `sub_jmi_${semesterTitle.replace(/\s+/g, '_')}_elective_${group.id}`;
         subjectsList.push({
           id,
           name: `${defaultOpt.code} ${defaultOpt.name}`,
