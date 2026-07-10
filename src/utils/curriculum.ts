@@ -1353,6 +1353,9 @@ export function getDefaultCurriculumSubjects(
   firstYearPattern?: 'SetA' | 'SetB'
  ): { subjects: any[]; electiveSelections: Record<string, string> } {
   const isFirstYear = semesterTitle === 'Semester 1' || semesterTitle === 'Semester 2';
+  if (isFirstYear) {
+    return { subjects: [], electiveSelections: {} };
+  }
   const isCivil = department === 'Civil Engineering' || department.includes('Civil Engineering');
   const isVlsi = department === 'Electronics (VLSI Design & Technology) (Self-Financed)' || department.includes('VLSI Design');
   const isElec = department === 'Electrical Engineering';

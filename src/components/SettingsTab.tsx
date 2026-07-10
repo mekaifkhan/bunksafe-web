@@ -584,26 +584,7 @@ export default function SettingsTab({
             </div>
           )}
 
-          {(profile.semester === 'Semester 1' || profile.semester === 'Semester 2') && (
-            <div className="space-y-1.5">
-              <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider block">First Year Syllabus Pattern</label>
-              <select
-                value={profile.firstYearPattern || 'SetA'}
-                onChange={(e) => {
-                  const pattern = e.target.value as 'SetA' | 'SetB';
-                  setProfile({ ...profile, firstYearPattern: pattern });
-                  const { subjects: defaultSubs } = getDefaultCurriculumSubjects(profile.semester, profile.department, pattern);
-                  if (defaultSubs && defaultSubs.length > 0) {
-                    setSubjects(defaultSubs);
-                  }
-                }}
-                className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-3 py-2.5 text-xs text-zinc-100 focus:outline-none focus:border-primary transition-colors font-bold"
-              >
-                <option value="SetA">Option 1: Semester 1 → Set A, Semester 2 → Set B</option>
-                <option value="SetB">Option 2: Semester 1 → Set B, Semester 2 → Set A</option>
-              </select>
-            </div>
-          )}
+
 
           <div className="grid grid-cols-1 gap-3">
             <div className="space-y-1.5">

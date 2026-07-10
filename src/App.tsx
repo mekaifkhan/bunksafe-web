@@ -3255,9 +3255,7 @@ export default function App() {
     );
   };
 
-  const showFirstYearPatternModal = onboardingCompleted && 
-    (profile.semester === 'Semester 1' || profile.semester === 'Semester 2') && 
-    !profile.firstYearPattern;
+  const showFirstYearPatternModal = false;
 
   const renderFirstYearPatternModal = () => {
     if (!showFirstYearPatternModal) return null;
