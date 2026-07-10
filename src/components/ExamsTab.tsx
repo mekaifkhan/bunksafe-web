@@ -20,7 +20,8 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { format, differenceInDays } from 'date-fns';
-import { Exam, SubjectGradeConfig, Subject } from '../types';
+import { Exam, SubjectGradeConfig, Subject, Profile } from '../types';
+import { logCustomEvent } from '../firebase';
 
 interface ExamsTabProps {
   exams: Exam[];
@@ -33,6 +34,7 @@ interface ExamsTabProps {
   gradeSubjects: SubjectGradeConfig[];
   setGradeSubjects: React.Dispatch<React.SetStateAction<SubjectGradeConfig[]>>;
   subjects: Subject[];
+  profile?: Profile;
 }
 
 export default function ExamsTab({
@@ -45,10 +47,18 @@ export default function ExamsTab({
   handleDeleteExam,
   gradeSubjects,
   setGradeSubjects,
-  subjects
+  subjects,
+  profile
 }: ExamsTabProps) {
   // Navigation active sub-section or scrolling is fine. But let's show them nicely with clear headings or toggles!
   const [activeSection, setActiveSection] = useState<'schedule' | 'grade_planner'>('schedule');
+
+  const logPredictorUsed = () => {
+    logCustomEvent('grade_predictor_used', {
+      branch: profile?.department || 'Unknown',
+      semester: profile?.semester || 'Unknown'
+    });
+  };
 
   // State for Subject Setup Modal
   const [showSubjectModal, setShowSubjectModal] = useState(false);
@@ -167,6 +177,7 @@ export default function ExamsTab({
         setExpandedSubjectId(config.id);
       }
       
+      logPredictorUsed();
       setShowSubjectModal(false);
       setEditingSubject(null);
       resetSubjectForm();
@@ -237,6 +248,7 @@ export default function ExamsTab({
       setExpandedSubjectId(config.id);
     }
 
+    logPredictorUsed();
     setShowSubjectModal(false);
     setEditingSubject(null);
     resetSubjectForm();
@@ -772,6 +784,7 @@ export default function ExamsTab({
                                         onChange={(e) => {
                                           const val = parseFloat(e.target.value);
                                           setGradeSubjects(prev => prev.map(s => s.id === subj.id ? { ...s, obtainedInternalLab: val } : s));
+                                          logPredictorUsed();
                                         }}
                                         className="flex-1 h-1.5 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-primary"
                                       />
@@ -810,6 +823,7 @@ export default function ExamsTab({
                                         onChange={(e) => {
                                           const val = parseFloat(e.target.value);
                                           setGradeSubjects(prev => prev.map(s => s.id === subj.id ? { ...s, obtainedExternalLab: val } : s));
+                                          logPredictorUsed();
                                         }}
                                         className="flex-1 h-1.5 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-primary"
                                       />
@@ -897,6 +911,7 @@ export default function ExamsTab({
                                       onChange={(e) => {
                                         const val = parseFloat(e.target.value);
                                         setGradeSubjects(prev => prev.map(s => s.id === subj.id ? { ...s, obtainedMid1: val } : s));
+                                        logPredictorUsed();
                                       }}
                                       className="w-full h-1.5 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-primary"
                                     />
@@ -965,6 +980,7 @@ export default function ExamsTab({
                                       onChange={(e) => {
                                         const val = parseFloat(e.target.value);
                                         setGradeSubjects(prev => prev.map(s => s.id === subj.id ? { ...s, obtainedMid2: val } : s));
+                                        logPredictorUsed();
                                       }}
                                       className="w-full h-1.5 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-primary"
                                     />
@@ -1034,6 +1050,7 @@ export default function ExamsTab({
                                         onChange={(e) => {
                                           const val = parseFloat(e.target.value);
                                           setGradeSubjects(prev => prev.map(s => s.id === subj.id ? { ...s, obtainedAssignment: val } : s));
+                                          logPredictorUsed();
                                         }}
                                         className="w-full h-1.5 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-primary"
                                       />
@@ -1103,6 +1120,7 @@ export default function ExamsTab({
                                       onChange={(e) => {
                                         const val = parseFloat(e.target.value);
                                         setGradeSubjects(prev => prev.map(s => s.id === subj.id ? { ...s, obtainedEndSem: val } : s));
+                                        logPredictorUsed();
                                       }}
                                       className="w-full h-1.5 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-primary"
                                     />
@@ -1140,6 +1158,7 @@ export default function ExamsTab({
                                       key={gr}
                                       onClick={() => {
                                         setGradeSubjects(prev => prev.map(s => s.id === subj.id ? { ...s, targetGrade: gr } : s));
+                                        logPredictorUsed();
                                       }}
                                       className={`px-2.5 py-1 rounded-md text-[10px] font-black uppercase transition-all border ${stats.normTarget === gr ? 'bg-primary border-primary text-white shadow' : 'bg-zinc-850 border-zinc-800 text-zinc-500 hover:text-zinc-300'}`}
                                     >

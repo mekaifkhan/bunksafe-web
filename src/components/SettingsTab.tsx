@@ -30,6 +30,7 @@ import {
 import { format } from 'date-fns';
 import { Profile, Semester, AttendanceRecord, SemesterHistory, AppState, Subject, SubjectGradeConfig, formatSubjectName } from '../types';
 import { motion, AnimatePresence } from 'motion/react';
+import { logCustomEvent } from '../firebase';
 
 interface SettingsTabProps {
   profile: Profile;
@@ -434,7 +435,11 @@ export default function SettingsTab({
           </div>
           
           <button 
-            onClick={() => alert('Profile and Personal settings updated locally!')}
+            onClick={() => {
+              logCustomEvent('branch_selected', { branch: profile.department });
+              logCustomEvent('semester_selected', { semester: profile.semester });
+              alert('Profile and Personal settings updated locally!');
+            }}
             className="w-full py-2 bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 rounded-xl text-xs font-bold uppercase transition-all"
           >
             Save Information

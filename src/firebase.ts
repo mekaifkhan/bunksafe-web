@@ -44,6 +44,15 @@ export function trackPageView(pagePath: string) {
   }
 }
 
+/**
+ * Log a custom event with properties.
+ */
+export function logCustomEvent(eventName: string, params?: Record<string, any>) {
+  if (analytics) {
+    logEvent(analytics, eventName, params);
+  }
+}
+
 // Intercept History API to track SPA route changes automatically
 if (isBrowser && isProd) {
   const originalPushState = window.history.pushState;

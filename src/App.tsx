@@ -3,7 +3,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { logCustomEvent } from './firebase';
 import { 
   LayoutDashboard, 
   Calendar as CalendarIcon, 
@@ -150,7 +151,21 @@ export default function App() {
     const defaultProfile = { name: 'Kaif Khan', email: 'kaif@example.com', college: 'IIT Delhi', department: 'Computer Science', semester: 'Semester 1', mobile: '', avatar: '' };
     if (!saved) return defaultProfile;
     const parsed = JSON.parse(saved);
-    return { ...defaultProfile, ...parsed };
+    const profileMerged = { ...defaultProfile, ...parsed };
+
+    // Backward compatibility: If an existing profile has a department (branch), migrate/infer programme safely
+    if (profileMerged.department && !profileMerged.programme) {
+      const deptLower = profileMerged.department.toLowerCase();
+      if (deptLower.includes('applied science') || deptLower.includes('applied sciences')) {
+        profileMerged.department = 'Applied Science & Humanities';
+        profileMerged.programme = 'Regular';
+      } else if (deptLower.includes('self-financed') || deptLower.includes('self-finance')) {
+        profileMerged.programme = 'Self-Financed';
+      } else {
+        profileMerged.programme = 'Regular';
+      }
+    }
+    return profileMerged;
   });
 
   const [semester, setSemester] = useState<Semester>(() => {
@@ -202,7 +217,8 @@ export default function App() {
   const [isJamiaStudent, setIsJamiaStudent] = useState<boolean | null>(null);
 
   const [onboardName, setOnboardName] = useState('');
-  const [onboardDept, setOnboardDept] = useState('Computer Engineering');
+  const [onboardProgramme, setOnboardProgramme] = useState<'Regular' | 'Self-Financed' | ''>('');
+  const [onboardDept, setOnboardDept] = useState('');
   const [onboardSem, setOnboardSem] = useState('Semester 3');
 
   const [onboardStartDate, setOnboardStartDate] = useState('2026-07-17');
@@ -451,6 +467,7 @@ export default function App() {
   const [isSendingReport, setIsSendingReport] = useState(false);
   const [reportStatus, setReportStatus] = useState<{ type: 'success' | 'error', message: string } | null>(null);
 
+  const isFirstThemeRender = useRef(true);
   useEffect(() => {
     document.documentElement.style.setProperty('--primary-color', themeColor);
     // Simple darken for hover
@@ -462,6 +479,11 @@ export default function App() {
     const hoverColor = `#${darken(r)}${darken(g)}${darken(b)}`;
     document.documentElement.style.setProperty('--primary-hover', hoverColor);
     localStorage.setItem('bs_theme_color', themeColor);
+    if (isFirstThemeRender.current) {
+      isFirstThemeRender.current = false;
+    } else {
+      logCustomEvent('theme_changed', { theme: themeColor });
+    }
   }, [themeColor]);
 
   const [viewDate, setViewDate] = useState(new Date());
@@ -1107,6 +1129,12 @@ export default function App() {
       ...prev,
       [date]: { date, held, attended, isHoliday }
     }));
+    if (!isHoliday) {
+      logCustomEvent('attendance_marked', {
+        branch: profile.department || 'Unknown',
+        semester: profile.semester || 'Unknown'
+      });
+    }
   };
 
   // --- Screens ---
@@ -1488,78 +1516,146 @@ export default function App() {
               </motion.div>
             )}
 
-            {onboardingStep === 2 && (
-              <motion.div
-                key="step2"
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: 20 }}
-                className="space-y-5"
-              >
-                <div className="text-center">
-                  <h2 className="text-xl font-bold">Your Details</h2>
-                  <p className="text-zinc-500 text-sm mt-1">Please enter your academic information.</p>
-                </div>
+            {onboardingStep === 2 && (() => {
+              const isSem1or2 = onboardSem === 'Semester 1' || onboardSem === 'Semester 2';
+              const isFormValid = !!(onboardName.trim() && onboardSem && (isSem1or2 || (onboardProgramme && onboardDept)));
 
-                <Card className="space-y-4 p-5">
-                  <Input 
-                    label="Full Name" 
-                    value={onboardName} 
-                    onChange={setOnboardName} 
-                    placeholder="Enter your name" 
-                  />
-                  
-                  <div className="space-y-1 text-left">
-                    <label className="text-xs font-bold text-zinc-500 uppercase tracking-widest block">Department</label>
-                    <select
-                      value={onboardDept}
-                      onChange={(e) => setOnboardDept(e.target.value)}
-                      className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3 text-zinc-100 focus:outline-none focus:border-primary transition-colors"
-                    >
-                      <option value="Computer Engineering">Computer Engineering</option>
-                      <option value="Electronics & Communication Engineering">Electronics & Communication Engg</option>
-                      <option value="Electrical Engineering">Electrical Engineering</option>
-                      <option value="Mechanical Engineering">Mechanical Engineering</option>
-                      <option value="Civil Engineering">Civil Engineering</option>
-                      <option value="Applied Sciences">Applied Sciences & Humanities</option>
-                    </select>
+              return (
+                <motion.div
+                  key="step2"
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: 20 }}
+                  className="space-y-5"
+                >
+                  <div className="text-center">
+                    <h2 className="text-xl font-bold">Your Details</h2>
+                    <p className="text-zinc-500 text-sm mt-1">Please enter your academic information.</p>
                   </div>
 
-                  <div className="space-y-2 text-left">
-                    <label className="text-xs font-bold text-zinc-500 uppercase tracking-widest block">Semester</label>
-                    <div className="grid grid-cols-4 gap-2">
-                      {Array.from({ length: 8 }, (_, i) => `Semester ${i + 1}`).map(sem => (
-                        <button
-                          key={sem}
-                          type="button"
-                          onClick={() => setOnboardSem(sem)}
-                          className={`py-2 px-1 rounded-lg text-xs font-bold border transition-all ${onboardSem === sem ? 'bg-primary border-primary text-white font-black' : 'bg-zinc-800 border-zinc-700/60 text-zinc-400'}`}
-                        >
-                          Sem {sem.split(' ')[1]}
-                        </button>
-                      ))}
+                  <Card className="space-y-4 p-5">
+                    <Input 
+                      label="Full Name" 
+                      value={onboardName} 
+                      onChange={setOnboardName} 
+                      placeholder="Enter your name" 
+                    />
+
+                    <div className="space-y-2 text-left">
+                      <label className="text-xs font-bold text-zinc-500 uppercase tracking-widest block">Semester</label>
+                      <div className="grid grid-cols-4 gap-2">
+                        {Array.from({ length: 8 }, (_, i) => `Semester ${i + 1}`).map(sem => (
+                          <button
+                            key={sem}
+                            type="button"
+                            onClick={() => {
+                              setOnboardSem(sem);
+                              logCustomEvent('semester_selected', { semester: sem });
+                              const is1or2 = sem === 'Semester 1' || sem === 'Semester 2';
+                              if (is1or2) {
+                                setOnboardDept('Applied Science & Humanities');
+                                setOnboardProgramme('');
+                                logCustomEvent('branch_selected', { branch: 'Applied Science & Humanities' });
+                              } else {
+                                setOnboardDept('');
+                                setOnboardProgramme('');
+                              }
+                            }}
+                            className={`py-2 px-1 rounded-lg text-xs font-bold border transition-all ${onboardSem === sem ? 'bg-primary border-primary text-white font-black' : 'bg-zinc-800 border-zinc-700/60 text-zinc-400'}`}
+                          >
+                            Sem {sem.split(' ')[1]}
+                          </button>
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                </Card>
 
-                <div className="flex gap-3">
-                  <Button variant="secondary" className="flex-1" onClick={() => setOnboardingStep(1)}>
-                    Back
-                  </Button>
-                  <Button 
-                    className="flex-1" 
-                    onClick={() => {
-                      if (onboardName.trim()) {
-                        setOnboardingStep(3);
-                      }
-                    }}
-                    disabled={!onboardName.trim()}
-                  >
-                    Next
-                  </Button>
-                </div>
-              </motion.div>
-            )}
+                    <AnimatePresence mode="popLayout">
+                      {!isSem1or2 && (
+                        <motion.div
+                          initial={{ opacity: 0, height: 0 }}
+                          animate={{ opacity: 1, height: 'auto' }}
+                          exit={{ opacity: 0, height: 0 }}
+                          className="space-y-4 overflow-hidden"
+                        >
+                          <div className="space-y-2 text-left">
+                            <label className="text-xs font-bold text-zinc-500 uppercase tracking-widest block">Programme</label>
+                            <div className="grid grid-cols-2 gap-2">
+                              {(['Regular', 'Self-Financed'] as const).map(prog => (
+                                <button
+                                  key={prog}
+                                  type="button"
+                                  onClick={() => {
+                                    setOnboardProgramme(prog);
+                                    setOnboardDept('');
+                                  }}
+                                  className={`py-2.5 px-2 rounded-xl text-xs font-bold border transition-all ${onboardProgramme === prog ? 'bg-primary border-primary text-white font-black' : 'bg-zinc-950 border-zinc-800 text-zinc-500 hover:text-zinc-400'}`}
+                                >
+                                  {prog}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+
+                          {onboardProgramme && (
+                            <motion.div
+                              initial={{ opacity: 0, y: -10 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              className="space-y-1 text-left"
+                            >
+                              <label className="text-xs font-bold text-zinc-500 uppercase tracking-widest block">Branch</label>
+                              <select
+                                value={onboardDept}
+                                onChange={(e) => {
+                                  setOnboardDept(e.target.value);
+                                  logCustomEvent('branch_selected', { branch: e.target.value });
+                                }}
+                                className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3 text-zinc-100 focus:outline-none focus:border-primary transition-colors text-sm"
+                              >
+                                <option value="">Select your branch</option>
+                                {onboardProgramme === 'Regular' ? (
+                                  <>
+                                    <option value="Civil Engineering">Civil Engineering</option>
+                                    <option value="Electrical Engineering">Electrical Engineering</option>
+                                    <option value="Mechanical Engineering">Mechanical Engineering</option>
+                                    <option value="Electronics & Communication Engineering">Electronics & Communication Engineering</option>
+                                    <option value="Computer Engineering">Computer Engineering</option>
+                                  </>
+                                ) : (
+                                  <>
+                                    <option value="Civil Engineering (Construction Technology) (Self-Financed)">Civil Engineering (Construction Technology) (Self-Financed)</option>
+                                    <option value="Electrical & Computer Engineering (Self-Financed)">Electrical & Computer Engineering (Self-Financed)</option>
+                                    <option value="Robotics & Artificial Intelligence (Self-Financed)">Robotics & Artificial Intelligence (Self-Financed)</option>
+                                    <option value="Electronics (VLSI Design & Technology) (Self-Financed)">Electronics (VLSI Design & Technology) (Self-Financed)</option>
+                                    <option value="Computer Science & Engineering (Data Sciences) (Self-Financed)">Computer Science & Engineering (Data Sciences) (Self-Financed)</option>
+                                  </>
+                                )}
+                              </select>
+                            </motion.div>
+                          )}
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </Card>
+
+                  <div className="flex gap-3">
+                    <Button variant="secondary" className="flex-1" onClick={() => setOnboardingStep(1)}>
+                      Back
+                    </Button>
+                    <Button 
+                      className="flex-1" 
+                      onClick={() => {
+                        if (isFormValid) {
+                          setOnboardingStep(3);
+                        }
+                      }}
+                      disabled={!isFormValid}
+                    >
+                      Next
+                    </Button>
+                  </div>
+                </motion.div>
+              );
+            })()}
 
             {onboardingStep === 3 && (
               <motion.div
@@ -1673,8 +1769,12 @@ export default function App() {
                       department: onboardDept,
                       semester: onboardSem,
                       mobile: '',
-                      avatar: ''
+                      avatar: '',
+                      programme: (onboardSem === 'Semester 1' || onboardSem === 'Semester 2') ? 'Regular' : onboardProgramme
                     });
+
+                    logCustomEvent('branch_selected', { branch: onboardDept });
+                    logCustomEvent('semester_selected', { semester: onboardSem });
 
                     setSemester({
                       title: onboardSem,
@@ -3065,6 +3165,7 @@ export default function App() {
         gradeSubjects={gradeSubjects}
         setGradeSubjects={setGradeSubjects}
         subjects={subjects}
+        profile={profile}
       />
     );
   };
