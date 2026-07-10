@@ -1849,12 +1849,18 @@ export default function App() {
                     const finalProg = (onboardSem === 'Semester 1' || onboardSem === 'Semester 2') ? 'Regular' : onboardProgramme;
                     const isJmiECE = finalProg === 'Regular' && onboardDept === 'Electronics & Communication Engineering';
                     const isJmiCivil = finalProg === 'Regular' && onboardDept === 'Civil Engineering';
+                    const isJmiVLSI = finalProg === 'Self-Financed' && onboardDept === 'Electronics (VLSI Design & Technology) (Self-Financed)';
                     if (isJmiECE) {
                       const { subjects: defaultSubs } = getDefaultCurriculumSubjects(onboardSem, onboardDept);
                       if (defaultSubs && defaultSubs.length > 0) {
                         setSubjects(defaultSubs);
                       }
                     } else if (isJmiCivil) {
+                      const { subjects: defaultSubs } = getDefaultCurriculumSubjects(onboardSem, onboardDept);
+                      if (defaultSubs && defaultSubs.length > 0) {
+                        setSubjects(defaultSubs);
+                      }
+                    } else if (isJmiVLSI) {
                       const { subjects: defaultSubs } = getDefaultCurriculumSubjects(onboardSem, onboardDept);
                       if (defaultSubs && defaultSubs.length > 0) {
                         setSubjects(defaultSubs);

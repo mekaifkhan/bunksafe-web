@@ -317,6 +317,163 @@ export const JMI_CIVIL_CURRICULUM: Record<string, SemesterCurriculum> = {
   }
 };
 
+export const JMI_VLSI_CURRICULUM: Record<string, SemesterCurriculum> = {
+  'Semester 3': {
+    subjects: [
+      { code: 'ASM-301', name: 'Universal Human Values', credits: 3, type: 'Theory' },
+      { code: 'ASB-301', name: 'Engineering Mathematics III', credits: 3, type: 'Theory' },
+      { code: 'VDC-301', name: 'Electronic Devices', credits: 3, type: 'Theory' },
+      { code: 'VDC-302', name: 'Digital System Design', credits: 3, type: 'Theory' },
+      { code: 'VDC-303', name: 'Signals and Systems', credits: 3, type: 'Theory' },
+      { code: 'VDC-304', name: 'Network Theory', credits: 3, type: 'Theory' },
+      { code: 'ASM-302', name: 'Essence of Indian Traditional Knowledge', credits: 0, type: 'Theory' },
+      { code: 'VDL-301', name: 'Electronic Devices Lab', credits: 1, type: 'Lab' },
+      { code: 'VDL-302', name: 'Digital System Design Lab', credits: 1, type: 'Lab' },
+      { code: 'VDL-303', name: 'Electronics Workshop Lab', credits: 1, type: 'Lab' },
+      { code: 'VDL-304', name: 'Network Theory Lab', credits: 1, type: 'Lab' }
+    ]
+  },
+  'Semester 4': {
+    subjects: [
+      { code: 'VDC-401', name: 'Analog Circuits', credits: 3, type: 'Theory' },
+      { code: 'VDC-402', name: 'Microprocessors and its Applications', credits: 3, type: 'Theory' },
+      { code: 'VDC-403', name: 'Analog and Digital Communication', credits: 3, type: 'Theory' },
+      { code: 'AST-401', name: 'Operations Research (OEC-I)', credits: 3, type: 'Theory' },
+      { code: 'AST-402', name: 'Engineering Economics (OEC-II)', credits: 3, type: 'Theory' },
+      { code: 'VDL-401', name: 'Analog Circuits Lab', credits: 1, type: 'Lab' },
+      { code: 'VDL-402', name: 'Microprocessors Lab', credits: 1, type: 'Lab' },
+      { code: 'VDL-403', name: 'Analog and Digital Communication Lab', credits: 1, type: 'Lab' },
+      { code: 'ASL-401', name: 'Numeric and Scientific Computing Lab', credits: 2, type: 'Lab' }
+    ]
+  },
+  'Semester 5': {
+    subjects: [
+      { code: 'VDC-501', name: 'Digital Signal Processing', credits: 3, type: 'Theory' },
+      { code: 'VDC-502', name: 'Electromagnetic Waves', credits: 3, type: 'Theory' },
+      { code: 'VDC-503', name: 'Digital IC Design', credits: 3, type: 'Theory' },
+      { code: 'VDC-504', name: 'Control Systems', credits: 3, type: 'Theory' },
+      { code: 'VDC-505', name: 'Microcontrollers and Embedded Systems', credits: 3, type: 'Theory' },
+      { code: 'VDL-501', name: 'Digital Signal Processing Lab', credits: 1, type: 'Lab' },
+      { code: 'VDL-502', name: 'Digital IC Design Lab', credits: 1, type: 'Lab' },
+      { code: 'VDL-503', name: 'Microcontrollers and Embedded Systems Lab', credits: 1, type: 'Lab' },
+      { code: 'VDL-504', name: 'Electronic Systems Design and Verification Lab', credits: 1, type: 'Lab' }
+    ],
+    electives: [
+      {
+        id: 'sem5_vlsi_group1',
+        label: 'Professional Elective (PEC)',
+        options: [
+          { code: 'VDE-501', name: 'Electronic Systems Design and Verification Using HDL', credits: 3, type: 'Theory' },
+          { code: 'VDE-502', name: 'Introduction to VLSI Life Cycle', credits: 3, type: 'Theory' },
+          { code: 'VDE-503', name: 'Memory Design and Testing', credits: 3, type: 'Theory' }
+        ]
+      }
+    ]
+  },
+  'Semester 6': {
+    subjects: [
+      { code: 'VDC-601', name: 'VLSI Physical Design', credits: 3, type: 'Theory' },
+      { code: 'VDC-602', name: 'VLSI Testing and Design For Testability', credits: 3, type: 'Theory' },
+      { code: 'VDC-603', name: 'Analog and Mixed Signal IC Design', credits: 3, type: 'Theory' },
+      { code: 'VDC-604', name: 'VLSI Fabrication Technology', credits: 3, type: 'Theory' },
+      { code: 'VDL-601', name: 'VLSI Physical Design Lab', credits: 1, type: 'Lab' },
+      { code: 'VDL-602', name: 'VLSI Testing and Design For Testability Lab', credits: 1, type: 'Lab' },
+      { code: 'VDL-603', name: 'Analog and Mixed Signal IC Design Lab', credits: 1, type: 'Lab' },
+      { code: 'VDL-604', name: 'VLSI Fabrication Technology Lab', credits: 1, type: 'Lab' },
+      { code: 'VDP-601', name: 'Seminar (Literature Review)', credits: 1, type: 'Lab' }
+    ],
+    electives: [
+      {
+        id: 'sem6_vlsi_group1',
+        label: 'Professional Elective (PEC)',
+        options: [
+          { code: 'VDE-601', name: 'Computer Architecture and Organization', credits: 3, type: 'Theory' },
+          { code: 'VDE-602', name: 'Semiconductor Materials Synthesis and Characterization', credits: 3, type: 'Theory' },
+          { code: 'VDE-603', name: 'Semiconductor Device Modelling', credits: 3, type: 'Theory' }
+        ]
+      }
+    ]
+  },
+  'Semester 7': {
+    subjects: [
+      { code: 'VDP-701', name: 'Summer Internship', credits: 2, type: 'Lab' },
+      { code: 'VDP-702', name: 'Project', credits: 3, type: 'Lab' }
+    ],
+    electives: [
+      {
+        id: 'sem7_vlsi_group1',
+        label: 'Professional Elective Slot 1',
+        options: [
+          { code: 'VDE-701', name: 'RF Microelectronic Devices', credits: 3, type: 'Theory' },
+          { code: 'VDE-702', name: 'RF CMOS SoC Design', credits: 3, type: 'Theory' },
+          { code: 'VDE-703', name: 'Nanoscale Devices and Characterization', credits: 3, type: 'Theory' }
+        ]
+      },
+      {
+        id: 'sem7_vlsi_group2',
+        label: 'Professional Elective Slot 2',
+        options: [
+          { code: 'VDE-704', name: 'PCB and System Design', credits: 3, type: 'Theory' },
+          { code: 'VDE-705', name: 'System Verilog for Design and Verification', credits: 3, type: 'Theory' },
+          { code: 'VDE-706', name: 'ASIC and FPGA Design', credits: 3, type: 'Theory' }
+        ]
+      },
+      {
+        id: 'sem7_vlsi_group3',
+        label: 'Professional Elective Slot 3',
+        options: [
+          { code: 'VDE-707', name: 'Semiconductor Equipment Design and Technology', credits: 3, type: 'Theory' },
+          { code: 'VDE-708', name: 'Introduction to Internet of Things', credits: 3, type: 'Theory' },
+          { code: 'VDE-709', name: 'CAD for VLSI', credits: 3, type: 'Theory' }
+        ]
+      },
+      {
+        id: 'sem7_vlsi_group4',
+        label: 'Professional Elective Slot 4',
+        options: [
+          { code: 'VDE-710', name: 'Semiconductor Packaging and Testing', credits: 3, type: 'Theory' },
+          { code: 'VDE-711', name: 'System on Chip (SoC) Design', credits: 3, type: 'Theory' },
+          { code: 'VDE-712', name: 'C-Based VLSI Design', credits: 3, type: 'Theory' }
+        ]
+      },
+      {
+        id: 'sem7_vlsi_open_group',
+        label: 'Open Elective',
+        options: [
+          { code: 'VDO-701', name: 'Fundamentals of Nanotechnology', credits: 3, type: 'Theory' },
+          { code: 'VDO-702', name: 'Low Power VLSI Design', credits: 3, type: 'Theory' },
+          { code: 'VDO-703', name: 'VLSI Digital Signal Processing', credits: 3, type: 'Theory' }
+        ]
+      }
+    ]
+  },
+  'Semester 8': {
+    subjects: [
+      { code: 'VDP-801', name: 'Major Project', credits: 6, type: 'Lab' }
+    ],
+    electives: [
+      {
+        id: 'sem8_vlsi_open_group1',
+        label: 'Open Elective Slot 1',
+        options: [
+          { code: 'VDO-801', name: 'Machine Learning and Deep Learning – Fundamentals and Applications', credits: 3, type: 'Theory' },
+          { code: 'VDO-802', name: 'Neuromorphic AI Chip Design', credits: 3, type: 'Theory' },
+          { code: 'VDO-803', name: 'Microsensors and Nanosensors', credits: 3, type: 'Theory' }
+        ]
+      },
+      {
+        id: 'sem8_vlsi_open_group2',
+        label: 'Open Elective Slot 2',
+        options: [
+          { code: 'VDO-804', name: 'Quantum Computing', credits: 3, type: 'Theory' },
+          { code: 'VDO-805', name: 'VLSI Interconnects', credits: 3, type: 'Theory' },
+          { code: 'VDO-806', name: 'Organic Electronics', credits: 3, type: 'Theory' }
+        ]
+      }
+    ]
+  }
+};
+
 /**
  * Returns default list of subjects for a given Semester.
  * By default, this maps CurriculumSubject items to Subject items (with generated unique IDs).
@@ -327,7 +484,12 @@ export function getDefaultCurriculumSubjects(
   department: string = 'Electronics & Communication Engineering'
 ): { subjects: any[]; electiveSelections: Record<string, string> } {
   const isCivil = department === 'Civil Engineering';
-  const semData = isCivil ? JMI_CIVIL_CURRICULUM[semesterTitle] : JMI_CURRICULUM[semesterTitle];
+  const isVlsi = department === 'Electronics (VLSI Design & Technology) (Self-Financed)';
+  const semData = isCivil 
+    ? JMI_CIVIL_CURRICULUM[semesterTitle] 
+    : isVlsi 
+      ? JMI_VLSI_CURRICULUM[semesterTitle] 
+      : JMI_CURRICULUM[semesterTitle];
   if (!semData) {
     return { subjects: [], electiveSelections: {} };
   }
@@ -339,7 +501,9 @@ export function getDefaultCurriculumSubjects(
   semData.subjects.forEach((s) => {
     const id = isCivil 
       ? `sub_jmi_civil_${semesterTitle.replace(/\s+/g, '_')}_${s.code.replace(/\s+/g, '_')}`
-      : `sub_jmi_${semesterTitle.replace(/\s+/g, '_')}_${s.code.replace(/\s+/g, '_')}`;
+      : isVlsi
+        ? `sub_jmi_vlsi_${semesterTitle.replace(/\s+/g, '_')}_${s.code.replace(/\s+/g, '_')}`
+        : `sub_jmi_${semesterTitle.replace(/\s+/g, '_')}_${s.code.replace(/\s+/g, '_')}`;
     subjectsList.push({
       id,
       name: `${s.code} ${s.name}`,
@@ -359,7 +523,9 @@ export function getDefaultCurriculumSubjects(
         electiveSelections[group.id] = defaultOpt.code;
         const id = isCivil
           ? `sub_jmi_civil_${semesterTitle.replace(/\s+/g, '_')}_elective_${group.id}`
-          : `sub_jmi_${semesterTitle.replace(/\s+/g, '_')}_elective_${group.id}`;
+          : isVlsi
+            ? `sub_jmi_vlsi_${semesterTitle.replace(/\s+/g, '_')}_elective_${group.id}`
+            : `sub_jmi_${semesterTitle.replace(/\s+/g, '_')}_elective_${group.id}`;
         subjectsList.push({
           id,
           name: `${defaultOpt.code} ${defaultOpt.name}`,
