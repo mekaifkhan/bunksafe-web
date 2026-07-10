@@ -5,6 +5,7 @@
 
 import { initializeApp, getApps, getApp } from 'firebase/app';
 import { getAnalytics, logEvent, Analytics } from 'firebase/analytics';
+import { getFirestore, doc, setDoc, getDoc } from 'firebase/firestore';
 
 // WARNING: Client-side exposure of third-party API keys is acceptable here as it is standard practice
 // for Firebase Client SDK configuration, but keep in mind that these keys are readable in browser builds.
@@ -23,12 +24,46 @@ const isProd = !!(import.meta as any).env?.PROD;
 
 let app;
 let analytics: Analytics | undefined;
+let db: any;
 
 if (isBrowser) {
   app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
+  db = getFirestore(app);
   if (isProd) {
     analytics = getAnalytics(app);
   }
+}
+
+/**
+ * Sync subjects list to Firestore
+ */
+export async function saveUserSubjectsToFirestore(email: string, subjects: any[]) {
+  if (!db || !email) return;
+  try {
+    const userDocRef = doc(db, 'users', email.toLowerCase().trim());
+    await setDoc(userDocRef, { subjects }, { merge: true });
+    console.log('Successfully synced subjects to Firestore for:', email);
+  } catch (error) {
+    console.error('Error syncing subjects to Firestore:', error);
+  }
+}
+
+/**
+ * Load subjects list from Firestore
+ */
+export async function loadUserSubjectsFromFirestore(email: string): Promise<any[] | null> {
+  if (!db || !email) return null;
+  try {
+    const userDocRef = doc(db, 'users', email.toLowerCase().trim());
+    const docSnap = await getDoc(userDocRef);
+    if (docSnap.exists()) {
+      const data = docSnap.data();
+      return data.subjects || null;
+    }
+  } catch (error) {
+    console.error('Error loading subjects from Firestore:', error);
+  }
+  return null;
 }
 
 /**

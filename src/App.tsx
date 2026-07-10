@@ -4,7 +4,8 @@
  */
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { logCustomEvent } from './firebase';
+import { logCustomEvent, saveUserSubjectsToFirestore, loadUserSubjectsFromFirestore } from './firebase';
+import { getDefaultCurriculumSubjects } from './utils/curriculum';
 import { 
   LayoutDashboard, 
   Calendar as CalendarIcon, 
@@ -299,7 +300,29 @@ export default function App() {
 
   useEffect(() => {
     localStorage.setItem('bs_subjects', JSON.stringify(subjects));
-  }, [subjects]);
+    if (profile.email && subjects.length > 0) {
+      saveUserSubjectsToFirestore(profile.email, subjects);
+    }
+  }, [subjects, profile.email]);
+
+  useEffect(() => {
+    const fetchCloudSubjects = async () => {
+      if (profile.email) {
+        try {
+          const cloudSubs = await loadUserSubjectsFromFirestore(profile.email);
+          if (cloudSubs && cloudSubs.length > 0) {
+            const savedLocal = localStorage.getItem('bs_subjects');
+            if (!savedLocal || JSON.parse(savedLocal).length === 0) {
+              setSubjects(cloudSubs);
+            }
+          }
+        } catch (e) {
+          console.error("Failed to load cloud subjects:", e);
+        }
+      }
+    };
+    fetchCloudSubjects();
+  }, [profile.email]);
 
   const [subjectAttendance, setSubjectAttendance] = useState<Record<string, { attended: number; held: number }>>(() => {
     const saved = localStorage.getItem('bs_subject_attendance');
@@ -1810,6 +1833,15 @@ export default function App() {
                       }
                     ];
                     setExams(preparedExams);
+
+                    const finalProg = (onboardSem === 'Semester 1' || onboardSem === 'Semester 2') ? 'Regular' : onboardProgramme;
+                    const isJmiECE = finalProg === 'Regular' && onboardDept === 'Electronics & Communication Engineering';
+                    if (isJmiECE) {
+                      const { subjects: defaultSubs } = getDefaultCurriculumSubjects(onboardSem);
+                      if (defaultSubs && defaultSubs.length > 0) {
+                        setSubjects(defaultSubs);
+                      }
+                    }
 
                     localStorage.setItem('bs_onboarding_completed', 'true');
                     setOnboardingCompleted(true);

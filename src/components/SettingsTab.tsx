@@ -31,6 +31,7 @@ import { format } from 'date-fns';
 import { Profile, Semester, AttendanceRecord, SemesterHistory, AppState, Subject, SubjectGradeConfig, formatSubjectName } from '../types';
 import { motion, AnimatePresence } from 'motion/react';
 import { logCustomEvent } from '../firebase';
+import { JMI_CURRICULUM, getDefaultCurriculumSubjects } from '../utils/curriculum';
 
 interface SettingsTabProps {
   profile: Profile;
@@ -101,6 +102,77 @@ export default function SettingsTab({
   
   const [deleteConfirmSubjectId, setDeleteConfirmSubjectId] = useState<string | null>(null);
 
+  // Curriculum Database helpers
+  const isJmiECE = profile.programme === 'Regular' && profile.department === 'Electronics & Communication Engineering';
+
+  const getSelectedElectiveCode = (groupId: string, options: any[]) => {
+    const found = subjects.find(s => 
+      (s as any).electiveGroupId === groupId || 
+      options.some(opt => s.name.toLowerCase().startsWith(opt.code.toLowerCase()))
+    );
+    if (found) {
+      const opt = options.find(o => 
+        found.name.toLowerCase().startsWith(o.code.toLowerCase()) || 
+        ((found as any).electiveGroupId === groupId && found.name.toLowerCase().includes(o.name.toLowerCase()))
+      );
+      return opt ? opt.code : options[0].code;
+    }
+    return options[0].code;
+  };
+
+  const handleElectiveChange = (groupId: string, oldCode: string, newCode: string, options: any[]) => {
+    const oldOpt = options.find(o => o.code === oldCode);
+    const newOpt = options.find(o => o.code === newCode);
+    if (!newOpt) return;
+
+    const exists = subjects.some(s => 
+      (s as any).electiveGroupId === groupId || 
+      (oldOpt && s.name.toLowerCase().startsWith(oldOpt.code.toLowerCase()))
+    );
+
+    if (exists) {
+      const updated = subjects.map(s => {
+        if ((s as any).electiveGroupId === groupId || (oldOpt && s.name.toLowerCase().startsWith(oldOpt.code.toLowerCase()))) {
+          return {
+            ...s,
+            name: `${newOpt.code} ${newOpt.name}`,
+            credits: newOpt.credits,
+            type: newOpt.type,
+            electiveGroupId: groupId
+          };
+        }
+        return s;
+      });
+      setSubjects(updated);
+
+      const oldSubjectName = subjects.find(s => (s as any).electiveGroupId === groupId || (oldOpt && s.name.toLowerCase().startsWith(oldOpt.code.toLowerCase())))?.name;
+      if (oldSubjectName) {
+        setGradeSubjects(prev => prev.map(item => 
+          item.name === oldSubjectName 
+            ? { ...item, name: `${newOpt.code} ${newOpt.name}` }
+            : item
+        ));
+      }
+    } else {
+      const newSub = {
+        id: `sub_jmi_${profile.semester.replace(/\s+/g, '_')}_elective_${groupId}`,
+        name: `${newOpt.code} ${newOpt.name}`,
+        type: newOpt.type,
+        credits: newOpt.credits,
+        isCurriculum: true,
+        electiveGroupId: groupId
+      };
+      setSubjects([...subjects, newSub]);
+    }
+
+    logCustomEvent('elective_selected', { 
+      semester: profile.semester, 
+      group: groupId, 
+      selected_code: newCode 
+    });
+    logCustomEvent('subject_customized', { action: 'elective_change', group: groupId, code: newCode });
+  };
+
   // Reorder subjects
   const handleMoveSubject = (index: number, direction: 'up' | 'down') => {
     const nextIndex = direction === 'up' ? index - 1 : index + 1;
@@ -151,6 +223,7 @@ export default function SettingsTab({
       ));
 
       setEditingSubject(null);
+      logCustomEvent('subject_customized', { action: 'edit_subject', name: formattedName });
     } else {
       const newSub: Subject = {
         id: `sub_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
@@ -159,6 +232,7 @@ export default function SettingsTab({
         credits: creditsNum
       };
       setSubjects([...subjects, newSub]);
+      logCustomEvent('subject_customized', { action: 'add_subject', name: formattedName, type: subjTypeInput });
     }
 
     setShowAddEditSubjectModal(false);
@@ -170,6 +244,7 @@ export default function SettingsTab({
   // Delete subject with cascade cleanup
   const handleDeleteSubject = (id: string) => {
     setSubjects(prev => prev.filter(s => s.id !== id));
+    logCustomEvent('subject_customized', { action: 'delete_subject', id });
 
     setClassSchedule(prev => {
       const copy = { ...prev };
@@ -505,7 +580,19 @@ export default function SettingsTab({
               }
               logCustomEvent('branch_selected', { branch: profile.department });
               logCustomEvent('semester_selected', { semester: profile.semester });
-              alert('Profile and Personal settings updated locally!');
+              
+              const isNewJmiECE = profile.programme === 'Regular' && profile.department === 'Electronics & Communication Engineering';
+              if (isNewJmiECE && subjects.length === 0) {
+                const { subjects: defaultSubs } = getDefaultCurriculumSubjects(profile.semester);
+                if (defaultSubs && defaultSubs.length > 0) {
+                  setSubjects(defaultSubs);
+                  alert(`Profile updated. Automatically loaded default JMI ECE curriculum for ${profile.semester}!`);
+                } else {
+                  alert('Profile and Personal settings updated locally!');
+                }
+              } else {
+                alert('Profile and Personal settings updated locally!');
+              }
             }}
             className="w-full py-2 bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 rounded-xl text-xs font-bold uppercase transition-all"
           >
@@ -821,6 +908,37 @@ export default function SettingsTab({
 
               {/* Subject list */}
               <div className="flex-1 overflow-y-auto py-4 space-y-3 pr-1">
+                {isJmiECE && JMI_CURRICULUM[profile.semester]?.electives && (
+                  <div className="bg-zinc-950/40 border border-zinc-800/80 rounded-2xl p-4 mb-4 space-y-3">
+                    <h4 className="text-[10px] font-black text-primary uppercase tracking-widest flex items-center gap-1.5">
+                      <Sliders size={12} /> Elective Selections
+                    </h4>
+                    <div className="space-y-3">
+                      {JMI_CURRICULUM[profile.semester].electives?.map((group: any) => {
+                        const selectedCode = getSelectedElectiveCode(group.id, group.options);
+                        return (
+                          <div key={group.id} className="space-y-1.5 text-left">
+                            <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider block">
+                              {group.label}
+                            </label>
+                            <select
+                              value={selectedCode}
+                              onChange={(e) => handleElectiveChange(group.id, selectedCode, e.target.value, group.options)}
+                              className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2.5 text-zinc-100 focus:outline-none focus:border-primary transition-colors text-xs"
+                            >
+                              {group.options.map((opt: any) => (
+                                <option key={opt.code} value={opt.code}>
+                                  {opt.code} - {opt.name} ({opt.credits} Credits)
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
                 {subjects.length === 0 ? (
                   <div className="text-center py-10 border border-zinc-800 border-dashed rounded-2xl bg-zinc-950/20">
                     <GraduationCap className="mx-auto mb-2 text-zinc-700" size={36} />
@@ -900,25 +1018,42 @@ export default function SettingsTab({
               </div>
 
               {/* Actions Footer */}
-              <div className="pt-4 border-t border-zinc-800/80 flex gap-2">
-                <button
-                  onClick={() => {
-                    setEditingSubject(null);
-                    setSubjNameInput('');
-                    setSubjTypeInput('Theory');
-                    setSubjCreditsInput('');
-                    setShowAddEditSubjectModal(true);
-                  }}
-                  className="flex-1 py-3 bg-primary hover:bg-primary/95 text-white rounded-xl text-xs font-black uppercase flex items-center justify-center gap-1.5 transition-all shadow-lg shadow-primary/20"
-                >
-                  <Plus size={14} /> Add New Subject
-                </button>
-                <button
-                  onClick={() => setShowSubjectManager(false)}
-                  className="px-5 py-3 bg-zinc-800 hover:bg-zinc-750 text-zinc-300 rounded-xl text-xs font-bold uppercase transition-all"
-                >
-                  Close
-                </button>
+              <div className="pt-4 border-t border-zinc-800/80 flex flex-col gap-2">
+                {isJmiECE && JMI_CURRICULUM[profile.semester] && (
+                  <button
+                    onClick={() => {
+                      if (confirm(`Are you sure you want to reset your curriculum for ${profile.semester}? This will restore all default theory and lab subjects. Existing attendance tracking for deleted subjects will be lost.`)) {
+                        const { subjects: defaultSubs } = getDefaultCurriculumSubjects(profile.semester);
+                        setSubjects(defaultSubs);
+                        logCustomEvent('subject_reset', { semester: profile.semester });
+                        alert('Curriculum reset to default successfully!');
+                      }
+                    }}
+                    className="w-full py-2.5 bg-zinc-800/60 hover:bg-zinc-750 text-zinc-300 rounded-xl text-xs font-bold uppercase transition-all flex items-center justify-center gap-1.5 border border-zinc-800"
+                  >
+                    <RefreshCw size={12} className="text-primary" /> Reset to Default Curriculum
+                  </button>
+                )}
+                <div className="flex gap-2 w-full">
+                  <button
+                    onClick={() => {
+                      setEditingSubject(null);
+                      setSubjNameInput('');
+                      setSubjTypeInput('Theory');
+                      setSubjCreditsInput('');
+                      setShowAddEditSubjectModal(true);
+                    }}
+                    className="flex-1 py-3 bg-primary hover:bg-primary/95 text-white rounded-xl text-xs font-black uppercase flex items-center justify-center gap-1.5 transition-all shadow-lg shadow-primary/20"
+                  >
+                    <Plus size={14} /> Add New Subject
+                  </button>
+                  <button
+                    onClick={() => setShowSubjectManager(false)}
+                    className="px-5 py-3 bg-zinc-800 hover:bg-zinc-750 text-zinc-300 rounded-xl text-xs font-bold uppercase transition-all"
+                  >
+                    Close
+                  </button>
+                </div>
               </div>
             </motion.div>
           </motion.div>
