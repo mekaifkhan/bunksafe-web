@@ -169,73 +169,73 @@ export const JMI_CIVIL_CURRICULUM: Record<string, SemesterCurriculum> = {
   'Semester 3': {
     subjects: [
       { code: 'ASM-301', name: 'Universal Human Values', credits: 3, type: 'Theory' },
-      { code: 'ASB-301', name: 'Engineering Mathematics III', credits: 3, type: 'Theory' },
-      { code: 'CEC-301', name: 'Engineering Mechanics', credits: 3, type: 'Theory' },
-      { code: 'CEC-302', name: 'Building Materials', credits: 3, type: 'Theory' },
-      { code: 'CEC-303', name: 'Surveying', credits: 3, type: 'Theory' },
-      { code: 'CEC-304', name: 'Strength of Materials', credits: 3, type: 'Theory' },
       { code: 'ASM-302', name: 'Essence of Indian Traditional Knowledge', credits: 0, type: 'Theory' },
-      { code: 'CEL-301', name: 'Engineering Mechanics Lab', credits: 1, type: 'Lab' },
-      { code: 'CEL-302', name: 'Building Materials Lab', credits: 1, type: 'Lab' },
-      { code: 'CEL-303', name: 'Surveying Lab', credits: 1, type: 'Lab' },
-      { code: 'CEL-304', name: 'Strength of Materials Lab', credits: 1, type: 'Lab' }
+      { code: 'ASB-301', name: 'Engineering Mathematics III', credits: 3, type: 'Theory' },
+      { code: 'CEC-301', name: 'Soil Mechanics', credits: 3, type: 'Theory' },
+      { code: 'CEC-302', name: 'Fluid Mechanics', credits: 3, type: 'Theory' },
+      { code: 'CEC-303', name: 'Engineering Materials & Concrete Technology', credits: 3, type: 'Theory' },
+      { code: 'CEC-304', name: 'Geomatics', credits: 3, type: 'Theory' },
+      { code: 'CEL-301', name: 'Soil Mechanics Lab', credits: 1, type: 'Lab' },
+      { code: 'CEL-302', name: 'Fluid Mechanics Lab', credits: 1, type: 'Lab' },
+      { code: 'CEL-303', name: 'Engineering Materials & Concrete Technology Lab', credits: 1, type: 'Lab' },
+      { code: 'CEL-304', name: 'Geomatics Engineering Lab', credits: 1, type: 'Lab' }
     ]
   },
   'Semester 4': {
     subjects: [
-      { code: 'ASM-401', name: 'Environmental Science', credits: 2, type: 'Theory' },
-      { code: 'CEC-401', name: 'Structural Analysis', credits: 3, type: 'Theory' },
-      { code: 'CEC-402', name: 'Fluid Mechanics', credits: 3, type: 'Theory' },
-      { code: 'CEC-403', name: 'Concrete Technology', credits: 3, type: 'Theory' },
+      { code: 'CEC-401', name: 'Structural Analysis I', credits: 3, type: 'Theory' },
+      { code: 'CEC-402', name: 'Hydraulics', credits: 3, type: 'Theory' },
+      { code: 'CEC-403', name: 'Building Construction and Quantity Surveying', credits: 3, type: 'Theory' },
       { code: 'AST-401', name: 'Operations Research', credits: 3, type: 'Theory' },
-      { code: 'AST-402', name: 'Engineering Economics', credits: 3, type: 'Theory' },
+      { code: 'AST-402', name: 'Economics', credits: 3, type: 'Theory' },
       { code: 'CEL-401', name: 'Structural Analysis Lab', credits: 1, type: 'Lab' },
-      { code: 'CEL-402', name: 'Fluid Mechanics Lab', credits: 1, type: 'Lab' },
-      { code: 'CEL-403', name: 'Concrete Technology Lab', credits: 1, type: 'Lab' },
-      { code: 'ASL-401', name: 'Numeric & Scientific Computing Lab', credits: 2, type: 'Lab' }
+      { code: 'CEL-402', name: 'Hydraulics Lab', credits: 1, type: 'Lab' },
+      { code: 'CEL-403', name: 'Civil Engineering Drawing & CAD Lab', credits: 1, type: 'Lab' },
+      { code: 'ASL-401', name: 'Numeric and Scientific Computing Lab', credits: 2, type: 'Lab' }
     ]
   },
   'Semester 5': {
     subjects: [
-      { code: 'CEC-501', name: 'Geotechnical Engineering - I', credits: 3, type: 'Theory' },
-      { code: 'CEC-502', name: 'Design of Structures - I', credits: 3, type: 'Theory' },
-      { code: 'CEC-503', name: 'Environmental Engineering - I', credits: 3, type: 'Theory' },
-      { code: 'CEC-504', name: 'Transportation Engineering - I', credits: 3, type: 'Theory' },
-      { code: 'CEC-505', name: 'Water Resources Engineering - I', credits: 3, type: 'Theory' },
-      { code: 'CEL-501', name: 'Geotechnical Engineering Lab - I', credits: 1, type: 'Lab' },
-      { code: 'CEL-502', name: 'Environmental Engineering Lab - I', credits: 1, type: 'Lab' },
-      { code: 'CEL-503', name: 'CAD Lab', credits: 1, type: 'Lab' }
+      { code: 'CEC-501', name: 'Soil Mechanics', credits: 3, type: 'Theory' },
+      { code: 'CEC-502', name: 'Water Treatment & Supply', credits: 3, type: 'Theory' },
+      { code: 'CEC-503', name: 'Design of RCC Structures', credits: 3, type: 'Theory' },
+      { code: 'CEC-504', name: 'Structural Analysis II', credits: 3, type: 'Theory' },
+      { code: 'CEC-505', name: 'Design of Steel Structures', credits: 3, type: 'Theory' },
+      { code: 'CEL-501', name: 'Soil Mechanics Lab', credits: 1, type: 'Lab' },
+      { code: 'CEL-502', name: 'Water Treatment Lab', credits: 1, type: 'Lab' },
+      { code: 'CEL-503', name: 'RCC Design & Drawing Lab', credits: 1, type: 'Lab' },
+      { code: 'CEL-506', name: 'Surveying Camp', credits: 1, type: 'Lab' }
     ],
     electives: [
       {
         id: 'sem5_group1',
-        label: 'Professional Elective-I',
+        label: 'Professional Elective (PEC)',
         options: [
-          { code: 'CEE-501', name: 'Advanced Surveying', credits: 3, type: 'Theory' },
-          { code: 'CEE-502', name: 'Advanced Mechanics of Solids', credits: 3, type: 'Theory' },
-          { code: 'CEE-503', name: 'Rock Mechanics', credits: 3, type: 'Theory' }
+          { code: 'CEE-501', name: 'Open Channel Flow', credits: 3, type: 'Theory' },
+          { code: 'CEE-50x', name: 'Other PEC through SWAYAM', credits: 3, type: 'Theory' }
         ]
       }
     ]
   },
   'Semester 6': {
     subjects: [
-      { code: 'CEC-601', name: 'Geotechnical Engineering - II', credits: 3, type: 'Theory' },
-      { code: 'CEC-602', name: 'Design of Structures - II', credits: 3, type: 'Theory' },
-      { code: 'CEC-603', name: 'Environmental Engineering - II', credits: 3, type: 'Theory' },
-      { code: 'CEC-604', name: 'Transportation Engineering - II', credits: 3, type: 'Theory' },
-      { code: 'CEL-601', name: 'Geotechnical Engineering Lab - II', credits: 1, type: 'Lab' },
-      { code: 'CEL-602', name: 'Transportation Engineering Lab - I', credits: 1, type: 'Lab' },
+      { code: 'CEC-601', name: 'Engineering Economics & Construction Management', credits: 3, type: 'Theory' },
+      { code: 'CEC-602', name: 'Wastewater Collection and Treatment', credits: 3, type: 'Theory' },
+      { code: 'CEC-603', name: 'Transportation Engineering', credits: 3, type: 'Theory' },
+      { code: 'CEC-604', name: 'Engineering Hydrology', credits: 3, type: 'Theory' },
+      { code: 'CEL-601', name: 'Construction Management Lab', credits: 1, type: 'Lab' },
+      { code: 'CEL-602', name: 'Wastewater Engineering Lab', credits: 1, type: 'Lab' },
+      { code: 'CEL-603', name: 'Transportation Engineering Lab', credits: 1, type: 'Lab' },
+      { code: 'CEL-605', name: 'Civil Engineering Software Lab', credits: 1, type: 'Lab' },
       { code: 'CEP-601', name: 'Seminar', credits: 1, type: 'Theory' }
     ],
     electives: [
       {
         id: 'sem6_group1',
-        label: 'Professional Elective-II',
+        label: 'Professional Elective',
         options: [
-          { code: 'CEE-601', name: 'Bridge Engineering', credits: 3, type: 'Theory' },
-          { code: 'CEE-602', name: 'Ground Improvement Techniques', credits: 3, type: 'Theory' },
-          { code: 'CEE-603', name: 'Prestressed Concrete', credits: 3, type: 'Theory' }
+          { code: 'CEE-601', name: 'Advanced Structural Design', credits: 3, type: 'Theory' },
+          { code: 'CEE-60x', name: 'Other PEC through SWAYAM', credits: 3, type: 'Theory' }
         ]
       }
     ]
@@ -243,68 +243,74 @@ export const JMI_CIVIL_CURRICULUM: Record<string, SemesterCurriculum> = {
   'Semester 7': {
     subjects: [
       { code: 'CEP-701', name: 'Summer Internship', credits: 2, type: 'Lab' },
-      { code: 'CEP-702', name: 'Minor Project', credits: 4, type: 'Lab' }
+      { code: 'CEP-702', name: 'Project', credits: 3, type: 'Lab' }
     ],
     electives: [
       {
         id: 'sem7_group1',
-        label: 'Professional Elective-III',
+        label: 'Professional Elective Slot 1',
         options: [
-          { code: 'CEE-701', name: 'Advanced Concrete Technology', credits: 3, type: 'Theory' },
-          { code: 'CEE-702', name: 'Earth and Earth Retaining Structures', credits: 3, type: 'Theory' },
-          { code: 'CEE-703', name: 'Hydraulic Structures', credits: 3, type: 'Theory' }
+          { code: 'CEE-701', name: 'Foundation Engineering', credits: 3, type: 'Theory' },
+          { code: 'CEE-70x', name: 'Other PEC', credits: 3, type: 'Theory' }
         ]
       },
       {
         id: 'sem7_group2',
-        label: 'Professional Elective-IV',
+        label: 'Professional Elective Slot 2',
         options: [
-          { code: 'CEE-704', name: 'Traffic Engineering', credits: 3, type: 'Theory' },
-          { code: 'CEE-705', name: 'Air Pollution and Control', credits: 3, type: 'Theory' },
-          { code: 'CEE-706', name: 'Construction Management', credits: 3, type: 'Theory' }
+          { code: 'CEE-702', name: 'Advanced Structural Design II', credits: 3, type: 'Theory' },
+          { code: 'CEE-70y', name: 'Other PEC', credits: 3, type: 'Theory' }
         ]
       },
       {
         id: 'sem7_group3',
-        label: 'Professional Elective-V',
+        label: 'Professional Elective Slot 3',
         options: [
-          { code: 'CEE-707', name: 'Structural Dynamics', credits: 3, type: 'Theory' },
-          { code: 'CEE-708', name: 'Ground Water Hydrology', credits: 3, type: 'Theory' },
-          { code: 'CEE-709', name: 'Environmental Impact Assessment', credits: 3, type: 'Theory' }
+          { code: 'CEE-703', name: 'Irrigation Engineering', credits: 3, type: 'Theory' },
+          { code: 'CEE-70z', name: 'Other PEC', credits: 3, type: 'Theory' }
+        ]
+      },
+      {
+        id: 'sem7_group4',
+        label: 'Professional Elective Slot 4',
+        options: [
+          { code: 'CEE-704', name: 'Advanced Transportation Engineering', credits: 3, type: 'Theory' },
+          { code: 'CEE-705', name: 'Building Services', credits: 3, type: 'Theory' },
+          { code: 'CEE-70w', name: 'Other PEC', credits: 3, type: 'Theory' }
         ]
       },
       {
         id: 'sem7_open_group',
-        label: 'Open Elective-III',
+        label: 'Open Elective',
         options: [
-          { code: 'CEO-701', name: 'Disaster Management', credits: 3, type: 'Theory' },
-          { code: 'CEO-702', name: 'Environmental Management', credits: 3, type: 'Theory' },
-          { code: 'CEO-703', name: 'Remote Sensing and GIS', credits: 3, type: 'Theory' }
+          { code: 'CEO-701', name: 'Construction Project Management', credits: 3, type: 'Theory' },
+          { code: 'CEO-702', name: 'Computational Methods in Civil Engineering', credits: 3, type: 'Theory' },
+          { code: 'CEO-70x', name: 'Other OEC through SWAYAM', credits: 3, type: 'Theory' }
         ]
       }
     ]
   },
   'Semester 8': {
     subjects: [
-      { code: 'CEP-801', name: 'Major Project', credits: 8, type: 'Lab' }
+      { code: 'CEP-801', name: 'Major Project', credits: 6, type: 'Lab' }
     ],
     electives: [
       {
         id: 'sem8_open_group1',
-        label: 'Open Elective-IV',
+        label: 'Open Elective Slot 1',
         options: [
-          { code: 'CEO-801', name: 'Project Management', credits: 3, type: 'Theory' },
-          { code: 'CEO-802', name: 'Solid Waste Management', credits: 3, type: 'Theory' },
-          { code: 'CEO-803', name: 'Smart Cities', credits: 3, type: 'Theory' }
+          { code: 'CEO-801', name: 'Environmental Pollution Control', credits: 3, type: 'Theory' },
+          { code: 'CEO-802', name: 'Water Resources Engineering', credits: 3, type: 'Theory' },
+          { code: 'CEO-803', name: 'Earth Resistant Design', credits: 3, type: 'Theory' },
+          { code: 'CEO-804', name: 'Advanced Geomatics', credits: 3, type: 'Theory' },
+          { code: 'CEO-80x', name: 'Other OEC through SWAYAM', credits: 3, type: 'Theory' }
         ]
       },
       {
         id: 'sem8_open_group2',
-        label: 'Open Elective-V',
+        label: 'Open Elective Slot 2',
         options: [
-          { code: 'CEO-804', name: 'Renewable Energy Resources', credits: 3, type: 'Theory' },
-          { code: 'CEO-805', name: 'Transport Planning and Management', credits: 3, type: 'Theory' },
-          { code: 'CEO-806', name: 'Industrial Waste Treatment', credits: 3, type: 'Theory' }
+          { code: 'CEO-80y', name: 'Other OEC through SWAYAM', credits: 3, type: 'Theory' }
         ]
       }
     ]
