@@ -320,8 +320,16 @@ export default function App() {
               setSubjects(cloudSubs);
             }
           }
-        } catch (e) {
-          console.error("Failed to load cloud subjects:", e);
+        } catch (e: any) {
+          const isOffline = e instanceof Error && (
+            e.message.toLowerCase().includes('offline') || 
+            e.message.toLowerCase().includes('unavailable')
+          );
+          if (isOffline) {
+            console.warn("Could not load cloud subjects because the client is offline.");
+          } else {
+            console.error("Failed to load cloud subjects:", e);
+          }
         }
       }
     };

@@ -43,8 +43,17 @@ export async function saveUserSubjectsToFirestore(email: string, subjects: any[]
     const userDocRef = doc(db, 'users', email.toLowerCase().trim());
     await setDoc(userDocRef, { subjects }, { merge: true });
     console.log('Successfully synced subjects to Firestore for:', email);
-  } catch (error) {
-    console.error('Error syncing subjects to Firestore:', error);
+  } catch (error: any) {
+    const isOffline = error instanceof Error && (
+      error.message.toLowerCase().includes('offline') || 
+      error.message.toLowerCase().includes('unavailable') || 
+      (error as any).code === 'unavailable'
+    );
+    if (isOffline) {
+      console.warn('Firestore is offline. Subject sync to cloud will resume when online.');
+    } else {
+      console.error('Error syncing subjects to Firestore:', error);
+    }
   }
 }
 
@@ -60,8 +69,17 @@ export async function loadUserSubjectsFromFirestore(email: string): Promise<any[
       const data = docSnap.data();
       return data.subjects || null;
     }
-  } catch (error) {
-    console.error('Error loading subjects from Firestore:', error);
+  } catch (error: any) {
+    const isOffline = error instanceof Error && (
+      error.message.toLowerCase().includes('offline') || 
+      error.message.toLowerCase().includes('unavailable') || 
+      (error as any).code === 'unavailable'
+    );
+    if (isOffline) {
+      console.warn('Firestore is offline. Could not load subjects from cloud; using local fallback.');
+    } else {
+      console.error('Error loading subjects from Firestore:', error);
+    }
   }
   return null;
 }
