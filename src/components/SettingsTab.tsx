@@ -31,7 +31,7 @@ import { format } from 'date-fns';
 import { Profile, Semester, AttendanceRecord, SemesterHistory, AppState, Subject, SubjectGradeConfig, formatSubjectName } from '../types';
 import { motion, AnimatePresence } from 'motion/react';
 import { logCustomEvent } from '../firebase';
-import { JMI_CURRICULUM, JMI_CIVIL_CURRICULUM, JMI_VLSI_CURRICULUM, JMI_ELECTRICAL_CURRICULUM, JMI_MECHANICAL_CURRICULUM, JMI_CSE_DS_CURRICULUM, JMI_ELECTRICAL_COMPUTER_CURRICULUM, JMI_FIRST_YEAR_SET_A, JMI_FIRST_YEAR_SET_B, getDefaultCurriculumSubjects } from '../utils/curriculum';
+import { JMI_CURRICULUM, JMI_CIVIL_CURRICULUM, JMI_VLSI_CURRICULUM, JMI_ELECTRICAL_CURRICULUM, JMI_MECHANICAL_CURRICULUM, JMI_CSE_DS_CURRICULUM, JMI_COMP_ENG_CURRICULUM, JMI_ELECTRICAL_COMPUTER_CURRICULUM, JMI_FIRST_YEAR_SET_A, JMI_FIRST_YEAR_SET_B, getDefaultCurriculumSubjects } from '../utils/curriculum';
 
 interface SettingsTabProps {
   profile: Profile;
@@ -114,8 +114,9 @@ export default function SettingsTab({
   const isJmiElec = profile.department === 'Electrical Engineering';
   const isJmiMech = profile.department === 'Mechanical Engineering';
   const isJmiCsds = profile.department.includes('Computer Science') && profile.department.includes('Data Science');
+  const isJmiCompEng = profile.department === 'Computer Engineering' || (profile.department.includes('Computer') && !profile.department.includes('Data Science') && !profile.department.includes('Electrical'));
   const isJmiEec = profile.department.includes('Electrical & Computer');
-  const isJmiCurriculumBranch = isJmiECE || isJmiCivil || isJmiVLSI || isJmiElec || isJmiMech || isJmiCsds || isJmiEec || isFirstYear;
+  const isJmiCurriculumBranch = isJmiECE || isJmiCivil || isJmiVLSI || isJmiElec || isJmiMech || isJmiCsds || isJmiCompEng || isJmiEec || isFirstYear;
   const activeCurriculum = isFirstYear
     ? (profile.firstYearPattern === 'SetB' ? JMI_FIRST_YEAR_SET_B : JMI_FIRST_YEAR_SET_A)
     : isJmiCivil 
@@ -128,9 +129,11 @@ export default function SettingsTab({
             ? JMI_MECHANICAL_CURRICULUM
             : isJmiCsds
               ? JMI_CSE_DS_CURRICULUM
-              : isJmiEec
-                ? JMI_ELECTRICAL_COMPUTER_CURRICULUM
-                : JMI_CURRICULUM;
+              : isJmiCompEng
+                ? JMI_COMP_ENG_CURRICULUM
+                : isJmiEec
+                  ? JMI_ELECTRICAL_COMPUTER_CURRICULUM
+                  : JMI_CURRICULUM;
 
   const getSelectedElectiveCode = (groupId: string, options: any[]) => {
     const found = subjects.find(s => 
@@ -637,8 +640,9 @@ export default function SettingsTab({
               const isNewJmiElec = profile.department === 'Electrical Engineering';
               const isNewJmiMech = profile.department === 'Mechanical Engineering';
               const isNewJmiCsds = profile.department.includes('Computer Science') && profile.department.includes('Data Science');
+              const isNewJmiCompEng = profile.department === 'Computer Engineering' || (profile.department.includes('Computer') && !profile.department.includes('Data Science') && !profile.department.includes('Electrical'));
               const isNewJmiEec = profile.department.includes('Electrical & Computer');
-              const isJmiCurriculum = isSem1or2 || isNewJmiECE || isNewJmiCivil || isNewJmiVLSI || isNewJmiElec || isNewJmiMech || isNewJmiCsds || isNewJmiEec;
+              const isJmiCurriculum = isSem1or2 || isNewJmiECE || isNewJmiCivil || isNewJmiVLSI || isNewJmiElec || isNewJmiMech || isNewJmiCsds || isNewJmiCompEng || isNewJmiEec;
 
               const branchChanged = profile.department !== initialBranch || profile.semester !== initialSem;
 

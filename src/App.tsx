@@ -1855,10 +1855,11 @@ export default function App() {
                     const isJmiElec = onboardDept === 'Electrical Engineering';
                     const isJmiMech = onboardDept === 'Mechanical Engineering';
                     const isJmiCsds = onboardDept.includes('Computer Science') && onboardDept.includes('Data Science');
+                    const isJmiCompEng = onboardDept === 'Computer Engineering' || (onboardDept.includes('Computer') && !onboardDept.includes('Data Science') && !onboardDept.includes('Electrical'));
                     const isJmiEec = onboardDept.includes('Electrical & Computer');
                     const isFirstYear = onboardSem === 'Semester 1' || onboardSem === 'Semester 2';
 
-                    if (isFirstYear || isJmiECE || isJmiCivil || isJmiVLSI || isJmiElec || isJmiMech || isJmiCsds || isJmiEec) {
+                    if (isFirstYear || isJmiECE || isJmiCivil || isJmiVLSI || isJmiElec || isJmiMech || isJmiCsds || isJmiCompEng || isJmiEec) {
                       const { subjects: defaultSubs } = getDefaultCurriculumSubjects(onboardSem, onboardDept, 'SetA');
                       if (defaultSubs && defaultSubs.length > 0) {
                         setSubjects(defaultSubs);

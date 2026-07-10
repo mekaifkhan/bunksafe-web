@@ -654,6 +654,186 @@ export const JMI_CSE_DS_CURRICULUM: Record<string, SemesterCurriculum> = {
   }
 };
 
+export const JMI_COMP_ENG_CURRICULUM: Record<string, SemesterCurriculum> = {
+  'Semester 3': {
+    subjects: [
+      { code: 'ASM-301', name: 'Universal Human Values', credits: 3, type: 'Theory' },
+      { code: 'ASB-301', name: 'Engineering Mathematics III', credits: 3, type: 'Theory' },
+      { code: 'DSC-301', name: 'Discrete Mathematics – PCC1', credits: 3, type: 'Theory' },
+      { code: 'DSC-302', name: 'Data Structure – PCC2', credits: 3, type: 'Theory' },
+      { code: 'DSC-303', name: 'Digital Logic Design – PCC3', credits: 3, type: 'Theory' },
+      { code: 'DSC-304', name: 'Database Management System – PCC4', credits: 3, type: 'Theory' },
+      { code: 'DSL-301', name: 'Data Structure Lab – PCL1', credits: 1, type: 'Lab' },
+      { code: 'DSL-302', name: 'Digital Logic Design Lab – PCL2', credits: 1, type: 'Lab' },
+      { code: 'DSL-303', name: 'C Programming Lab – PCL3', credits: 1, type: 'Lab' },
+      { code: 'DSL-304', name: 'Database Management System Lab – PCL4', credits: 1, type: 'Lab' }
+    ]
+  },
+  'Semester 4': {
+    subjects: [
+      { code: 'ASM-401', name: 'Environmental Science', credits: 2, type: 'Theory' },
+      { code: 'DSC-401', name: 'Data Mining – PCC5', credits: 3, type: 'Theory' },
+      { code: 'DSC-402', name: 'Computer Organization & Architecture – PCC6', credits: 3, type: 'Theory' },
+      { code: 'DSC-403', name: 'Operating System – PCC7', credits: 3, type: 'Theory' },
+      { code: 'ASM-402', name: 'Essence of Indian Traditional Knowledge', credits: 0, type: 'Theory' },
+      { code: 'AST-401', name: 'Operations Research (OEC-I)', credits: 3, type: 'Theory' },
+      { code: 'AST-402', name: 'Economics (OEC-II)', credits: 3, type: 'Theory' },
+      { code: 'DSL-401', name: 'Data Mining Lab – PCL5', credits: 1, type: 'Lab' },
+      { code: 'DSL-402', name: 'Python Programming Lab – PCL6', credits: 1, type: 'Lab' },
+      { code: 'DSL-403', name: 'Operating System & Linux Lab – PCL7', credits: 1, type: 'Lab' },
+      { code: 'ASL-401', name: 'Numeric & Scientific Computing Lab', credits: 2, type: 'Lab' }
+    ]
+  },
+  'Semester 5': {
+    subjects: [
+      { code: 'DSC-501', name: 'Automata Theory – PCC8', credits: 3, type: 'Theory' },
+      { code: 'DSC-502', name: 'Data Analytics – PCC9', credits: 3, type: 'Theory' },
+      { code: 'DSC-503', name: 'Computer Networks – PCC10', credits: 3, type: 'Theory' },
+      { code: 'DSC-504', name: 'Software Engineering – PCC11', credits: 3, type: 'Theory' },
+      { code: 'DSC-505', name: 'Object Oriented Programming – PCC12', credits: 3, type: 'Theory' },
+      { code: 'DSL-501', name: 'Object Oriented Programming Lab – PCL8', credits: 1, type: 'Lab' },
+      { code: 'DSL-502', name: 'Machine Learning Lab – PCL9', credits: 1, type: 'Lab' },
+      { code: 'DSL-503', name: 'Computer Network Lab – PCL10', credits: 1, type: 'Lab' },
+      { code: 'DSL-504', name: 'Data Analytics Lab – PCL11', credits: 1, type: 'Lab' }
+    ],
+    electives: [
+      {
+        id: 'sem5_comp_group1',
+        label: 'Professional Elective-I',
+        options: [
+          { code: 'CSE-701', name: 'Computer Vision & Image Processing', credits: 3, type: 'Theory' },
+          { code: 'CSE-702', name: 'Mobile Computing & IoT', credits: 3, type: 'Theory' },
+          { code: 'CSE-703', name: 'Cloud Computing', credits: 3, type: 'Theory' },
+          { code: 'CSE-704', name: 'Internet Protocol', credits: 3, type: 'Theory' },
+          { code: 'CSE-705', name: 'Soft Computing', credits: 3, type: 'Theory' },
+          { code: 'CSE-706', name: 'Social Network Analysis', credits: 3, type: 'Theory' },
+          { code: 'CSE-707', name: 'Artificial Neural Networks', credits: 3, type: 'Theory' }
+        ]
+      }
+    ]
+  },
+  'Semester 6': {
+    subjects: [
+      { code: 'DSC-601', name: 'Analysis & Design of Algorithms – PCC13', credits: 3, type: 'Theory' },
+      { code: 'DSC-602', name: 'Compiler Design – PCC14', credits: 3, type: 'Theory' },
+      { code: 'DSC-603', name: 'Data Visualization – PCC15', credits: 3, type: 'Theory' },
+      { code: 'DSC-604', name: 'Artificial Intelligence – PCC16', credits: 3, type: 'Theory' },
+      { code: 'DSL-601', name: 'Compiler Design Lab – PCL12', credits: 1, type: 'Lab' },
+      { code: 'DSL-602', name: 'Artificial Intelligence Lab – PCL13', credits: 1, type: 'Lab' },
+      { code: 'DSL-603', name: 'Deep Learning Lab – PCL14', credits: 1, type: 'Lab' },
+      { code: 'DSL-604', name: 'Data Visualization Lab – PCL15', credits: 1, type: 'Lab' },
+      { code: 'DSL-605', name: 'Seminar', credits: 1, type: 'Lab' }
+    ],
+    electives: [
+      {
+        id: 'sem6_comp_group1',
+        label: 'Professional Elective-II',
+        options: [
+          { code: 'DSE-605', name: 'Deep Learning', credits: 3, type: 'Theory' }
+        ]
+      }
+    ]
+  },
+  'Semester 7': {
+    subjects: [
+      { code: 'CSP-792', name: 'Summer Internship', credits: 2, type: 'Lab' },
+      { code: 'CSP-793', name: 'Minor Project', credits: 3, type: 'Lab' }
+    ],
+    electives: [
+      {
+        id: 'sem7_comp_group1',
+        label: 'Professional Elective-III',
+        options: [
+          { code: 'CSE-701', name: 'Computer Vision & Image Processing', credits: 3, type: 'Theory' },
+          { code: 'CSE-702', name: 'Mobile Computing & IoT', credits: 3, type: 'Theory' },
+          { code: 'CSE-703', name: 'Cloud Computing', credits: 3, type: 'Theory' },
+          { code: 'CSE-704', name: 'Internet Protocol', credits: 3, type: 'Theory' },
+          { code: 'CSE-705', name: 'Soft Computing', credits: 3, type: 'Theory' },
+          { code: 'CSE-706', name: 'Social Network Analysis', credits: 3, type: 'Theory' },
+          { code: 'CSE-707', name: 'Artificial Neural Networks', credits: 3, type: 'Theory' }
+        ]
+      },
+      {
+        id: 'sem7_comp_group2',
+        label: 'Professional Elective-IV',
+        options: [
+          { code: 'CSE-701', name: 'Computer Vision & Image Processing', credits: 3, type: 'Theory' },
+          { code: 'CSE-702', name: 'Mobile Computing & IoT', credits: 3, type: 'Theory' },
+          { code: 'CSE-703', name: 'Cloud Computing', credits: 3, type: 'Theory' },
+          { code: 'CSE-704', name: 'Internet Protocol', credits: 3, type: 'Theory' },
+          { code: 'CSE-705', name: 'Soft Computing', credits: 3, type: 'Theory' },
+          { code: 'CSE-706', name: 'Social Network Analysis', credits: 3, type: 'Theory' },
+          { code: 'CSE-707', name: 'Artificial Neural Networks', credits: 3, type: 'Theory' }
+        ]
+      },
+      {
+        id: 'sem7_comp_group3',
+        label: 'Professional Elective-V',
+        options: [
+          { code: 'CSE-701', name: 'Computer Vision & Image Processing', credits: 3, type: 'Theory' },
+          { code: 'CSE-702', name: 'Mobile Computing & IoT', credits: 3, type: 'Theory' },
+          { code: 'CSE-703', name: 'Cloud Computing', credits: 3, type: 'Theory' },
+          { code: 'CSE-704', name: 'Internet Protocol', credits: 3, type: 'Theory' },
+          { code: 'CSE-705', name: 'Soft Computing', credits: 3, type: 'Theory' },
+          { code: 'CSE-706', name: 'Social Network Analysis', credits: 3, type: 'Theory' },
+          { code: 'CSE-707', name: 'Artificial Neural Networks', credits: 3, type: 'Theory' }
+        ]
+      },
+      {
+        id: 'sem7_comp_group4',
+        label: 'Professional Elective-VI',
+        options: [
+          { code: 'CSE-701', name: 'Computer Vision & Image Processing', credits: 3, type: 'Theory' },
+          { code: 'CSE-702', name: 'Mobile Computing & IoT', credits: 3, type: 'Theory' },
+          { code: 'CSE-703', name: 'Cloud Computing', credits: 3, type: 'Theory' },
+          { code: 'CSE-704', name: 'Internet Protocol', credits: 3, type: 'Theory' },
+          { code: 'CSE-705', name: 'Soft Computing', credits: 3, type: 'Theory' },
+          { code: 'CSE-706', name: 'Social Network Analysis', credits: 3, type: 'Theory' },
+          { code: 'CSE-707', name: 'Artificial Neural Networks', credits: 3, type: 'Theory' }
+        ]
+      },
+      {
+        id: 'sem7_comp_open_group',
+        label: 'Open Elective-III',
+        options: [
+          { code: 'CSO-701', name: 'Any approved Open Elective', credits: 3, type: 'Theory' }
+        ]
+      }
+    ]
+  },
+  'Semester 8': {
+    subjects: [
+      { code: 'CSP-891', name: 'Major Project', credits: 6, type: 'Lab' }
+    ],
+    electives: [
+      {
+        id: 'sem8_comp_open_group1',
+        label: 'Open Elective-IV',
+        options: [
+          { code: 'CSO-801', name: 'Network Security', credits: 3, type: 'Theory' },
+          { code: 'CSO-802', name: 'Applications of Blockchain Technology', credits: 3, type: 'Theory' },
+          { code: 'CSO-803', name: 'Software Testing', credits: 3, type: 'Theory' },
+          { code: 'CSO-804', name: 'Big Data Analytics', credits: 3, type: 'Theory' },
+          { code: 'CSO-805', name: 'Applied Linear Algebra in AI & ML', credits: 3, type: 'Theory' },
+          { code: 'CSO-806', name: 'Generative AI', credits: 3, type: 'Theory' }
+        ]
+      },
+      {
+        id: 'sem8_comp_open_group2',
+        label: 'Open Elective-V',
+        options: [
+          { code: 'CSO-801', name: 'Network Security', credits: 3, type: 'Theory' },
+          { code: 'CSO-802', name: 'Applications of Blockchain Technology', credits: 3, type: 'Theory' },
+          { code: 'CSO-803', name: 'Software Testing', credits: 3, type: 'Theory' },
+          { code: 'CSO-804', name: 'Big Data Analytics', credits: 3, type: 'Theory' },
+          { code: 'CSO-805', name: 'Applied Linear Algebra in AI & ML', credits: 3, type: 'Theory' },
+          { code: 'CSO-806', name: 'Generative AI', credits: 3, type: 'Theory' }
+        ]
+      }
+    ]
+  }
+};
+
 export const JMI_FIRST_YEAR_SET_A: Record<string, SemesterCurriculum> = {
   'Semester 1': {
     subjects: [
@@ -1178,6 +1358,7 @@ export function getDefaultCurriculumSubjects(
   const isElec = department === 'Electrical Engineering';
   const isMech = department === 'Mechanical Engineering';
   const isCsds = department.startsWith('Computer Science & Engineering (Data Science') || (department.includes('Computer Science') && department.includes('Data Science'));
+  const isCompEng = department === 'Computer Engineering' || (department.includes('Computer') && !department.includes('Data Science') && !department.includes('Electrical'));
   const isEec = department === 'Electrical & Computer Engineering' || department.includes('Electrical & Computer');
 
   let semData: SemesterCurriculum | undefined = undefined;
@@ -1196,9 +1377,11 @@ export function getDefaultCurriculumSubjects(
             ? JMI_MECHANICAL_CURRICULUM[semesterTitle]
             : isCsds
               ? JMI_CSE_DS_CURRICULUM[semesterTitle]
-              : isEec
-                ? JMI_ELECTRICAL_COMPUTER_CURRICULUM[semesterTitle]
-                : JMI_CURRICULUM[semesterTitle];
+              : isCompEng
+                ? JMI_COMP_ENG_CURRICULUM[semesterTitle]
+                : isEec
+                  ? JMI_ELECTRICAL_COMPUTER_CURRICULUM[semesterTitle]
+                  : JMI_CURRICULUM[semesterTitle];
   }
 
   if (!semData) {
@@ -1222,9 +1405,11 @@ export function getDefaultCurriculumSubjects(
               ? `sub_jmi_mech_${semesterTitle.replace(/\s+/g, '_')}_${s.code.replace(/\s+/g, '_')}`
               : isCsds
                 ? `sub_jmi_csds_${semesterTitle.replace(/\s+/g, '_')}_${s.code.replace(/\s+/g, '_')}`
-                : isEec
-                  ? `sub_jmi_eec_${semesterTitle.replace(/\s+/g, '_')}_${s.code.replace(/\s+/g, '_')}`
-                  : `sub_jmi_${semesterTitle.replace(/\s+/g, '_')}_${s.code.replace(/\s+/g, '_')}`;
+                : isCompEng
+                  ? `sub_jmi_comp_${semesterTitle.replace(/\s+/g, '_')}_${s.code.replace(/\s+/g, '_')}`
+                  : isEec
+                    ? `sub_jmi_eec_${semesterTitle.replace(/\s+/g, '_')}_${s.code.replace(/\s+/g, '_')}`
+                    : `sub_jmi_${semesterTitle.replace(/\s+/g, '_')}_${s.code.replace(/\s+/g, '_')}`;
     subjectsList.push({
       id,
       name: `${s.code} ${s.name}`,
@@ -1254,9 +1439,11 @@ export function getDefaultCurriculumSubjects(
                   ? `sub_jmi_mech_${semesterTitle.replace(/\s+/g, '_')}_elective_${group.id}`
                   : isCsds
                     ? `sub_jmi_csds_${semesterTitle.replace(/\s+/g, '_')}_elective_${group.id}`
-                    : isEec
-                      ? `sub_jmi_eec_${semesterTitle.replace(/\s+/g, '_')}_elective_${group.id}`
-                      : `sub_jmi_${semesterTitle.replace(/\s+/g, '_')}_elective_${group.id}`;
+                    : isCompEng
+                      ? `sub_jmi_comp_${semesterTitle.replace(/\s+/g, '_')}_elective_${group.id}`
+                      : isEec
+                        ? `sub_jmi_eec_${semesterTitle.replace(/\s+/g, '_')}_elective_${group.id}`
+                        : `sub_jmi_${semesterTitle.replace(/\s+/g, '_')}_elective_${group.id}`;
         subjectsList.push({
           id,
           name: `${defaultOpt.code} ${defaultOpt.name}`,
