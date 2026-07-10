@@ -7,6 +7,7 @@ export interface Profile {
   mobile: string;
   avatar?: string;
   academicSession?: string;
+  programme?: string;
 }
 
 export interface Semester {

@@ -402,26 +402,84 @@ export default function SettingsTab({
               />
             </div>
             <div className="space-y-1.5">
-              <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider block">Department</label>
-              <input 
-                type="text" 
-                value={profile.department} 
-                onChange={(e) => setProfile({ ...profile, department: e.target.value })} 
+              <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider block">Semester</label>
+              <select
+                value={profile.semester}
+                onChange={(e) => {
+                  const sem = e.target.value;
+                  const is1or2 = sem === 'Semester 1' || sem === 'Semester 2';
+                  setProfile({
+                    ...profile,
+                    semester: sem,
+                    department: is1or2 ? 'Applied Science & Humanities' : '',
+                    programme: is1or2 ? 'Regular' : ''
+                  });
+                  logCustomEvent('semester_selected', { semester: sem });
+                  if (is1or2) {
+                    logCustomEvent('branch_selected', { branch: 'Applied Science & Humanities' });
+                  }
+                }}
                 className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-3 py-2.5 text-xs text-zinc-100 focus:outline-none focus:border-primary transition-colors font-bold"
-              />
+              >
+                {Array.from({ length: 8 }, (_, i) => `Semester ${i + 1}`).map(sem => (
+                  <option key={sem} value={sem}>{sem}</option>
+                ))}
+              </select>
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider block">Semester</label>
-              <input 
-                type="text" 
-                value={profile.semester} 
-                onChange={(e) => setProfile({ ...profile, semester: e.target.value })} 
-                className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-3 py-2.5 text-xs text-zinc-100 focus:outline-none focus:border-primary transition-colors font-bold"
-              />
+          {!(profile.semester === 'Semester 1' || profile.semester === 'Semester 2') && (
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider block">Programme</label>
+                <select
+                  value={profile.programme || ''}
+                  onChange={(e) => {
+                    setProfile({ ...profile, programme: e.target.value, department: '' });
+                  }}
+                  className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-3 py-2.5 text-xs text-zinc-100 focus:outline-none focus:border-primary transition-colors font-bold"
+                >
+                  <option value="">Select Programme</option>
+                  <option value="Regular">Regular</option>
+                  <option value="Self-Financed">Self-Financed</option>
+                </select>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider block">Branch</label>
+                <select
+                  value={profile.department}
+                  onChange={(e) => {
+                    setProfile({ ...profile, department: e.target.value });
+                    logCustomEvent('branch_selected', { branch: e.target.value });
+                  }}
+                  className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-3 py-2.5 text-xs text-zinc-100 focus:outline-none focus:border-primary transition-colors font-bold text-zinc-100"
+                  disabled={!profile.programme}
+                >
+                  <option value="">Select Branch</option>
+                  {profile.programme === 'Regular' ? (
+                    <>
+                      <option value="Civil Engineering">Civil Engineering</option>
+                      <option value="Electrical Engineering">Electrical Engineering</option>
+                      <option value="Mechanical Engineering">Mechanical Engineering</option>
+                      <option value="Electronics & Communication Engineering">Electronics & Communication Engineering</option>
+                      <option value="Computer Engineering">Computer Engineering</option>
+                    </>
+                  ) : profile.programme === 'Self-Financed' ? (
+                    <>
+                      <option value="Civil Engineering (Construction Technology) (Self-Financed)">Civil Engineering (Construction Technology) (Self-Financed)</option>
+                      <option value="Electrical & Computer Engineering (Self-Financed)">Electrical & Computer Engineering (Self-Financed)</option>
+                      <option value="Robotics & Artificial Intelligence (Self-Financed)">Robotics & Artificial Intelligence (Self-Financed)</option>
+                      <option value="Electronics (VLSI Design & Technology) (Self-Financed)">Electronics (VLSI Design & Technology) (Self-Financed)</option>
+                      <option value="Computer Science & Engineering (Data Sciences) (Self-Financed)">Computer Science & Engineering (Data Sciences) (Self-Financed)</option>
+                    </>
+                  ) : null}
+                </select>
+              </div>
             </div>
+          )}
+
+          <div className="grid grid-cols-1 gap-3">
             <div className="space-y-1.5">
               <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider block">Academic Session</label>
               <input 
@@ -436,6 +494,15 @@ export default function SettingsTab({
           
           <button 
             onClick={() => {
+              const isSem1or2 = profile.semester === 'Semester 1' || profile.semester === 'Semester 2';
+              if (!profile.name.trim()) {
+                alert('Please enter your full name.');
+                return;
+              }
+              if (!isSem1or2 && (!profile.programme || !profile.department)) {
+                alert('Please select both Programme and Branch.');
+                return;
+              }
               logCustomEvent('branch_selected', { branch: profile.department });
               logCustomEvent('semester_selected', { semester: profile.semester });
               alert('Profile and Personal settings updated locally!');
