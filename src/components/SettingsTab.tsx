@@ -31,7 +31,7 @@ import { format } from 'date-fns';
 import { Profile, Semester, AttendanceRecord, SemesterHistory, AppState, Subject, SubjectGradeConfig, formatSubjectName } from '../types';
 import { motion, AnimatePresence } from 'motion/react';
 import { logCustomEvent } from '../firebase';
-import { JMI_CURRICULUM, getDefaultCurriculumSubjects } from '../utils/curriculum';
+import { JMI_CURRICULUM, JMI_CIVIL_CURRICULUM, getDefaultCurriculumSubjects } from '../utils/curriculum';
 
 interface SettingsTabProps {
   profile: Profile;
@@ -104,6 +104,9 @@ export default function SettingsTab({
 
   // Curriculum Database helpers
   const isJmiECE = profile.programme === 'Regular' && profile.department === 'Electronics & Communication Engineering';
+  const isJmiCivil = profile.programme === 'Regular' && profile.department === 'Civil Engineering';
+  const isJmiCurriculumBranch = isJmiECE || isJmiCivil;
+  const activeCurriculum = isJmiCivil ? JMI_CIVIL_CURRICULUM : JMI_CURRICULUM;
 
   const getSelectedElectiveCode = (groupId: string, options: any[]) => {
     const found = subjects.find(s => 
@@ -582,11 +585,20 @@ export default function SettingsTab({
               logCustomEvent('semester_selected', { semester: profile.semester });
               
               const isNewJmiECE = profile.programme === 'Regular' && profile.department === 'Electronics & Communication Engineering';
+              const isNewJmiCivil = profile.programme === 'Regular' && profile.department === 'Civil Engineering';
               if (isNewJmiECE && subjects.length === 0) {
-                const { subjects: defaultSubs } = getDefaultCurriculumSubjects(profile.semester);
+                const { subjects: defaultSubs } = getDefaultCurriculumSubjects(profile.semester, profile.department);
                 if (defaultSubs && defaultSubs.length > 0) {
                   setSubjects(defaultSubs);
                   alert(`Profile updated. Automatically loaded default JMI ECE curriculum for ${profile.semester}!`);
+                } else {
+                  alert('Profile and Personal settings updated locally!');
+                }
+              } else if (isNewJmiCivil && subjects.length === 0) {
+                const { subjects: defaultSubs } = getDefaultCurriculumSubjects(profile.semester, profile.department);
+                if (defaultSubs && defaultSubs.length > 0) {
+                  setSubjects(defaultSubs);
+                  alert(`Profile updated. Automatically loaded default JMI Civil Engineering curriculum for ${profile.semester}!`);
                 } else {
                   alert('Profile and Personal settings updated locally!');
                 }
@@ -908,13 +920,13 @@ export default function SettingsTab({
 
               {/* Subject list */}
               <div className="flex-1 overflow-y-auto py-4 space-y-3 pr-1">
-                {isJmiECE && JMI_CURRICULUM[profile.semester]?.electives && (
+                {isJmiCurriculumBranch && activeCurriculum[profile.semester]?.electives && (
                   <div className="bg-zinc-950/40 border border-zinc-800/80 rounded-2xl p-4 mb-4 space-y-3">
                     <h4 className="text-[10px] font-black text-primary uppercase tracking-widest flex items-center gap-1.5">
                       <Sliders size={12} /> Elective Selections
                     </h4>
                     <div className="space-y-3">
-                      {JMI_CURRICULUM[profile.semester].electives?.map((group: any) => {
+                      {activeCurriculum[profile.semester].electives?.map((group: any) => {
                         const selectedCode = getSelectedElectiveCode(group.id, group.options);
                         return (
                           <div key={group.id} className="space-y-1.5 text-left">
@@ -1019,11 +1031,11 @@ export default function SettingsTab({
 
               {/* Actions Footer */}
               <div className="pt-4 border-t border-zinc-800/80 flex flex-col gap-2">
-                {isJmiECE && JMI_CURRICULUM[profile.semester] && (
+                {isJmiCurriculumBranch && activeCurriculum[profile.semester] && (
                   <button
                     onClick={() => {
                       if (confirm(`Are you sure you want to reset your curriculum for ${profile.semester}? This will restore all default theory and lab subjects. Existing attendance tracking for deleted subjects will be lost.`)) {
-                        const { subjects: defaultSubs } = getDefaultCurriculumSubjects(profile.semester);
+                        const { subjects: defaultSubs } = getDefaultCurriculumSubjects(profile.semester, profile.department);
                         setSubjects(defaultSubs);
                         logCustomEvent('subject_reset', { semester: profile.semester });
                         alert('Curriculum reset to default successfully!');

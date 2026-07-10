@@ -5,8 +5,8 @@
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
   
-  --color-primary: var(--primary-color, #10b981);
-  --color-primary-hover: var(--primary-hover, #059669);
+  --color-primary: var(--primary-color, #facc15);
+  --color-primary-hover: var(--primary-hover, #ca8a04);
 }
 
 @layer utilities {

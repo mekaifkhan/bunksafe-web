@@ -257,7 +257,11 @@ export default function App() {
   }, [currentGapIndex, gapDays]);
 
   const [themeColor, setThemeColor] = useState(() => {
-    return localStorage.getItem('bs_theme_color') || '#10b981';
+    const saved = localStorage.getItem('bs_theme_color');
+    if (!saved || saved === '#10b981') {
+      return '#facc15';
+    }
+    return saved;
   });
 
   // Daily Class Schedule States
@@ -1836,8 +1840,14 @@ export default function App() {
 
                     const finalProg = (onboardSem === 'Semester 1' || onboardSem === 'Semester 2') ? 'Regular' : onboardProgramme;
                     const isJmiECE = finalProg === 'Regular' && onboardDept === 'Electronics & Communication Engineering';
+                    const isJmiCivil = finalProg === 'Regular' && onboardDept === 'Civil Engineering';
                     if (isJmiECE) {
-                      const { subjects: defaultSubs } = getDefaultCurriculumSubjects(onboardSem);
+                      const { subjects: defaultSubs } = getDefaultCurriculumSubjects(onboardSem, onboardDept);
+                      if (defaultSubs && defaultSubs.length > 0) {
+                        setSubjects(defaultSubs);
+                      }
+                    } else if (isJmiCivil) {
+                      const { subjects: defaultSubs } = getDefaultCurriculumSubjects(onboardSem, onboardDept);
                       if (defaultSubs && defaultSubs.length > 0) {
                         setSubjects(defaultSubs);
                       }
@@ -3006,6 +3016,7 @@ export default function App() {
 
   const renderSpecial = () => {
     const themes = [
+      { name: 'Yellow & Black', color: '#facc15' },
       { name: 'Emerald', color: '#10b981' },
       { name: 'Blue', color: '#3b82f6' },
       { name: 'Purple', color: '#8b5cf6' },
@@ -3052,7 +3063,7 @@ export default function App() {
                 type="text" 
                 value={themeColor} 
                 onChange={(e) => setThemeColor(e.target.value)}
-                placeholder="#10b981"
+                placeholder="#facc15"
                 className="flex-1 bg-zinc-800 border border-zinc-700 rounded-lg px-3 text-xs font-mono text-zinc-100 focus:outline-none focus:border-primary"
               />
             </div>

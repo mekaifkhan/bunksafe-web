@@ -165,13 +165,163 @@ export const JMI_CURRICULUM: Record<string, SemesterCurriculum> = {
   }
 };
 
+export const JMI_CIVIL_CURRICULUM: Record<string, SemesterCurriculum> = {
+  'Semester 3': {
+    subjects: [
+      { code: 'ASM-301', name: 'Universal Human Values', credits: 3, type: 'Theory' },
+      { code: 'ASB-301', name: 'Engineering Mathematics III', credits: 3, type: 'Theory' },
+      { code: 'CEC-301', name: 'Engineering Mechanics', credits: 3, type: 'Theory' },
+      { code: 'CEC-302', name: 'Building Materials', credits: 3, type: 'Theory' },
+      { code: 'CEC-303', name: 'Surveying', credits: 3, type: 'Theory' },
+      { code: 'CEC-304', name: 'Strength of Materials', credits: 3, type: 'Theory' },
+      { code: 'ASM-302', name: 'Essence of Indian Traditional Knowledge', credits: 0, type: 'Theory' },
+      { code: 'CEL-301', name: 'Engineering Mechanics Lab', credits: 1, type: 'Lab' },
+      { code: 'CEL-302', name: 'Building Materials Lab', credits: 1, type: 'Lab' },
+      { code: 'CEL-303', name: 'Surveying Lab', credits: 1, type: 'Lab' },
+      { code: 'CEL-304', name: 'Strength of Materials Lab', credits: 1, type: 'Lab' }
+    ]
+  },
+  'Semester 4': {
+    subjects: [
+      { code: 'ASM-401', name: 'Environmental Science', credits: 2, type: 'Theory' },
+      { code: 'CEC-401', name: 'Structural Analysis', credits: 3, type: 'Theory' },
+      { code: 'CEC-402', name: 'Fluid Mechanics', credits: 3, type: 'Theory' },
+      { code: 'CEC-403', name: 'Concrete Technology', credits: 3, type: 'Theory' },
+      { code: 'AST-401', name: 'Operations Research', credits: 3, type: 'Theory' },
+      { code: 'AST-402', name: 'Engineering Economics', credits: 3, type: 'Theory' },
+      { code: 'CEL-401', name: 'Structural Analysis Lab', credits: 1, type: 'Lab' },
+      { code: 'CEL-402', name: 'Fluid Mechanics Lab', credits: 1, type: 'Lab' },
+      { code: 'CEL-403', name: 'Concrete Technology Lab', credits: 1, type: 'Lab' },
+      { code: 'ASL-401', name: 'Numeric & Scientific Computing Lab', credits: 2, type: 'Lab' }
+    ]
+  },
+  'Semester 5': {
+    subjects: [
+      { code: 'CEC-501', name: 'Geotechnical Engineering - I', credits: 3, type: 'Theory' },
+      { code: 'CEC-502', name: 'Design of Structures - I', credits: 3, type: 'Theory' },
+      { code: 'CEC-503', name: 'Environmental Engineering - I', credits: 3, type: 'Theory' },
+      { code: 'CEC-504', name: 'Transportation Engineering - I', credits: 3, type: 'Theory' },
+      { code: 'CEC-505', name: 'Water Resources Engineering - I', credits: 3, type: 'Theory' },
+      { code: 'CEL-501', name: 'Geotechnical Engineering Lab - I', credits: 1, type: 'Lab' },
+      { code: 'CEL-502', name: 'Environmental Engineering Lab - I', credits: 1, type: 'Lab' },
+      { code: 'CEL-503', name: 'CAD Lab', credits: 1, type: 'Lab' }
+    ],
+    electives: [
+      {
+        id: 'sem5_group1',
+        label: 'Professional Elective-I',
+        options: [
+          { code: 'CEE-501', name: 'Advanced Surveying', credits: 3, type: 'Theory' },
+          { code: 'CEE-502', name: 'Advanced Mechanics of Solids', credits: 3, type: 'Theory' },
+          { code: 'CEE-503', name: 'Rock Mechanics', credits: 3, type: 'Theory' }
+        ]
+      }
+    ]
+  },
+  'Semester 6': {
+    subjects: [
+      { code: 'CEC-601', name: 'Geotechnical Engineering - II', credits: 3, type: 'Theory' },
+      { code: 'CEC-602', name: 'Design of Structures - II', credits: 3, type: 'Theory' },
+      { code: 'CEC-603', name: 'Environmental Engineering - II', credits: 3, type: 'Theory' },
+      { code: 'CEC-604', name: 'Transportation Engineering - II', credits: 3, type: 'Theory' },
+      { code: 'CEL-601', name: 'Geotechnical Engineering Lab - II', credits: 1, type: 'Lab' },
+      { code: 'CEL-602', name: 'Transportation Engineering Lab - I', credits: 1, type: 'Lab' },
+      { code: 'CEP-601', name: 'Seminar', credits: 1, type: 'Theory' }
+    ],
+    electives: [
+      {
+        id: 'sem6_group1',
+        label: 'Professional Elective-II',
+        options: [
+          { code: 'CEE-601', name: 'Bridge Engineering', credits: 3, type: 'Theory' },
+          { code: 'CEE-602', name: 'Ground Improvement Techniques', credits: 3, type: 'Theory' },
+          { code: 'CEE-603', name: 'Prestressed Concrete', credits: 3, type: 'Theory' }
+        ]
+      }
+    ]
+  },
+  'Semester 7': {
+    subjects: [
+      { code: 'CEP-701', name: 'Summer Internship', credits: 2, type: 'Lab' },
+      { code: 'CEP-702', name: 'Minor Project', credits: 4, type: 'Lab' }
+    ],
+    electives: [
+      {
+        id: 'sem7_group1',
+        label: 'Professional Elective-III',
+        options: [
+          { code: 'CEE-701', name: 'Advanced Concrete Technology', credits: 3, type: 'Theory' },
+          { code: 'CEE-702', name: 'Earth and Earth Retaining Structures', credits: 3, type: 'Theory' },
+          { code: 'CEE-703', name: 'Hydraulic Structures', credits: 3, type: 'Theory' }
+        ]
+      },
+      {
+        id: 'sem7_group2',
+        label: 'Professional Elective-IV',
+        options: [
+          { code: 'CEE-704', name: 'Traffic Engineering', credits: 3, type: 'Theory' },
+          { code: 'CEE-705', name: 'Air Pollution and Control', credits: 3, type: 'Theory' },
+          { code: 'CEE-706', name: 'Construction Management', credits: 3, type: 'Theory' }
+        ]
+      },
+      {
+        id: 'sem7_group3',
+        label: 'Professional Elective-V',
+        options: [
+          { code: 'CEE-707', name: 'Structural Dynamics', credits: 3, type: 'Theory' },
+          { code: 'CEE-708', name: 'Ground Water Hydrology', credits: 3, type: 'Theory' },
+          { code: 'CEE-709', name: 'Environmental Impact Assessment', credits: 3, type: 'Theory' }
+        ]
+      },
+      {
+        id: 'sem7_open_group',
+        label: 'Open Elective-III',
+        options: [
+          { code: 'CEO-701', name: 'Disaster Management', credits: 3, type: 'Theory' },
+          { code: 'CEO-702', name: 'Environmental Management', credits: 3, type: 'Theory' },
+          { code: 'CEO-703', name: 'Remote Sensing and GIS', credits: 3, type: 'Theory' }
+        ]
+      }
+    ]
+  },
+  'Semester 8': {
+    subjects: [
+      { code: 'CEP-801', name: 'Major Project', credits: 8, type: 'Lab' }
+    ],
+    electives: [
+      {
+        id: 'sem8_open_group1',
+        label: 'Open Elective-IV',
+        options: [
+          { code: 'CEO-801', name: 'Project Management', credits: 3, type: 'Theory' },
+          { code: 'CEO-802', name: 'Solid Waste Management', credits: 3, type: 'Theory' },
+          { code: 'CEO-803', name: 'Smart Cities', credits: 3, type: 'Theory' }
+        ]
+      },
+      {
+        id: 'sem8_open_group2',
+        label: 'Open Elective-V',
+        options: [
+          { code: 'CEO-804', name: 'Renewable Energy Resources', credits: 3, type: 'Theory' },
+          { code: 'CEO-805', name: 'Transport Planning and Management', credits: 3, type: 'Theory' },
+          { code: 'CEO-806', name: 'Industrial Waste Treatment', credits: 3, type: 'Theory' }
+        ]
+      }
+    ]
+  }
+};
+
 /**
  * Returns default list of subjects for a given Semester.
  * By default, this maps CurriculumSubject items to Subject items (with generated unique IDs).
  * For electives, the first option in the group is chosen as the default.
  */
-export function getDefaultCurriculumSubjects(semesterTitle: string): { subjects: any[]; electiveSelections: Record<string, string> } {
-  const semData = JMI_CURRICULUM[semesterTitle];
+export function getDefaultCurriculumSubjects(
+  semesterTitle: string,
+  department: string = 'Electronics & Communication Engineering'
+): { subjects: any[]; electiveSelections: Record<string, string> } {
+  const isCivil = department === 'Civil Engineering';
+  const semData = isCivil ? JMI_CIVIL_CURRICULUM[semesterTitle] : JMI_CURRICULUM[semesterTitle];
   if (!semData) {
     return { subjects: [], electiveSelections: {} };
   }
@@ -181,8 +331,11 @@ export function getDefaultCurriculumSubjects(semesterTitle: string): { subjects:
 
   // Add non-electives
   semData.subjects.forEach((s) => {
+    const id = isCivil 
+      ? `sub_jmi_civil_${semesterTitle.replace(/\s+/g, '_')}_${s.code.replace(/\s+/g, '_')}`
+      : `sub_jmi_${semesterTitle.replace(/\s+/g, '_')}_${s.code.replace(/\s+/g, '_')}`;
     subjectsList.push({
-      id: `sub_jmi_${semesterTitle.replace(/\s+/g, '_')}_${s.code.replace(/\s+/g, '_')}`,
+      id,
       name: `${s.code} ${s.name}`,
       type: s.type,
       credits: s.credits,
@@ -198,8 +351,11 @@ export function getDefaultCurriculumSubjects(semesterTitle: string): { subjects:
       if (group.options.length > 0) {
         const defaultOpt = group.options[0];
         electiveSelections[group.id] = defaultOpt.code;
+        const id = isCivil
+          ? `sub_jmi_civil_${semesterTitle.replace(/\s+/g, '_')}_elective_${group.id}`
+          : `sub_jmi_${semesterTitle.replace(/\s+/g, '_')}_elective_${group.id}`;
         subjectsList.push({
-          id: `sub_jmi_${semesterTitle.replace(/\s+/g, '_')}_elective_${group.id}`,
+          id,
           name: `${defaultOpt.code} ${defaultOpt.name}`,
           type: defaultOpt.type,
           credits: defaultOpt.credits,
