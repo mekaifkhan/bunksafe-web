@@ -534,55 +534,23 @@ export default function SettingsTab({
           </div>
 
           {!(profile.semester === 'Semester 1' || profile.semester === 'Semester 2') && (
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider block">Programme</label>
-                <select
-                  value={profile.programme || ''}
-                  onChange={(e) => {
-                    setProfile({ ...profile, programme: e.target.value, department: '' });
-                  }}
-                  className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-3 py-2.5 text-xs text-zinc-100 focus:outline-none focus:border-primary transition-colors font-bold"
-                >
-                  <option value="">Select Programme</option>
-                  <option value="Regular">Regular</option>
-                  <option value="Self-Financed">Self-Financed</option>
-                </select>
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider block">Branch</label>
-                <select
-                  value={profile.department}
-                  onChange={(e) => {
-                    setProfile({ ...profile, department: e.target.value });
-                    logCustomEvent('branch_selected', { branch: e.target.value });
-                  }}
-                  className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-3 py-2.5 text-xs text-zinc-100 focus:outline-none focus:border-primary transition-colors font-bold text-zinc-100"
-                  disabled={!profile.programme}
-                >
-                  <option value="">Select Branch</option>
-                  {profile.programme === 'Regular' ? (
-                    <>
-                      <option value="Civil Engineering">Civil Engineering</option>
-                      <option value="Electrical Engineering">Electrical Engineering</option>
-                      <option value="Mechanical Engineering">Mechanical Engineering</option>
-                      <option value="Electronics & Communication Engineering">Electronics & Communication Engineering</option>
-                      <option value="Computer Engineering">Computer Engineering</option>
-                      <option value="Computer Science & Engineering (Data Science)">Computer Science & Engineering (Data Science)</option>
-                      <option value="Electrical & Computer Engineering">Electrical & Computer Engineering</option>
-                    </>
-                  ) : profile.programme === 'Self-Financed' ? (
-                    <>
-                      <option value="Civil Engineering (Construction Technology) (Self-Financed)">Civil Engineering (Construction Technology) (Self-Financed)</option>
-                      <option value="Electrical & Computer Engineering (Self-Financed)">Electrical & Computer Engineering (Self-Financed)</option>
-                      <option value="Robotics & Artificial Intelligence (Self-Financed)">Robotics & Artificial Intelligence (Self-Financed)</option>
-                      <option value="Electronics (VLSI Design & Technology) (Self-Financed)">Electronics (VLSI Design & Technology) (Self-Financed)</option>
-                      <option value="Computer Science & Engineering (Data Sciences) (Self-Financed)">Computer Science & Engineering (Data Sciences) (Self-Financed)</option>
-                    </>
-                  ) : null}
-                </select>
-              </div>
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider block">Branch</label>
+              <select
+                value={profile.department}
+                onChange={(e) => {
+                  setProfile({ ...profile, programme: 'Regular', department: e.target.value });
+                  logCustomEvent('branch_selected', { branch: e.target.value });
+                }}
+                className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-3 py-2.5 text-xs text-zinc-100 focus:outline-none focus:border-primary transition-colors font-bold text-zinc-100"
+              >
+                <option value="">Select Branch</option>
+                <option value="Civil Engineering">Civil Engineering</option>
+                <option value="Electrical Engineering">Electrical Engineering</option>
+                <option value="Mechanical Engineering">Mechanical Engineering</option>
+                <option value="Electronics & Communication Engineering">Electronics & Communication Engineering</option>
+                <option value="Computer Engineering">Computer Engineering</option>
+              </select>
             </div>
           )}
 
@@ -825,43 +793,15 @@ export default function SettingsTab({
       {/* 4. DATA SECTION */}
       <div className="space-y-3">
         <h3 className="text-xs font-bold text-zinc-500 uppercase tracking-widest flex items-center gap-1.5 px-1">
-          <RefreshCw size={14} className="text-primary" /> Data & Backups
+          <RefreshCw size={14} className="text-primary" /> Data Options
         </h3>
-        <div className="bg-zinc-900 border border-zinc-800/80 rounded-2xl p-4 space-y-3.5">
-          <div className="grid grid-cols-2 gap-3">
-            <button 
-              onClick={exportBackup}
-              className="py-3 px-4 bg-zinc-950 border border-zinc-800 hover:border-zinc-700 rounded-xl text-xs font-bold uppercase flex items-center justify-center gap-1.5 text-zinc-300 transition-all active:scale-95"
-            >
-              <Download size={14} className="text-primary" /> Export Backup
-            </button>
-
-            <label className="py-3 px-4 bg-zinc-950 border border-zinc-800 hover:border-zinc-700 rounded-xl text-xs font-bold uppercase flex items-center justify-center gap-1.5 text-zinc-300 transition-all active:scale-95 cursor-pointer text-center">
-              <Upload size={14} className="text-primary" /> Import Backup
-              <input 
-                type="file" 
-                accept=".json" 
-                onChange={handleImportBackup} 
-                className="hidden" 
-              />
-            </label>
-          </div>
-
-          <div className="border-t border-zinc-800/80 pt-3.5 space-y-2">
-            <button 
-              onClick={handleResetAttendance}
-              className="w-full py-2.5 bg-amber-600/10 hover:bg-amber-600/20 text-amber-500 border border-amber-500/20 rounded-xl text-xs font-bold uppercase flex items-center justify-center gap-1 transition-all"
-            >
-              Reset Attendance Data
-            </button>
-
-            <button 
-              onClick={handleClearLocalStorage}
-              className="w-full py-2.5 bg-red-600/10 hover:bg-red-600/20 text-red-500 border border-red-500/20 rounded-xl text-xs font-bold uppercase flex items-center justify-center gap-1 transition-all"
-            >
-              Clear Local Storage
-            </button>
-          </div>
+        <div className="bg-zinc-900 border border-zinc-800/80 rounded-2xl p-4">
+          <button 
+            onClick={handleClearLocalStorage}
+            className="w-full py-2.5 bg-red-600/10 hover:bg-red-600/20 text-red-500 border border-red-500/20 rounded-xl text-xs font-bold uppercase flex items-center justify-center gap-1 transition-all"
+          >
+            Clear Local Storage
+          </button>
         </div>
       </div>
 
@@ -928,15 +868,31 @@ export default function SettingsTab({
               <Heart size={32} className="animate-pulse" />
             </div>
             <h3 className="text-lg font-black text-zinc-100">About Developer</h3>
+            
+            <div className="bg-zinc-950/50 border border-zinc-850 p-3 rounded-2xl space-y-1">
+              <p className="text-sm font-black text-zinc-100">Kaif Ahmad Khan</p>
+              <p className="text-[11px] text-zinc-400 font-medium">B.Tech Electronics & Communication Engineering</p>
+              <p className="text-[10px] text-primary font-bold uppercase tracking-wider">3rd Year, JMI</p>
+            </div>
+
             <p className="text-xs text-zinc-400 leading-relaxed">
               BunkSafe is designed and built with passion to help university students manage attendance targets, track lectures, log exams, and strategically plan sessional/grade results with ease.
             </p>
-            <p className="text-[11px] text-zinc-500 font-bold uppercase">
-              Created for JMI and college students worldwide ❤️
-            </p>
+
+            <div className="pt-1">
+              <a 
+                href="https://www.linkedin.com/in/kaif-khan-011a57302?utm_source=share_via&utm_content=profile&utm_medium=member_android" 
+                target="_blank" 
+                rel="noreferrer"
+                className="inline-flex items-center justify-center gap-1.5 w-full py-2.5 px-4 bg-[#0077b5] hover:bg-[#0077b5]/90 text-white rounded-xl text-xs font-bold transition-all"
+              >
+                Connect on LinkedIn
+              </a>
+            </div>
+
             <button 
               onClick={() => setShowAboutDev(false)}
-              className="w-full py-2.5 bg-primary text-white rounded-xl text-xs font-bold uppercase transition-all"
+              className="w-full py-2.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 rounded-xl text-xs font-bold uppercase transition-all"
             >
               Close Dialog
             </button>
@@ -1028,7 +984,7 @@ export default function SettingsTab({
                     >
                       <div className="space-y-1 min-w-0 flex-1">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <span className="font-extrabold text-sm text-zinc-100 truncate">{sub.name}</span>
+                          <span className="font-extrabold text-sm text-zinc-100 break-words leading-snug">{sub.name}</span>
                           <span className={`text-[9px] font-black uppercase px-1.5 py-0.5 rounded ${sub.type === 'Lab' ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20' : 'bg-primary/10 text-primary border border-primary/20'}`}>
                             {sub.type}
                           </span>
