@@ -1654,6 +1654,8 @@ export default function App() {
                                     <option value="Mechanical Engineering">Mechanical Engineering</option>
                                     <option value="Electronics & Communication Engineering">Electronics & Communication Engineering</option>
                                     <option value="Computer Engineering">Computer Engineering</option>
+                                    <option value="Computer Science & Engineering (Data Science)">Computer Science & Engineering (Data Science)</option>
+                                    <option value="Electrical & Computer Engineering">Electrical & Computer Engineering</option>
                                   </>
                                 ) : (
                                   <>
@@ -1850,6 +1852,10 @@ export default function App() {
                     const isJmiECE = finalProg === 'Regular' && onboardDept === 'Electronics & Communication Engineering';
                     const isJmiCivil = finalProg === 'Regular' && onboardDept === 'Civil Engineering';
                     const isJmiVLSI = finalProg === 'Self-Financed' && onboardDept === 'Electronics (VLSI Design & Technology) (Self-Financed)';
+                    const isJmiElec = finalProg === 'Regular' && onboardDept === 'Electrical Engineering';
+                    const isJmiMech = finalProg === 'Regular' && onboardDept === 'Mechanical Engineering';
+                    const isJmiCsds = finalProg === 'Regular' && onboardDept === 'Computer Science & Engineering (Data Science)';
+                    const isJmiEec = finalProg === 'Regular' && onboardDept === 'Electrical & Computer Engineering';
                     if (isJmiECE) {
                       const { subjects: defaultSubs } = getDefaultCurriculumSubjects(onboardSem, onboardDept);
                       if (defaultSubs && defaultSubs.length > 0) {
@@ -1861,6 +1867,26 @@ export default function App() {
                         setSubjects(defaultSubs);
                       }
                     } else if (isJmiVLSI) {
+                      const { subjects: defaultSubs } = getDefaultCurriculumSubjects(onboardSem, onboardDept);
+                      if (defaultSubs && defaultSubs.length > 0) {
+                        setSubjects(defaultSubs);
+                      }
+                    } else if (isJmiElec) {
+                      const { subjects: defaultSubs } = getDefaultCurriculumSubjects(onboardSem, onboardDept);
+                      if (defaultSubs && defaultSubs.length > 0) {
+                        setSubjects(defaultSubs);
+                      }
+                    } else if (isJmiMech) {
+                      const { subjects: defaultSubs } = getDefaultCurriculumSubjects(onboardSem, onboardDept);
+                      if (defaultSubs && defaultSubs.length > 0) {
+                        setSubjects(defaultSubs);
+                      }
+                    } else if (isJmiCsds) {
+                      const { subjects: defaultSubs } = getDefaultCurriculumSubjects(onboardSem, onboardDept);
+                      if (defaultSubs && defaultSubs.length > 0) {
+                        setSubjects(defaultSubs);
+                      }
+                    } else if (isJmiEec) {
                       const { subjects: defaultSubs } = getDefaultCurriculumSubjects(onboardSem, onboardDept);
                       if (defaultSubs && defaultSubs.length > 0) {
                         setSubjects(defaultSubs);

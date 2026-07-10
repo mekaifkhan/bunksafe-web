@@ -31,7 +31,7 @@ import { format } from 'date-fns';
 import { Profile, Semester, AttendanceRecord, SemesterHistory, AppState, Subject, SubjectGradeConfig, formatSubjectName } from '../types';
 import { motion, AnimatePresence } from 'motion/react';
 import { logCustomEvent } from '../firebase';
-import { JMI_CURRICULUM, JMI_CIVIL_CURRICULUM, JMI_VLSI_CURRICULUM, getDefaultCurriculumSubjects } from '../utils/curriculum';
+import { JMI_CURRICULUM, JMI_CIVIL_CURRICULUM, JMI_VLSI_CURRICULUM, JMI_ELECTRICAL_CURRICULUM, JMI_MECHANICAL_CURRICULUM, JMI_CSE_DS_CURRICULUM, JMI_ELECTRICAL_COMPUTER_CURRICULUM, getDefaultCurriculumSubjects } from '../utils/curriculum';
 
 interface SettingsTabProps {
   profile: Profile;
@@ -106,12 +106,24 @@ export default function SettingsTab({
   const isJmiECE = profile.programme === 'Regular' && profile.department === 'Electronics & Communication Engineering';
   const isJmiCivil = profile.programme === 'Regular' && profile.department === 'Civil Engineering';
   const isJmiVLSI = profile.programme === 'Self-Financed' && profile.department === 'Electronics (VLSI Design & Technology) (Self-Financed)';
-  const isJmiCurriculumBranch = isJmiECE || isJmiCivil || isJmiVLSI;
+  const isJmiElec = profile.programme === 'Regular' && profile.department === 'Electrical Engineering';
+  const isJmiMech = profile.programme === 'Regular' && profile.department === 'Mechanical Engineering';
+  const isJmiCsds = profile.programme === 'Regular' && profile.department === 'Computer Science & Engineering (Data Science)';
+  const isJmiEec = profile.programme === 'Regular' && profile.department === 'Electrical & Computer Engineering';
+  const isJmiCurriculumBranch = isJmiECE || isJmiCivil || isJmiVLSI || isJmiElec || isJmiMech || isJmiCsds || isJmiEec;
   const activeCurriculum = isJmiCivil 
     ? JMI_CIVIL_CURRICULUM 
     : isJmiVLSI 
       ? JMI_VLSI_CURRICULUM 
-      : JMI_CURRICULUM;
+      : isJmiElec
+        ? JMI_ELECTRICAL_CURRICULUM
+        : isJmiMech
+          ? JMI_MECHANICAL_CURRICULUM
+          : isJmiCsds
+            ? JMI_CSE_DS_CURRICULUM
+            : isJmiEec
+              ? JMI_ELECTRICAL_COMPUTER_CURRICULUM
+              : JMI_CURRICULUM;
 
   const getSelectedElectiveCode = (groupId: string, options: any[]) => {
     const found = subjects.find(s => 
@@ -547,6 +559,8 @@ export default function SettingsTab({
                       <option value="Mechanical Engineering">Mechanical Engineering</option>
                       <option value="Electronics & Communication Engineering">Electronics & Communication Engineering</option>
                       <option value="Computer Engineering">Computer Engineering</option>
+                      <option value="Computer Science & Engineering (Data Science)">Computer Science & Engineering (Data Science)</option>
+                      <option value="Electrical & Computer Engineering">Electrical & Computer Engineering</option>
                     </>
                   ) : profile.programme === 'Self-Financed' ? (
                     <>
@@ -592,6 +606,10 @@ export default function SettingsTab({
               const isNewJmiECE = profile.programme === 'Regular' && profile.department === 'Electronics & Communication Engineering';
               const isNewJmiCivil = profile.programme === 'Regular' && profile.department === 'Civil Engineering';
               const isNewJmiVLSI = profile.programme === 'Self-Financed' && profile.department === 'Electronics (VLSI Design & Technology) (Self-Financed)';
+              const isNewJmiElec = profile.programme === 'Regular' && profile.department === 'Electrical Engineering';
+              const isNewJmiMech = profile.programme === 'Regular' && profile.department === 'Mechanical Engineering';
+              const isNewJmiCsds = profile.programme === 'Regular' && profile.department === 'Computer Science & Engineering (Data Science)';
+              const isNewJmiEec = profile.programme === 'Regular' && profile.department === 'Electrical & Computer Engineering';
               if (isNewJmiECE && subjects.length === 0) {
                 const { subjects: defaultSubs } = getDefaultCurriculumSubjects(profile.semester, profile.department);
                 if (defaultSubs && defaultSubs.length > 0) {
@@ -613,6 +631,38 @@ export default function SettingsTab({
                 if (defaultSubs && defaultSubs.length > 0) {
                   setSubjects(defaultSubs);
                   alert(`Profile updated. Automatically loaded default JMI Electronics (VLSI Design & Technology) curriculum for ${profile.semester}!`);
+                } else {
+                  alert('Profile and Personal settings updated locally!');
+                }
+              } else if (isNewJmiElec && subjects.length === 0) {
+                const { subjects: defaultSubs } = getDefaultCurriculumSubjects(profile.semester, profile.department);
+                if (defaultSubs && defaultSubs.length > 0) {
+                  setSubjects(defaultSubs);
+                  alert(`Profile updated. Automatically loaded default JMI Electrical Engineering curriculum for ${profile.semester}!`);
+                } else {
+                  alert('Profile and Personal settings updated locally!');
+                }
+              } else if (isNewJmiMech && subjects.length === 0) {
+                const { subjects: defaultSubs } = getDefaultCurriculumSubjects(profile.semester, profile.department);
+                if (defaultSubs && defaultSubs.length > 0) {
+                  setSubjects(defaultSubs);
+                  alert(`Profile updated. Automatically loaded default JMI Mechanical Engineering curriculum for ${profile.semester}!`);
+                } else {
+                  alert('Profile and Personal settings updated locally!');
+                }
+              } else if (isNewJmiCsds && subjects.length === 0) {
+                const { subjects: defaultSubs } = getDefaultCurriculumSubjects(profile.semester, profile.department);
+                if (defaultSubs && defaultSubs.length > 0) {
+                  setSubjects(defaultSubs);
+                  alert(`Profile updated. Automatically loaded default JMI Computer Science & Engineering (Data Science) curriculum for ${profile.semester}!`);
+                } else {
+                  alert('Profile and Personal settings updated locally!');
+                }
+              } else if (isNewJmiEec && subjects.length === 0) {
+                const { subjects: defaultSubs } = getDefaultCurriculumSubjects(profile.semester, profile.department);
+                if (defaultSubs && defaultSubs.length > 0) {
+                  setSubjects(defaultSubs);
+                  alert(`Profile updated. Automatically loaded default JMI Electrical & Computer Engineering curriculum for ${profile.semester}!`);
                 } else {
                   alert('Profile and Personal settings updated locally!');
                 }

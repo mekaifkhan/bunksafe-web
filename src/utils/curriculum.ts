@@ -474,6 +474,630 @@ export const JMI_VLSI_CURRICULUM: Record<string, SemesterCurriculum> = {
   }
 };
 
+export const JMI_CSE_DS_CURRICULUM: Record<string, SemesterCurriculum> = {
+  'Semester 3': {
+    subjects: [
+      { code: 'ASM-301', name: 'Universal Human Values', credits: 3, type: 'Theory' },
+      { code: 'ASB-301', name: 'Engineering Mathematics III', credits: 3, type: 'Theory' },
+      { code: 'DSC-301', name: 'Discrete Mathematics – PCC1', credits: 3, type: 'Theory' },
+      { code: 'DSC-302', name: 'Data Structure – PCC2', credits: 3, type: 'Theory' },
+      { code: 'DSC-303', name: 'Digital Logic Design – PCC3', credits: 3, type: 'Theory' },
+      { code: 'DSC-304', name: 'Database Management System – PCC4', credits: 3, type: 'Theory' },
+      { code: 'DSL-301', name: 'Data Structure Lab – PCL1', credits: 1, type: 'Lab' },
+      { code: 'DSL-302', name: 'Digital Logic Design Lab – PCL2', credits: 1, type: 'Lab' },
+      { code: 'DSL-303', name: 'C Programming Lab – PCL3', credits: 1, type: 'Lab' },
+      { code: 'DSL-304', name: 'Database Management System Lab – PCL4', credits: 1, type: 'Lab' }
+    ]
+  },
+  'Semester 4': {
+    subjects: [
+      { code: 'ASM-401', name: 'Environmental Science', credits: 2, type: 'Theory' },
+      { code: 'DSC-401', name: 'Data Mining – PCC5', credits: 3, type: 'Theory' },
+      { code: 'DSC-402', name: 'Computer Organization & Architecture – PCC6', credits: 3, type: 'Theory' },
+      { code: 'DSC-403', name: 'Operating System – PCC7', credits: 3, type: 'Theory' },
+      { code: 'ASM-402', name: 'Essence of Indian Traditional Knowledge', credits: 0, type: 'Theory' },
+      { code: 'AST-401', name: 'Operations Research (OEC-I)', credits: 3, type: 'Theory' },
+      { code: 'AST-402', name: 'Economics (OEC-II)', credits: 3, type: 'Theory' },
+      { code: 'DSL-401', name: 'Data Mining Lab – PCL5', credits: 1, type: 'Lab' },
+      { code: 'DSL-402', name: 'Python Programming Lab – PCL6', credits: 1, type: 'Lab' },
+      { code: 'DSL-403', name: 'Operating System & Linux Lab – PCL7', credits: 1, type: 'Lab' },
+      { code: 'ASL-401', name: 'Numeric and Scientific Computing Lab', credits: 2, type: 'Lab' }
+    ]
+  },
+  'Semester 5': {
+    subjects: [
+      { code: 'DSC-501', name: 'Automata Theory – PCC8', credits: 3, type: 'Theory' },
+      { code: 'DSC-502', name: 'Data Analytics – PCC9', credits: 3, type: 'Theory' },
+      { code: 'DSC-503', name: 'Computer Networks – PCC10', credits: 3, type: 'Theory' },
+      { code: 'DSC-504', name: 'Software Engineering – PCC11', credits: 3, type: 'Theory' },
+      { code: 'DSC-505', name: 'Object Oriented Programming – PCC12', credits: 3, type: 'Theory' },
+      { code: 'DSL-501', name: 'Object Oriented Programming Lab – PCL8', credits: 1, type: 'Lab' },
+      { code: 'DSL-502', name: 'Machine Learning Lab – PCL9', credits: 1, type: 'Lab' },
+      { code: 'DSL-503', name: 'Computer Network Lab – PCL10', credits: 1, type: 'Lab' },
+      { code: 'DSL-504', name: 'Data Analytics Lab – PCL11', credits: 1, type: 'Lab' }
+    ],
+    electives: [
+      {
+        id: 'sem5_csds_group1',
+        label: 'Professional Elective-I',
+        options: [
+          { code: 'DSE-501', name: 'Introduction to Machine Learning – PEC1', credits: 3, type: 'Theory' }
+        ]
+      }
+    ]
+  },
+  'Semester 6': {
+    subjects: [
+      { code: 'DSC-601', name: 'Analysis and Design of Algorithms – PCC13', credits: 3, type: 'Theory' },
+      { code: 'DSC-602', name: 'Compiler Design – PCC14', credits: 3, type: 'Theory' },
+      { code: 'DSC-603', name: 'Data Visualization – PCC15', credits: 3, type: 'Theory' },
+      { code: 'DSC-604', name: 'Artificial Intelligence – PCC16', credits: 3, type: 'Theory' },
+      { code: 'DSL-601', name: 'Compiler Design Lab – PCL12', credits: 1, type: 'Lab' },
+      { code: 'DSL-602', name: 'Artificial Intelligence Lab – PCL13', credits: 1, type: 'Lab' },
+      { code: 'DSL-603', name: 'Deep Learning Lab – PCL14', credits: 1, type: 'Lab' },
+      { code: 'DSL-604', name: 'Data Visualization Lab – PCL15', credits: 1, type: 'Lab' },
+      { code: 'DSL-605', name: 'Seminar (Literature Review)', credits: 1, type: 'Lab' }
+    ],
+    electives: [
+      {
+        id: 'sem6_csds_group1',
+        label: 'Professional Elective-II',
+        options: [
+          { code: 'DSE-605', name: 'Deep Learning – PEC2', credits: 3, type: 'Theory' }
+        ]
+      }
+    ]
+  },
+  'Semester 7': {
+    subjects: [
+      { code: 'DSP-792', name: 'Summer Internship', credits: 2, type: 'Lab' },
+      { code: 'DSP-793', name: 'Minor Project', credits: 3, type: 'Lab' }
+    ],
+    electives: [
+      {
+        id: 'sem7_csds_group1',
+        label: 'Professional Elective-III',
+        options: [
+          { code: 'DSE-701', name: 'Computer Vision and Image Processing', credits: 3, type: 'Theory' },
+          { code: 'DSE-702', name: 'Mobile Computing', credits: 3, type: 'Theory' },
+          { code: 'DSE-703', name: 'Cloud Computing', credits: 3, type: 'Theory' },
+          { code: 'DSE-704', name: 'Social Network Analysis', credits: 3, type: 'Theory' },
+          { code: 'DSE-705', name: 'NLP and Information Extraction', credits: 3, type: 'Theory' },
+          { code: 'DSE-706', name: 'Artificial Neural Networks', credits: 3, type: 'Theory' },
+          { code: 'DSE-707', name: 'Advanced Deep Learning', credits: 3, type: 'Theory' },
+          { code: 'DSE-708', name: 'Embedded System', credits: 3, type: 'Theory' },
+          { code: 'DSE-709', name: 'Parallel & Distributed Computing', credits: 3, type: 'Theory' }
+        ]
+      },
+      {
+        id: 'sem7_csds_group2',
+        label: 'Professional Elective-IV',
+        options: [
+          { code: 'DSE-701', name: 'Computer Vision and Image Processing', credits: 3, type: 'Theory' },
+          { code: 'DSE-702', name: 'Mobile Computing', credits: 3, type: 'Theory' },
+          { code: 'DSE-703', name: 'Cloud Computing', credits: 3, type: 'Theory' },
+          { code: 'DSE-704', name: 'Social Network Analysis', credits: 3, type: 'Theory' },
+          { code: 'DSE-705', name: 'NLP and Information Extraction', credits: 3, type: 'Theory' },
+          { code: 'DSE-706', name: 'Artificial Neural Networks', credits: 3, type: 'Theory' },
+          { code: 'DSE-707', name: 'Advanced Deep Learning', credits: 3, type: 'Theory' },
+          { code: 'DSE-708', name: 'Embedded System', credits: 3, type: 'Theory' },
+          { code: 'DSE-709', name: 'Parallel & Distributed Computing', credits: 3, type: 'Theory' }
+        ]
+      },
+      {
+        id: 'sem7_csds_group3',
+        label: 'Professional Elective-V',
+        options: [
+          { code: 'DSE-701', name: 'Computer Vision and Image Processing', credits: 3, type: 'Theory' },
+          { code: 'DSE-702', name: 'Mobile Computing', credits: 3, type: 'Theory' },
+          { code: 'DSE-703', name: 'Cloud Computing', credits: 3, type: 'Theory' },
+          { code: 'DSE-704', name: 'Social Network Analysis', credits: 3, type: 'Theory' },
+          { code: 'DSE-705', name: 'NLP and Information Extraction', credits: 3, type: 'Theory' },
+          { code: 'DSE-706', name: 'Artificial Neural Networks', credits: 3, type: 'Theory' },
+          { code: 'DSE-707', name: 'Advanced Deep Learning', credits: 3, type: 'Theory' },
+          { code: 'DSE-708', name: 'Embedded System', credits: 3, type: 'Theory' },
+          { code: 'DSE-709', name: 'Parallel & Distributed Computing', credits: 3, type: 'Theory' }
+        ]
+      },
+      {
+        id: 'sem7_csds_group4',
+        label: 'Professional Elective-VI',
+        options: [
+          { code: 'DSE-701', name: 'Computer Vision and Image Processing', credits: 3, type: 'Theory' },
+          { code: 'DSE-702', name: 'Mobile Computing', credits: 3, type: 'Theory' },
+          { code: 'DSE-703', name: 'Cloud Computing', credits: 3, type: 'Theory' },
+          { code: 'DSE-704', name: 'Social Network Analysis', credits: 3, type: 'Theory' },
+          { code: 'DSE-705', name: 'NLP and Information Extraction', credits: 3, type: 'Theory' },
+          { code: 'DSE-706', name: 'Artificial Neural Networks', credits: 3, type: 'Theory' },
+          { code: 'DSE-707', name: 'Advanced Deep Learning', credits: 3, type: 'Theory' },
+          { code: 'DSE-708', name: 'Embedded System', credits: 3, type: 'Theory' },
+          { code: 'DSE-709', name: 'Parallel & Distributed Computing', credits: 3, type: 'Theory' }
+        ]
+      },
+      {
+        id: 'sem7_csds_open_group',
+        label: 'Open Elective-III',
+        options: [
+          { code: 'DSO-701', name: 'Any approved Open Elective', credits: 3, type: 'Theory' }
+        ]
+      }
+    ]
+  },
+  'Semester 8': {
+    subjects: [
+      { code: 'DSP-891', name: 'Major Project', credits: 6, type: 'Lab' }
+    ],
+    electives: [
+      {
+        id: 'sem8_csds_open_group1',
+        label: 'Open Elective-IV',
+        options: [
+          { code: 'DSO-801', name: 'Network Security', credits: 3, type: 'Theory' },
+          { code: 'DSO-802', name: 'Blockchain Technology & its Application', credits: 3, type: 'Theory' },
+          { code: 'DSO-803', name: 'Software Testing', credits: 3, type: 'Theory' },
+          { code: 'DSO-804', name: 'Mobile Computing & IoT', credits: 3, type: 'Theory' },
+          { code: 'DSO-805', name: 'Advanced Graph Theory', credits: 3, type: 'Theory' }
+        ]
+      },
+      {
+        id: 'sem8_csds_open_group2',
+        label: 'Open Elective-V',
+        options: [
+          { code: 'DSO-801', name: 'Network Security', credits: 3, type: 'Theory' },
+          { code: 'DSO-802', name: 'Blockchain Technology & its Application', credits: 3, type: 'Theory' },
+          { code: 'DSO-803', name: 'Software Testing', credits: 3, type: 'Theory' },
+          { code: 'DSO-804', name: 'Mobile Computing & IoT', credits: 3, type: 'Theory' },
+          { code: 'DSO-805', name: 'Advanced Graph Theory', credits: 3, type: 'Theory' }
+        ]
+      }
+    ]
+  }
+};
+
+export const JMI_ELECTRICAL_COMPUTER_CURRICULUM: Record<string, SemesterCurriculum> = {
+  'Semester 3': {
+    subjects: [
+      { code: 'ASM-301', name: 'Mandatory Course: Universal Human Values', credits: 3, type: 'Theory' },
+      { code: 'ASM-302', name: 'Mandatory Course: Essence of Indian Traditional Knowledge', credits: 0, type: 'Theory' },
+      { code: 'ASB-301', name: 'Engineering Mathematics-III (Probability & Statistics)', credits: 3, type: 'Theory' },
+      { code: 'EEC-302', name: 'Network Analysis', credits: 3, type: 'Theory' },
+      { code: 'EEC-303', name: 'Signals and System', credits: 3, type: 'Theory' },
+      { code: 'EEC-305', name: 'Data Structures and Algorithms', credits: 3, type: 'Theory' },
+      { code: 'EEC-306', name: 'Electric Machines & Power System', credits: 3, type: 'Theory' },
+      { code: 'EEL-302', name: 'Network Analysis Lab', credits: 1, type: 'Lab' },
+      { code: 'EEL-303', name: 'Signals and System Lab', credits: 1, type: 'Lab' },
+      { code: 'EEL-305', name: 'Data Structures and Algorithms Lab', credits: 1, type: 'Lab' },
+      { code: 'EEL-306', name: 'Electric Machines & Power System Lab', credits: 1, type: 'Lab' }
+    ]
+  },
+  'Semester 4': {
+    subjects: [
+      { code: 'ASM-401', name: 'Mandatory Course: Environmental Science', credits: 2, type: 'Theory' },
+      { code: 'AST-401', name: 'OE-I Operations Research', credits: 3, type: 'Theory' },
+      { code: 'AST-402', name: 'OE-II Engineering Economics', credits: 3, type: 'Theory' },
+      { code: 'EEC-403', name: 'Power Electronics', credits: 3, type: 'Theory' },
+      { code: 'EEC-404', name: 'Analog and Digital Electronics', credits: 3, type: 'Theory' },
+      { code: 'EEC-405', name: 'Object Oriented Programming', credits: 3, type: 'Theory' },
+      { code: 'EEL-403', name: 'Power Electronics Lab', credits: 1, type: 'Lab' },
+      { code: 'EEL-404', name: 'Analog and Digital Electronics Lab', credits: 1, type: 'Lab' },
+      { code: 'EEL-405', name: 'Object Oriented Programming Lab', credits: 1, type: 'Lab' },
+      { code: 'ASL-401', name: 'Numeric & Scientific Computing Lab', credits: 2, type: 'Lab' }
+    ]
+  },
+  'Semester 5': {
+    subjects: [
+      { code: 'EEC-501', name: 'Control Systems', credits: 3, type: 'Theory' },
+      { code: 'EEC-506', name: 'Measurement and Instrumentation', credits: 3, type: 'Theory' },
+      { code: 'EEC-507', name: 'Data Communications & Computer Networks', credits: 3, type: 'Theory' },
+      { code: 'EEC-508', name: 'Computer Architecture', credits: 3, type: 'Theory' },
+      { code: 'EEC-509', name: 'Artificial Intelligence & Machine Learning', credits: 3, type: 'Theory' },
+      { code: 'EEL-501', name: 'Control Systems Lab', credits: 1, type: 'Lab' },
+      { code: 'EEL-506', name: 'Measurement & Instrumentation Lab', credits: 1, type: 'Lab' },
+      { code: 'EEL-507', name: 'Data Communications & Computer Network Lab', credits: 1, type: 'Lab' },
+      { code: 'EEL-509', name: 'Artificial Intelligence & Machine Learning Lab', credits: 1, type: 'Lab' }
+    ],
+    electives: [
+      {
+        id: 'sem5_eec_group1',
+        label: 'Professional Elective-I',
+        options: [
+          { code: 'EEC-502', name: 'Switchgear & Protection', credits: 3, type: 'Theory' },
+          { code: 'EEE-510', name: 'Digital Signal Processing', credits: 3, type: 'Theory' },
+          { code: 'EEE-511', name: 'Introduction to Robotics', credits: 3, type: 'Theory' },
+          { code: 'EEE-512', name: 'Database Management Systems', credits: 3, type: 'Theory' }
+        ]
+      }
+    ]
+  },
+  'Semester 6': {
+    subjects: [
+      { code: 'EEC-603', name: 'Power Systems Analysis', credits: 3, type: 'Theory' },
+      { code: 'EEC-604', name: 'SCADA & Smart Grid Technologies', credits: 3, type: 'Theory' },
+      { code: 'EEC-605', name: 'Microprocessors & Microcontrollers', credits: 3, type: 'Theory' },
+      { code: 'EEC-606', name: 'Operating Systems', credits: 3, type: 'Theory' },
+      { code: 'EEL-603', name: 'Power Systems Analysis (MATLAB-based) Lab', credits: 1, type: 'Lab' },
+      { code: 'EEL-604', name: 'SCADA & Smart Grid Technologies Lab', credits: 1, type: 'Lab' },
+      { code: 'EEL-605', name: 'Microprocessors & Microcontrollers Lab', credits: 1, type: 'Lab' },
+      { code: 'EEL-606', name: 'Operating Systems Lab', credits: 1, type: 'Lab' },
+      { code: 'EEP-601', name: 'Seminar (Literature Review)', credits: 1, type: 'Lab' }
+    ],
+    electives: [
+      {
+        id: 'sem6_eec_group1',
+        label: 'Professional Elective-II',
+        options: [
+          { code: 'EEE-602', name: 'HVDC Transmission', credits: 3, type: 'Theory' },
+          { code: 'EEE-603', name: 'Electrical Power Generation', credits: 3, type: 'Theory' },
+          { code: 'EEE-604', name: 'Intro to Cyber Security', credits: 3, type: 'Theory' },
+          { code: 'EEE-605', name: 'Theory of Computation', credits: 3, type: 'Theory' },
+          { code: 'EEE-606', name: 'Data Mining', credits: 3, type: 'Theory' }
+        ]
+      }
+    ]
+  },
+  'Semester 7': {
+    subjects: [
+      { code: 'EEP-701', name: 'Summer Internship', credits: 2, type: 'Lab' },
+      { code: 'EEP-702', name: 'Minor Project', credits: 3, type: 'Lab' }
+    ],
+    electives: [
+      {
+        id: 'sem7_eec_group1',
+        label: 'Professional Elective-III',
+        options: [
+          { code: 'EEE-702', name: 'Embedded Systems', credits: 3, type: 'Theory' },
+          { code: 'EEE-703', name: 'Power System Operation & Control', credits: 3, type: 'Theory' },
+          { code: 'EEE-711', name: 'Compiler Design', credits: 3, type: 'Theory' }
+        ]
+      },
+      {
+        id: 'sem7_eec_group2',
+        label: 'Professional Elective-IV',
+        options: [
+          { code: 'EEE-702', name: 'Robotics & Automation', credits: 3, type: 'Theory' },
+          { code: 'EEE-705', name: 'Advanced Protective Relays', credits: 3, type: 'Theory' },
+          { code: 'EEE-712', name: 'Big Data Analytics', credits: 3, type: 'Theory' }
+        ]
+      },
+      {
+        id: 'sem7_eec_group3',
+        label: 'Professional Elective-V',
+        options: [
+          { code: 'EEE-709', name: 'VLSI Design', credits: 3, type: 'Theory' },
+          { code: 'EEE-713', name: 'Cloud Computing', credits: 3, type: 'Theory' },
+          { code: 'EEE-714', name: 'Electric Drives', credits: 3, type: 'Theory' }
+        ]
+      },
+      {
+        id: 'sem7_eec_group4',
+        label: 'Professional Elective-VI',
+        options: [
+          { code: 'EEE-710', name: 'Advanced Power Electronics', credits: 3, type: 'Theory' },
+          { code: 'EEE-715', name: 'Deep Learning', credits: 3, type: 'Theory' },
+          { code: 'EEE-716', name: 'GPU Computing', credits: 3, type: 'Theory' }
+        ]
+      },
+      {
+        id: 'sem7_eec_open_group',
+        label: 'Open Elective-III',
+        options: [
+          { code: 'EEO-703', name: 'Software Engineering', credits: 3, type: 'Theory' },
+          { code: 'EEO-704', name: 'Power System Automation', credits: 3, type: 'Theory' },
+          { code: 'EEO-705', name: 'Cyber Physical Systems', credits: 3, type: 'Theory' }
+        ]
+      }
+    ]
+  },
+  'Semester 8': {
+    subjects: [
+      { code: 'EEP-801', name: 'Major Project', credits: 6, type: 'Lab' }
+    ],
+    electives: [
+      {
+        id: 'sem8_eec_open_group1',
+        label: 'Open Elective-IV',
+        options: [
+          { code: 'EEO-803', name: 'Grid Protection & Control', credits: 3, type: 'Theory' },
+          { code: 'EEO-806', name: 'Computing & Sustainability', credits: 3, type: 'Theory' },
+          { code: 'EEO-807', name: 'Advanced Cybersecurity', credits: 3, type: 'Theory' },
+          { code: 'EEO-808', name: 'NLP', credits: 3, type: 'Theory' }
+        ]
+      },
+      {
+        id: 'sem8_eec_open_group2',
+        label: 'Open Elective-V',
+        options: [
+          { code: 'EEO-805', name: 'Electricity Markets', credits: 3, type: 'Theory' },
+          { code: 'EEO-809', name: 'Evolutionary Optimization Techniques', credits: 3, type: 'Theory' },
+          { code: 'EEO-810', name: 'Blockchain Technology', credits: 3, type: 'Theory' },
+          { code: 'EEO-811', name: 'Image Processing & Computer Vision', credits: 3, type: 'Theory' }
+        ]
+      }
+    ]
+  }
+};
+
+export const JMI_MECHANICAL_CURRICULUM: Record<string, SemesterCurriculum> = {
+  'Semester 3': {
+    subjects: [
+      { code: 'ASM-301', name: 'Universal Human Values', credits: 3, type: 'Theory' },
+      { code: 'ASB-301', name: 'Engineering Mathematics III', credits: 3, type: 'Theory' },
+      { code: 'MEC-301', name: 'Mechanics of Solids', credits: 3, type: 'Theory' },
+      { code: 'MEC-302', name: 'Fluid Mechanics', credits: 3, type: 'Theory' },
+      { code: 'MEC-303', name: 'Manufacturing Processes', credits: 3, type: 'Theory' },
+      { code: 'MEC-304', name: 'Material Science', credits: 3, type: 'Theory' },
+      { code: 'ASM-302', name: 'Essence of Indian Traditional Knowledge', credits: 0, type: 'Theory' },
+      { code: 'MEL-301', name: 'Mechanics of Solids Laboratory', credits: 1, type: 'Lab' },
+      { code: 'MEL-302', name: 'Fluid Mechanics Laboratory', credits: 1, type: 'Lab' },
+      { code: 'MEL-303', name: 'Manufacturing Processes Laboratory', credits: 1, type: 'Lab' },
+      { code: 'MEL-304', name: 'Material Science Laboratory', credits: 1, type: 'Lab' }
+    ]
+  },
+  'Semester 4': {
+    subjects: [
+      { code: 'MEC-401', name: 'CAD and FEM', credits: 3, type: 'Theory' },
+      { code: 'MEC-402', name: 'Production Engineering-I', credits: 3, type: 'Theory' },
+      { code: 'MEC-403', name: 'Heat and Mass Transfer', credits: 3, type: 'Theory' },
+      { code: 'AST-401', name: 'Operations Research (OEC-I)', credits: 3, type: 'Theory' },
+      { code: 'AST-402', name: 'Economics (OEC-II)', credits: 3, type: 'Theory' },
+      { code: 'MEL-401', name: 'CAD, FEM and Computer Aided Machine Drawing Laboratory', credits: 1, type: 'Lab' },
+      { code: 'MEL-402', name: 'Production Engineering Laboratory', credits: 1, type: 'Lab' },
+      { code: 'MEL-403', name: 'Heat and Mass Transfer Laboratory', credits: 1, type: 'Lab' },
+      { code: 'ASL-401', name: 'Numeric and Scientific Computing Lab', credits: 2, type: 'Lab' }
+    ]
+  },
+  'Semester 5': {
+    subjects: [
+      { code: 'MEC-501', name: 'Advanced Fluid Mechanics and Control Engineering', credits: 3, type: 'Theory' },
+      { code: 'MEC-502', name: 'Applied Thermodynamics', credits: 3, type: 'Theory' },
+      { code: 'MEC-503', name: 'Theory of Mechanisms and Machines', credits: 3, type: 'Theory' },
+      { code: 'MEC-504', name: 'Design of Mechanical Components', credits: 3, type: 'Theory' },
+      { code: 'MEC-505', name: 'Production Engineering-II', credits: 3, type: 'Theory' },
+      { code: 'MEL-501', name: 'Instrumentation, Measurement and Control Laboratory', credits: 1, type: 'Lab' },
+      { code: 'MEL-502', name: 'Theory of Mechanisms and Machines Laboratory', credits: 1, type: 'Lab' },
+      { code: 'MEL-503', name: 'Design of Mechanical Components Practice Laboratory', credits: 1, type: 'Lab' },
+      { code: 'MEL-504', name: 'Mechatronics Laboratory', credits: 1, type: 'Lab' }
+    ],
+    electives: [
+      {
+        id: 'sem5_mech_group1',
+        label: 'Professional Elective-I',
+        options: [
+          { code: 'MEE-501', name: 'Mechatronics', credits: 3, type: 'Theory' }
+        ]
+      }
+    ]
+  },
+  'Semester 6': {
+    subjects: [
+      { code: 'MEC-601', name: 'Fluid Machines', credits: 3, type: 'Theory' },
+      { code: 'MEC-602', name: 'Refrigeration and Air Conditioning', credits: 3, type: 'Theory' },
+      { code: 'MEC-603', name: 'Design of Mechanical System', credits: 3, type: 'Theory' },
+      { code: 'MEC-604', name: 'Computer Aided Manufacturing', credits: 3, type: 'Theory' },
+      { code: 'MEL-601', name: 'Fluid Machines Laboratory', credits: 1, type: 'Lab' },
+      { code: 'MEL-602', name: 'Refrigeration and Air Conditioning Lab', credits: 1, type: 'Lab' },
+      { code: 'MEL-603', name: 'Design of Mechanical Systems Practice Laboratory', credits: 1, type: 'Lab' },
+      { code: 'MEL-604', name: 'Computer Aided Manufacturing Laboratory', credits: 1, type: 'Lab' },
+      { code: 'MEP-601', name: 'Seminar (Literature Review)', credits: 1, type: 'Lab' }
+    ],
+    electives: [
+      {
+        id: 'sem6_mech_group1',
+        label: 'Professional Elective-II',
+        options: [
+          { code: 'MEE-601', name: 'Electro-Mechanical Energy Conversion', credits: 3, type: 'Theory' }
+        ]
+      }
+    ]
+  },
+  'Semester 7': {
+    subjects: [
+      { code: 'MEL-701', name: 'Industrial Engineering Laboratory', credits: 1, type: 'Lab' },
+      { code: 'MEL-702', name: 'Heat Engines & Solar Energy Laboratory', credits: 1, type: 'Lab' },
+      { code: 'MEL-703', name: 'Machinery Dynamics & Vibration Laboratory', credits: 1, type: 'Lab' },
+      { code: 'MEP-701', name: 'Summer Internship', credits: 2, type: 'Lab' },
+      { code: 'MEP-702', name: 'Project', credits: 3, type: 'Lab' }
+    ],
+    electives: [
+      {
+        id: 'sem7_mech_group1',
+        label: 'Professional Elective-I',
+        options: [
+          { code: 'MEE-701', name: 'Industrial Engineering', credits: 3, type: 'Theory' },
+          { code: 'MEE-702', name: 'I.C. Engines', credits: 3, type: 'Theory' },
+          { code: 'MEE-703', name: 'Machinery Dynamics and Vibration', credits: 3, type: 'Theory' }
+        ]
+      },
+      {
+        id: 'sem7_mech_open_group',
+        label: 'Open Elective-III',
+        options: [
+          { code: 'MEO-701', name: 'Thermal & Fluid', credits: 3, type: 'Theory' }
+        ]
+      }
+    ]
+  },
+  'Semester 8': {
+    subjects: [
+      { code: 'MEP-801', name: 'Major Project', credits: 6, type: 'Lab' }
+    ],
+    electives: [
+      {
+        id: 'sem8_mech_open_group1',
+        label: 'Open Elective-IV',
+        options: [
+          { code: 'MEO-801', name: 'Machine Design', credits: 3, type: 'Theory' }
+        ]
+      },
+      {
+        id: 'sem8_mech_open_group2',
+        label: 'Open Elective-V',
+        options: [
+          { code: 'MEO-802', name: 'Production & Industrial', credits: 3, type: 'Theory' }
+        ]
+      }
+    ]
+  }
+};
+
+export const JMI_ELECTRICAL_CURRICULUM: Record<string, SemesterCurriculum> = {
+  'Semester 3': {
+    subjects: [
+      { code: 'EEC-301', name: 'Electronics Devices and Circuits', credits: 3, type: 'Theory' },
+      { code: 'EEC-302', name: 'Network Analysis', credits: 3, type: 'Theory' },
+      { code: 'EEC-303', name: 'Signals and Systems', credits: 3, type: 'Theory' },
+      { code: 'EEC-304', name: 'Transformer and Induction Machine', credits: 3, type: 'Theory' },
+      { code: 'ASB-301', name: 'Engineering Mathematics III', credits: 3, type: 'Theory' },
+      { code: 'ASM-301', name: 'Universal Human Values', credits: 3, type: 'Theory' },
+      { code: 'ASM-302', name: 'Essence of Indian Traditional Knowledge', credits: 0, type: 'Theory' },
+      { code: 'EEL-301', name: 'Electronics Devices and Circuits Lab', credits: 1, type: 'Lab' },
+      { code: 'EEL-302', name: 'Network Analysis Lab', credits: 1, type: 'Lab' },
+      { code: 'EEL-303', name: 'Signals and Systems Lab', credits: 1, type: 'Lab' },
+      { code: 'EEL-304', name: 'Transformer and Induction Machine Lab', credits: 1, type: 'Lab' }
+    ]
+  },
+  'Semester 4': {
+    subjects: [
+      { code: 'EEC-401', name: 'DC and Synchronous Machines', credits: 3, type: 'Theory' },
+      { code: 'EEC-402', name: 'Digital Electronics', credits: 3, type: 'Theory' },
+      { code: 'EEC-403', name: 'Power Electronics', credits: 3, type: 'Theory' },
+      { code: 'ASM-401', name: 'Environmental Science', credits: 2, type: 'Theory' },
+      { code: 'AST-401', name: 'Operations Research (OEC-I)', credits: 3, type: 'Theory' },
+      { code: 'AST-402', name: 'Engineering Economics (OEC-II)', credits: 3, type: 'Theory' },
+      { code: 'EEL-401', name: 'DC and Synchronous Machines Lab', credits: 1, type: 'Lab' },
+      { code: 'EEL-402', name: 'Digital Electronics Lab', credits: 1, type: 'Lab' },
+      { code: 'EEL-403', name: 'Power Electronics Lab', credits: 1, type: 'Lab' },
+      { code: 'ASL-401', name: 'Numeric and Scientific Computing Lab', credits: 2, type: 'Lab' }
+    ]
+  },
+  'Semester 5': {
+    subjects: [
+      { code: 'EEC-501', name: 'Control Systems', credits: 3, type: 'Theory' },
+      { code: 'EEC-502', name: 'Switchgear and Protection', credits: 3, type: 'Theory' },
+      { code: 'EEC-503', name: 'Electrical Measurement', credits: 3, type: 'Theory' },
+      { code: 'EEC-504', name: 'Programming Languages', credits: 3, type: 'Theory' },
+      { code: 'EEC-505', name: 'Fundamentals of Power Systems', credits: 3, type: 'Theory' },
+      { code: 'EEL-501', name: 'Control Systems Lab', credits: 1, type: 'Lab' },
+      { code: 'EEL-502', name: 'Switchgear and Protection Lab', credits: 1, type: 'Lab' },
+      { code: 'EEL-504', name: 'Programming Languages Lab', credits: 1, type: 'Lab' },
+      { code: 'EEL-505', name: 'Power Systems Communication Lab', credits: 1, type: 'Lab' }
+    ],
+    electives: [
+      {
+        id: 'sem5_elec_group1',
+        label: 'Professional Elective-I',
+        options: [
+          { code: 'EEE-501', name: 'Communication Systems', credits: 3, type: 'Theory' },
+          { code: 'EEE-502', name: 'Programmable Logic Controller', credits: 3, type: 'Theory' },
+          { code: 'EEE-503', name: 'Electromagnetic Field Theory', credits: 3, type: 'Theory' },
+          { code: 'EEE-504', name: 'Utilization of Electrical Energy', credits: 3, type: 'Theory' },
+          { code: 'EEE-505', name: 'Data Structures and Algorithms', credits: 3, type: 'Theory' },
+          { code: 'EEE-508', name: 'Computer Architecture', credits: 3, type: 'Theory' },
+          { code: 'EEE-510', name: 'Digital Signal Processing', credits: 3, type: 'Theory' },
+          { code: 'EEE-511', name: 'Introduction to Robotics', credits: 3, type: 'Theory' }
+        ]
+      }
+    ]
+  },
+  'Semester 6': {
+    subjects: [
+      { code: 'EEC-601', name: 'Advanced Control System', credits: 3, type: 'Theory' },
+      { code: 'EEC-602', name: 'Electrical and Electronics Instrumentation', credits: 3, type: 'Theory' },
+      { code: 'EEC-603', name: 'Power Systems Analysis', credits: 3, type: 'Theory' },
+      { code: 'EEC-604', name: 'SCADA and Smart Grid Technologies', credits: 3, type: 'Theory' },
+      { code: 'EEL-602', name: 'Electrical Measurement and Instrumentation Lab', credits: 1, type: 'Lab' },
+      { code: 'EEL-603', name: 'Power Systems Analysis (MATLAB Based) Lab', credits: 1, type: 'Lab' },
+      { code: 'EEL-604', name: 'SCADA and Smart Grid Technologies Lab', credits: 1, type: 'Lab' },
+      { code: 'EEL-605', name: 'Microprocessor and Microcontroller Lab', credits: 1, type: 'Lab' },
+      { code: 'EEP-601', name: 'Seminar (Literature Review)', credits: 1, type: 'Lab' }
+    ],
+    electives: [
+      {
+        id: 'sem6_elec_group1',
+        label: 'Professional Elective-II',
+        options: [
+          { code: 'EEE-601', name: 'Microprocessor and Microcontroller', credits: 3, type: 'Theory' },
+          { code: 'EEE-602', name: 'HVDC Transmission', credits: 3, type: 'Theory' },
+          { code: 'EEE-603', name: 'Electrical Power Generation', credits: 3, type: 'Theory' },
+          { code: 'EEE-604', name: 'Robotics and Artificial Intelligence', credits: 3, type: 'Theory' }
+        ]
+      }
+    ]
+  },
+  'Semester 7': {
+    subjects: [
+      { code: 'EEP-701', name: 'Summer Internship', credits: 2, type: 'Lab' },
+      { code: 'EEP-702', name: 'Minor Project', credits: 3, type: 'Lab' }
+    ],
+    electives: [
+      {
+        id: 'sem7_elec_group1',
+        label: 'Professional Elective-III',
+        options: [
+          { code: 'EEE-701', name: 'Power System Operation and Control', credits: 3, type: 'Theory' },
+          { code: 'EEE-702', name: 'Embedded Systems', credits: 3, type: 'Theory' }
+        ]
+      },
+      {
+        id: 'sem7_elec_group2',
+        label: 'Professional Elective-IV',
+        options: [
+          { code: 'EEE-703', name: 'Data Communications and Computer Networks', credits: 3, type: 'Theory' },
+          { code: 'EEE-704', name: 'Advanced Protective Relays', credits: 3, type: 'Theory' }
+        ]
+      },
+      {
+        id: 'sem7_elec_group3',
+        label: 'Professional Elective-V',
+        options: [
+          { code: 'EEE-705', name: 'Electric Drives', credits: 3, type: 'Theory' },
+          { code: 'EEE-706', name: 'VLSI Design', credits: 3, type: 'Theory' }
+        ]
+      },
+      {
+        id: 'sem7_elec_group4',
+        label: 'Professional Elective-VI',
+        options: [
+          { code: 'EEE-707', name: 'Bio-Medical Instrumentation', credits: 3, type: 'Theory' },
+          { code: 'EEE-708', name: 'Electrical Machine Design', credits: 3, type: 'Theory' }
+        ]
+      },
+      {
+        id: 'sem7_elec_open_group',
+        label: 'Open Elective-III',
+        options: [
+          { code: 'EEO-701', name: 'Advanced Power Electronics', credits: 3, type: 'Theory' },
+          { code: 'EEO-705', name: 'Cyber Physical Systems', credits: 3, type: 'Theory' }
+        ]
+      }
+    ]
+  },
+  'Semester 8': {
+    subjects: [
+      { code: 'EEP-801', name: 'Major Project', credits: 6, type: 'Lab' }
+    ],
+    electives: [
+      {
+        id: 'sem8_elec_open_group1',
+        label: 'Open Elective-IV',
+        options: [
+          { code: 'EEO-801', name: 'High Voltage Engineering', credits: 3, type: 'Theory' },
+          { code: 'EEO-802', name: 'Grid Protection and Control', credits: 3, type: 'Theory' },
+          { code: 'EEO-803', name: 'Mechatronics', credits: 3, type: 'Theory' }
+        ]
+      },
+      {
+        id: 'sem8_elec_open_group2',
+        label: 'Open Elective-V',
+        options: [
+          { code: 'EEO-804', name: 'Soft Computing', credits: 3, type: 'Theory' },
+          { code: 'EEO-805', name: 'Electricity Markets and Regulations', credits: 3, type: 'Theory' }
+        ]
+      }
+    ]
+  }
+};
+
 /**
  * Returns default list of subjects for a given Semester.
  * By default, this maps CurriculumSubject items to Subject items (with generated unique IDs).
@@ -482,14 +1106,26 @@ export const JMI_VLSI_CURRICULUM: Record<string, SemesterCurriculum> = {
 export function getDefaultCurriculumSubjects(
   semesterTitle: string,
   department: string = 'Electronics & Communication Engineering'
-): { subjects: any[]; electiveSelections: Record<string, string> } {
+ ): { subjects: any[]; electiveSelections: Record<string, string> } {
   const isCivil = department === 'Civil Engineering';
   const isVlsi = department === 'Electronics (VLSI Design & Technology) (Self-Financed)';
+  const isElec = department === 'Electrical Engineering';
+  const isMech = department === 'Mechanical Engineering';
+  const isCsds = department === 'Computer Science & Engineering (Data Science)';
+  const isEec = department === 'Electrical & Computer Engineering';
   const semData = isCivil 
     ? JMI_CIVIL_CURRICULUM[semesterTitle] 
     : isVlsi 
       ? JMI_VLSI_CURRICULUM[semesterTitle] 
-      : JMI_CURRICULUM[semesterTitle];
+      : isElec
+        ? JMI_ELECTRICAL_CURRICULUM[semesterTitle]
+        : isMech
+          ? JMI_MECHANICAL_CURRICULUM[semesterTitle]
+          : isCsds
+            ? JMI_CSE_DS_CURRICULUM[semesterTitle]
+            : isEec
+              ? JMI_ELECTRICAL_COMPUTER_CURRICULUM[semesterTitle]
+              : JMI_CURRICULUM[semesterTitle];
   if (!semData) {
     return { subjects: [], electiveSelections: {} };
   }
@@ -503,7 +1139,15 @@ export function getDefaultCurriculumSubjects(
       ? `sub_jmi_civil_${semesterTitle.replace(/\s+/g, '_')}_${s.code.replace(/\s+/g, '_')}`
       : isVlsi
         ? `sub_jmi_vlsi_${semesterTitle.replace(/\s+/g, '_')}_${s.code.replace(/\s+/g, '_')}`
-        : `sub_jmi_${semesterTitle.replace(/\s+/g, '_')}_${s.code.replace(/\s+/g, '_')}`;
+        : isElec
+          ? `sub_jmi_elec_${semesterTitle.replace(/\s+/g, '_')}_${s.code.replace(/\s+/g, '_')}`
+          : isMech
+            ? `sub_jmi_mech_${semesterTitle.replace(/\s+/g, '_')}_${s.code.replace(/\s+/g, '_')}`
+            : isCsds
+              ? `sub_jmi_csds_${semesterTitle.replace(/\s+/g, '_')}_${s.code.replace(/\s+/g, '_')}`
+              : isEec
+                ? `sub_jmi_eec_${semesterTitle.replace(/\s+/g, '_')}_${s.code.replace(/\s+/g, '_')}`
+                : `sub_jmi_${semesterTitle.replace(/\s+/g, '_')}_${s.code.replace(/\s+/g, '_')}`;
     subjectsList.push({
       id,
       name: `${s.code} ${s.name}`,
@@ -525,7 +1169,15 @@ export function getDefaultCurriculumSubjects(
           ? `sub_jmi_civil_${semesterTitle.replace(/\s+/g, '_')}_elective_${group.id}`
           : isVlsi
             ? `sub_jmi_vlsi_${semesterTitle.replace(/\s+/g, '_')}_elective_${group.id}`
-            : `sub_jmi_${semesterTitle.replace(/\s+/g, '_')}_elective_${group.id}`;
+            : isElec
+              ? `sub_jmi_elec_${semesterTitle.replace(/\s+/g, '_')}_elective_${group.id}`
+              : isMech
+                ? `sub_jmi_mech_${semesterTitle.replace(/\s+/g, '_')}_elective_${group.id}`
+                : isCsds
+                  ? `sub_jmi_csds_${semesterTitle.replace(/\s+/g, '_')}_elective_${group.id}`
+                  : isEec
+                    ? `sub_jmi_eec_${semesterTitle.replace(/\s+/g, '_')}_elective_${group.id}`
+                    : `sub_jmi_${semesterTitle.replace(/\s+/g, '_')}_elective_${group.id}`;
         subjectsList.push({
           id,
           name: `${defaultOpt.code} ${defaultOpt.name}`,
