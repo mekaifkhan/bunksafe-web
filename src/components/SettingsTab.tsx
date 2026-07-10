@@ -534,23 +534,53 @@ export default function SettingsTab({
           </div>
 
           {!(profile.semester === 'Semester 1' || profile.semester === 'Semester 2') && (
-            <div className="space-y-1.5">
-              <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider block">Branch</label>
-              <select
-                value={profile.department}
-                onChange={(e) => {
-                  setProfile({ ...profile, programme: 'Regular', department: e.target.value });
-                  logCustomEvent('branch_selected', { branch: e.target.value });
-                }}
-                className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-3 py-2.5 text-xs text-zinc-100 focus:outline-none focus:border-primary transition-colors font-bold text-zinc-100"
-              >
-                <option value="">Select Branch</option>
-                <option value="Civil Engineering">Civil Engineering</option>
-                <option value="Electrical Engineering">Electrical Engineering</option>
-                <option value="Mechanical Engineering">Mechanical Engineering</option>
-                <option value="Electronics & Communication Engineering">Electronics & Communication Engineering</option>
-                <option value="Computer Engineering">Computer Engineering</option>
-              </select>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider block">Programme</label>
+                <select
+                  value={profile.programme || ''}
+                  onChange={(e) => {
+                    setProfile({ ...profile, programme: e.target.value, department: '' });
+                  }}
+                  className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-3 py-2.5 text-xs text-zinc-100 focus:outline-none focus:border-primary transition-colors font-bold"
+                >
+                  <option value="">Select Programme</option>
+                  <option value="Regular">Regular</option>
+                  <option value="Self-Financed">Self-Financed</option>
+                </select>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider block">Branch</label>
+                <select
+                  value={profile.department}
+                  onChange={(e) => {
+                    setProfile({ ...profile, department: e.target.value });
+                    logCustomEvent('branch_selected', { branch: e.target.value });
+                  }}
+                  className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-3 py-2.5 text-xs text-zinc-100 focus:outline-none focus:border-primary transition-colors font-bold text-zinc-100"
+                  disabled={!profile.programme}
+                >
+                  <option value="">Select Branch</option>
+                  {profile.programme === 'Regular' ? (
+                    <>
+                      <option value="Civil Engineering">Civil Engineering</option>
+                      <option value="Electrical Engineering">Electrical Engineering</option>
+                      <option value="Mechanical Engineering">Mechanical Engineering</option>
+                      <option value="Electronics & Communication Engineering">Electronics & Communication Engineering</option>
+                      <option value="Computer Engineering">Computer Engineering</option>
+                    </>
+                  ) : profile.programme === 'Self-Financed' ? (
+                    <>
+                      <option value="Civil Engineering (Construction Technology) (Self-Financed)">Civil Engineering (Construction Technology) (Self-Financed)</option>
+                      <option value="Electrical & Computer Engineering (Self-Financed)">Electrical & Computer Engineering (Self-Financed)</option>
+                      <option value="Robotics & Artificial Intelligence (Self-Financed)">Robotics & Artificial Intelligence (Self-Financed)</option>
+                      <option value="Electronics (VLSI Design & Technology) (Self-Financed)">Electronics (VLSI Design & Technology) (Self-Financed)</option>
+                      <option value="Computer Science & Engineering (Data Sciences) (Self-Financed)">Computer Science & Engineering (Data Sciences) (Self-Financed)</option>
+                    </>
+                  ) : null}
+                </select>
+              </div>
             </div>
           )}
 

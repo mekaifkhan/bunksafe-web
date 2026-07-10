@@ -1612,28 +1612,61 @@ export default function App() {
                           exit={{ opacity: 0, height: 0 }}
                           className="space-y-4 overflow-hidden"
                         >
-                          <motion.div
-                            initial={{ opacity: 0, y: -10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            className="space-y-1 text-left"
-                          >
-                            <label className="text-xs font-bold text-zinc-500 uppercase tracking-widest block">Branch</label>
-                            <select
-                              value={onboardDept}
-                              onChange={(e) => {
-                                setOnboardDept(e.target.value);
-                                logCustomEvent('branch_selected', { branch: e.target.value });
-                              }}
-                              className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3 text-zinc-100 focus:outline-none focus:border-primary transition-colors text-sm font-bold"
+                          <div className="space-y-2 text-left">
+                            <label className="text-xs font-bold text-zinc-500 uppercase tracking-widest block">Programme</label>
+                            <div className="grid grid-cols-2 gap-2">
+                              {(['Regular', 'Self-Financed'] as const).map(prog => (
+                                <button
+                                  key={prog}
+                                  type="button"
+                                  onClick={() => {
+                                    setOnboardProgramme(prog);
+                                    setOnboardDept('');
+                                  }}
+                                  className={`py-2.5 px-2 rounded-xl text-xs font-bold border transition-all ${onboardProgramme === prog ? 'bg-primary border-primary text-white font-black' : 'bg-zinc-950 border-zinc-800 text-zinc-500 hover:text-zinc-400'}`}
+                                >
+                                  {prog}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+
+                          {onboardProgramme && (
+                            <motion.div
+                              initial={{ opacity: 0, y: -10 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              className="space-y-1 text-left"
                             >
-                              <option value="">Select your branch</option>
-                              <option value="Civil Engineering">Civil Engineering</option>
-                              <option value="Electrical Engineering">Electrical Engineering</option>
-                              <option value="Mechanical Engineering">Mechanical Engineering</option>
-                              <option value="Electronics & Communication Engineering">Electronics & Communication Engineering</option>
-                              <option value="Computer Engineering">Computer Engineering</option>
-                            </select>
-                          </motion.div>
+                              <label className="text-xs font-bold text-zinc-500 uppercase tracking-widest block">Branch</label>
+                              <select
+                                value={onboardDept}
+                                onChange={(e) => {
+                                  setOnboardDept(e.target.value);
+                                  logCustomEvent('branch_selected', { branch: e.target.value });
+                                }}
+                                className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3 text-zinc-100 focus:outline-none focus:border-primary transition-colors text-sm font-bold"
+                              >
+                                <option value="">Select your branch</option>
+                                {onboardProgramme === 'Regular' ? (
+                                  <>
+                                    <option value="Civil Engineering">Civil Engineering</option>
+                                    <option value="Electrical Engineering">Electrical Engineering</option>
+                                    <option value="Mechanical Engineering">Mechanical Engineering</option>
+                                    <option value="Electronics & Communication Engineering">Electronics & Communication Engineering</option>
+                                    <option value="Computer Engineering">Computer Engineering</option>
+                                  </>
+                                ) : (
+                                  <>
+                                    <option value="Civil Engineering (Construction Technology) (Self-Financed)">Civil Engineering (Construction Technology) (Self-Financed)</option>
+                                    <option value="Electrical & Computer Engineering (Self-Financed)">Electrical & Computer Engineering (Self-Financed)</option>
+                                    <option value="Robotics & Artificial Intelligence (Self-Financed)">Robotics & Artificial Intelligence (Self-Financed)</option>
+                                    <option value="Electronics (VLSI Design & Technology) (Self-Financed)">Electronics (VLSI Design & Technology) (Self-Financed)</option>
+                                    <option value="Computer Science & Engineering (Data Sciences) (Self-Financed)">Computer Science & Engineering (Data Sciences) (Self-Financed)</option>
+                                  </>
+                                )}
+                              </select>
+                            </motion.div>
+                          )}
                         </motion.div>
                       )}
                     </AnimatePresence>
