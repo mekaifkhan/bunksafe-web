@@ -57,11 +57,15 @@ export default function ExamsTab({
   // Subject Modal fields
   const [selectedSubjectId, setSelectedSubjectId] = useState('');
   const [subjName, setSubjName] = useState('');
-  const [maxMid1, setMaxMid1] = useState(40);
-  const [maxMid2, setMaxMid2] = useState(40);
+  const [maxMid1, setMaxMid1] = useState<number | ''>('');
+  const [maxMid2, setMaxMid2] = useState<number | ''>('');
   const [hasAssignment, setHasAssignment] = useState(true);
-  const [maxAssignment, setMaxAssignment] = useState(10);
-  const [maxEndSem, setMaxEndSem] = useState(45);
+  const [maxAssignment, setMaxAssignment] = useState<number | ''>('');
+  const [maxEndSem, setMaxEndSem] = useState<number | ''>('');
+
+  // Inline editing state for maximum marks in the card
+  const [editingField, setEditingField] = useState<{ subjId: string, field: 'mid1' | 'mid2' | 'assignment' | 'endSem' | 'internalLab' | 'externalLab' } | null>(null);
+  const [tempMaxVal, setTempMaxVal] = useState('');
 
   const availableSubjectsForPlanner = React.useMemo(() => {
     return subjects.filter(sub => !gradeSubjects.some(gs => gs.id === sub.id));
@@ -131,28 +135,106 @@ export default function ExamsTab({
     e.preventDefault();
     const targetSubId = editingSubject?.id || selectedSubjectId;
     const selectedSub = subjects.find(s => s.id === targetSubId);
-    if (!selectedSub) return;
+    if (!selectedSub) {
+      alert("Please select a subject first.");
+      return;
+    }
+
+    const isLab = selectedSub.type === 'Lab';
+
+    if (isLab) {
+      const defaultIntMax = selectedSub.credits * 15;
+      const defaultExtMax = selectedSub.credits * 10;
+      
+      const config: SubjectGradeConfig = {
+        id: targetSubId,
+        name: selectedSub.name,
+        maxMid1: 0,
+        maxMid2: 0,
+        hasAssignment: false,
+        maxEndSem: 0,
+        maxInternalLab: editingSubject?.maxInternalLab ?? defaultIntMax,
+        maxExternalLab: editingSubject?.maxExternalLab ?? defaultExtMax,
+        obtainedInternalLab: editingSubject?.obtainedInternalLab ?? 0,
+        obtainedExternalLab: editingSubject?.obtainedExternalLab ?? 0,
+        targetGrade: editingSubject?.targetGrade || 'A'
+      };
+
+      if (editingSubject) {
+        setGradeSubjects(prev => prev.map(s => s.id === editingSubject.id ? config : s));
+      } else {
+        setGradeSubjects(prev => [...prev, config]);
+        setExpandedSubjectId(config.id);
+      }
+      
+      setShowSubjectModal(false);
+      setEditingSubject(null);
+      resetSubjectForm();
+      return;
+    }
+
+    // Theory validation
+    if (maxMid1 === '' || maxMid2 === '' || maxEndSem === '') {
+      alert("Please specify maximum marks for all required exams (Mid Sem 1, Mid Sem 2, and End Sem).");
+      return;
+    }
+
+    if (hasAssignment && maxAssignment === '') {
+      alert("Please specify the maximum marks for assignments, or disable the assignment component.");
+      return;
+    }
+
+    const mMid1 = Number(maxMid1);
+    const mMid2 = Number(maxMid2);
+    const mAss = hasAssignment ? Number(maxAssignment) : 0;
+    const mEnd = Number(maxEndSem);
+
+    if (mMid1 <= 0 || mMid2 <= 0 || mEnd <= 0 || (hasAssignment && mAss <= 0)) {
+      alert("Maximum marks must be positive numbers greater than 0.");
+      return;
+    }
 
     const config: SubjectGradeConfig = {
       id: targetSubId,
       name: selectedSub.name,
-      maxMid1,
-      maxMid2,
+      maxMid1: mMid1,
+      maxMid2: mMid2,
       hasAssignment,
-      maxAssignment: hasAssignment ? maxAssignment : undefined,
-      maxEndSem,
-      obtainedMid1: editingSubject?.obtainedMid1 ?? 0,
-      obtainedMid2: editingSubject?.obtainedMid2 ?? 0,
-      obtainedAssignment: editingSubject?.obtainedAssignment ?? 0,
-      obtainedEndSem: editingSubject?.obtainedEndSem ?? 0,
+      maxAssignment: hasAssignment ? mAss : undefined,
+      maxEndSem: mEnd,
+      obtainedMid1: editingSubject ? (editingSubject.obtainedMid1 ?? 0) : 0,
+      obtainedMid2: editingSubject ? (editingSubject.obtainedMid2 ?? 0) : 0,
+      obtainedAssignment: editingSubject ? (editingSubject.obtainedAssignment ?? 0) : 0,
+      obtainedEndSem: editingSubject ? (editingSubject.obtainedEndSem ?? 0) : 0,
       targetGrade: editingSubject?.targetGrade || 'A'
     };
 
+    // If editingSubject, we should preserve their obtained marks, proportionally scaled if maximums changed.
     if (editingSubject) {
+      const oldMid1Max = editingSubject.maxMid1 || 1;
+      const oldMid1Obt = editingSubject.obtainedMid1 ?? 0;
+      config.obtainedMid1 = parseFloat(Math.min(mMid1, (oldMid1Obt / oldMid1Max) * mMid1).toFixed(2));
+
+      const oldMid2Max = editingSubject.maxMid2 || 1;
+      const oldMid2Obt = editingSubject.obtainedMid2 ?? 0;
+      config.obtainedMid2 = parseFloat(Math.min(mMid2, (oldMid2Obt / oldMid2Max) * mMid2).toFixed(2));
+
+      if (hasAssignment) {
+        const oldAssMax = editingSubject.maxAssignment || 1;
+        const oldAssObt = editingSubject.obtainedAssignment ?? 0;
+        config.obtainedAssignment = parseFloat(Math.min(mAss, (oldAssObt / oldAssMax) * mAss).toFixed(2));
+      } else {
+        config.obtainedAssignment = 0;
+      }
+
+      const oldEndMax = editingSubject.maxEndSem || 1;
+      const oldEndObt = editingSubject.obtainedEndSem ?? 0;
+      config.obtainedEndSem = parseFloat(Math.min(mEnd, (oldEndObt / oldEndMax) * mEnd).toFixed(2));
+
       setGradeSubjects(prev => prev.map(s => s.id === editingSubject.id ? config : s));
     } else {
       setGradeSubjects(prev => [...prev, config]);
-      setExpandedSubjectId(config.id); // auto-expand newly added subject
+      setExpandedSubjectId(config.id);
     }
 
     setShowSubjectModal(false);
@@ -165,11 +247,11 @@ export default function ExamsTab({
     const firstSub = nextAvailable[0];
     setSelectedSubjectId(firstSub?.id || '');
     setSubjName(firstSub?.name || '');
-    setMaxMid1(40);
-    setMaxMid2(40);
+    setMaxMid1('');
+    setMaxMid2('');
     setHasAssignment(true);
-    setMaxAssignment(10);
-    setMaxEndSem(45);
+    setMaxAssignment('');
+    setMaxEndSem('');
   };
 
   const handleEditSubjectClick = (subj: SubjectGradeConfig) => {
@@ -177,12 +259,60 @@ export default function ExamsTab({
     const resolvedName = subjects.find(s => s.id === subj.id)?.name || subj.name;
     setSubjName(resolvedName);
     setSelectedSubjectId(subj.id);
-    setMaxMid1(subj.maxMid1);
-    setMaxMid2(subj.maxMid2);
+    setMaxMid1(subj.maxMid1 || '');
+    setMaxMid2(subj.maxMid2 || '');
     setHasAssignment(subj.hasAssignment);
-    setMaxAssignment(subj.maxAssignment ?? 10);
-    setMaxEndSem(subj.maxEndSem);
+    setMaxAssignment(subj.maxAssignment ?? '');
+    setMaxEndSem(subj.maxEndSem || '');
     setShowSubjectModal(true);
+  };
+
+  const handleUpdateMaxMarks = (
+    subjId: string,
+    field: 'maxMid1' | 'maxMid2' | 'maxAssignment' | 'maxEndSem' | 'maxInternalLab' | 'maxExternalLab',
+    newMax: number
+  ) => {
+    if (newMax <= 0) return;
+    
+    setGradeSubjects(prev => prev.map(s => {
+      if (s.id !== subjId) return s;
+      
+      const updated = { ...s };
+      
+      if (field === 'maxMid1') {
+        const oldMax = s.maxMid1 || 1;
+        const obtained = s.obtainedMid1 ?? 0;
+        updated.maxMid1 = newMax;
+        updated.obtainedMid1 = parseFloat(Math.min(newMax, (obtained / oldMax) * newMax).toFixed(2));
+      } else if (field === 'maxMid2') {
+        const oldMax = s.maxMid2 || 1;
+        const obtained = s.obtainedMid2 ?? 0;
+        updated.maxMid2 = newMax;
+        updated.obtainedMid2 = parseFloat(Math.min(newMax, (obtained / oldMax) * newMax).toFixed(2));
+      } else if (field === 'maxAssignment') {
+        const oldMax = s.maxAssignment || 1;
+        const obtained = s.obtainedAssignment ?? 0;
+        updated.maxAssignment = newMax;
+        updated.obtainedAssignment = parseFloat(Math.min(newMax, (obtained / oldMax) * newMax).toFixed(2));
+      } else if (field === 'maxEndSem') {
+        const oldMax = s.maxEndSem || 1;
+        const obtained = s.obtainedEndSem ?? 0;
+        updated.maxEndSem = newMax;
+        updated.obtainedEndSem = parseFloat(Math.min(newMax, (obtained / oldMax) * newMax).toFixed(2));
+      } else if (field === 'maxInternalLab') {
+        const oldMax = s.maxInternalLab || 1;
+        const obtained = s.obtainedInternalLab ?? 0;
+        updated.maxInternalLab = newMax;
+        updated.obtainedInternalLab = parseFloat(Math.min(newMax, (obtained / oldMax) * newMax).toFixed(2));
+      } else if (field === 'maxExternalLab') {
+        const oldMax = s.maxExternalLab || 1;
+        const obtained = s.obtainedExternalLab ?? 0;
+        updated.maxExternalLab = newMax;
+        updated.obtainedExternalLab = parseFloat(Math.min(newMax, (obtained / oldMax) * newMax).toFixed(2));
+      }
+      
+      return updated;
+    }));
   };
 
   const handleDeleteSubject = (id: string) => {
@@ -220,6 +350,7 @@ export default function ExamsTab({
     let internalMax = 0;
     let externalMax = 0;
     let internalScore = 0;
+    let externalScore = 0;
     
     if (isLab) {
       // Lab Ratio 3:2
@@ -231,6 +362,10 @@ export default function ExamsTab({
       
       // Proportional conversion to standard internalMax
       internalScore = maxInt > 0 ? (optInt / maxInt) * internalMax : 0;
+
+      const optExt = subj.obtainedExternalLab ?? 0;
+      const maxExt = subj.maxExternalLab ?? externalMax;
+      externalScore = maxExt > 0 ? (optExt / maxExt) * externalMax : 0;
     } else {
       // Theory Ratio 2:3
       internalMax = totalMarks * 0.4; // Credits * 10
@@ -250,9 +385,14 @@ export default function ExamsTab({
       } else {
         internalScore = midMaxTotal > 0 ? (midObtainedTotal / midMaxTotal) * internalMax : 0;
       }
+
+      const optEnd = subj.obtainedEndSem ?? 0;
+      const maxEnd = subj.maxEndSem ?? externalMax;
+      externalScore = maxEnd > 0 ? (optEnd / maxEnd) * externalMax : 0;
     }
     
     internalScore = parseFloat(internalScore.toFixed(2));
+    externalScore = parseFloat(externalScore.toFixed(2));
     
     // Passing requirements
     const minInternalPass = internalMax * 0.40;
@@ -279,8 +419,17 @@ export default function ExamsTab({
     
     // Calculate required External marks
     const rawRequiredExternal = targetThreshold - internalScore;
-    const requiredExternal = Math.max(minExternalPass, Math.ceil(rawRequiredExternal));
-    const isImpossible = requiredExternal > externalMax || isInternalFailed;
+    
+    // Scale required external to custom/configured max
+    const customExternalMax = isLab ? (subj.maxExternalLab ?? externalMax) : (subj.maxEndSem ?? externalMax);
+    const rawRequiredExternalCustom = externalMax > 0 ? (rawRequiredExternal / externalMax) * customExternalMax : 0;
+    const requiredExternalCustom = Math.max(
+      Math.ceil(customExternalMax * 0.40),
+      Math.ceil(rawRequiredExternalCustom)
+    );
+    const minExternalPassCustom = customExternalMax * 0.40;
+
+    const isImpossible = requiredExternalCustom > customExternalMax || isInternalFailed;
     
     // Highest Achievable Grade
     const maxTotalPossible = internalScore + externalMax;
@@ -300,9 +449,9 @@ export default function ExamsTab({
     let difficulty = 'Easy';
     if (isImpossible) {
       difficulty = 'Impossible';
-    } else if (requiredExternal >= externalMax * 0.8) {
+    } else if (requiredExternalCustom >= customExternalMax * 0.8) {
       difficulty = 'Hard';
-    } else if (requiredExternal >= externalMax * 0.5) {
+    } else if (requiredExternalCustom >= customExternalMax * 0.5) {
       difficulty = 'Medium';
     }
     
@@ -318,13 +467,13 @@ export default function ExamsTab({
     if (isInternalFailed) {
       insights = `⚠️ Critical Alert: Your Internal marks are below ${minInternalPass.toFixed(1)}/${internalMax} (40% minimum passing). Jamia Millia Islamia rules require at least 40% in Internals to pass this course.`;
     } else if (isImpossible) {
-      insights = `Grade ${normTarget} is not achievable since you would need ${Math.ceil(rawRequiredExternal)} marks in External exam (Max ${externalMax}). Target ${highestAchievable} instead.`;
+      insights = `Grade ${normTarget} is not achievable since you would need ${Math.ceil(rawRequiredExternalCustom)} marks in External exam (Max ${customExternalMax}). Target ${highestAchievable} instead.`;
     } else if (internalScore >= internalMax * 0.8) {
-      insights = `✨ Excellent Internal Performance (${internalScore}/${internalMax})! You only require ${requiredExternal} marks in External exam to secure Grade ${normTarget}.`;
+      insights = `✨ Excellent Internal Performance (${internalScore}/${internalMax})! You only require ${requiredExternalCustom} marks in External exam to secure Grade ${normTarget}.`;
     } else if (internalScore >= internalMax * 0.6) {
       insights = `👍 Strong Internal score. Keep a steady focus on the External exam to secure your target ${normTarget} grade.`;
     } else {
-      insights = `Borderline Internal score. Be highly cautious. You need to secure at least ${requiredExternal}/${externalMax} in the External exam.`;
+      insights = `Borderline Internal score. Be highly cautious. You need to secure at least ${requiredExternalCustom}/${customExternalMax} in the External exam.`;
     }
     
     return {
@@ -333,10 +482,12 @@ export default function ExamsTab({
       totalMarks,
       internalMax,
       externalMax,
+      customExternalMax,
       internalScore,
+      externalScore,
       rawRequiredExternal,
-      requiredExternal,
-      minExternalPass,
+      requiredExternal: requiredExternalCustom,
+      minExternalPass: minExternalPassCustom,
       minInternalPass,
       isImpossible,
       highestAchievable,
@@ -633,7 +784,7 @@ export default function ExamsTab({
                                           value={subj.maxInternalLab ?? stats.internalMax}
                                           onChange={(e) => {
                                             const val = Math.max(1, parseInt(e.target.value) || 0);
-                                            setGradeSubjects(prev => prev.map(s => s.id === subj.id ? { ...s, maxInternalLab: val } : s));
+                                            handleUpdateMaxMarks(subj.id, 'maxInternalLab', val);
                                           }}
                                           className="w-12 bg-zinc-900 border border-zinc-800 rounded-lg px-1.5 py-0.5 text-center font-mono text-zinc-200 font-bold text-xs"
                                         />
@@ -671,7 +822,7 @@ export default function ExamsTab({
                                           value={subj.maxExternalLab ?? stats.externalMax}
                                           onChange={(e) => {
                                             const val = Math.max(1, parseInt(e.target.value) || 0);
-                                            setGradeSubjects(prev => prev.map(s => s.id === subj.id ? { ...s, maxExternalLab: val } : s));
+                                            handleUpdateMaxMarks(subj.id, 'maxExternalLab', val);
                                           }}
                                           className="w-12 bg-zinc-900 border border-zinc-800 rounded-lg px-1.5 py-0.5 text-center font-mono text-zinc-200 font-bold text-xs"
                                         />
@@ -687,7 +838,55 @@ export default function ExamsTab({
                                   <div className="space-y-1.5">
                                     <div className="flex justify-between items-center text-xs">
                                       <span className="font-bold text-zinc-400">Mid Semester 1</span>
-                                      <span className="font-mono font-black text-zinc-200">{subj.obtainedMid1 ?? 0} <span className="text-zinc-600 font-normal">/ {subj.maxMid1}</span></span>
+                                      <span className="font-mono font-black text-zinc-200">
+                                        {subj.obtainedMid1 ?? 0}
+                                        {editingField?.subjId === subj.id && editingField?.field === 'mid1' ? (
+                                          <span className="inline-flex items-center gap-1 ml-1.5">
+                                            <span className="text-zinc-600 font-normal">/</span>
+                                            <input
+                                              type="number"
+                                              min="1"
+                                              value={tempMaxVal}
+                                              onChange={(e) => setTempMaxVal(e.target.value)}
+                                              className="w-12 bg-zinc-950 border border-zinc-800 rounded px-1.5 py-0.5 text-xs text-zinc-100 font-mono font-bold text-center h-6"
+                                              placeholder="Max"
+                                              autoFocus
+                                              onBlur={() => {
+                                                const num = parseFloat(tempMaxVal);
+                                                if (!isNaN(num) && num > 0) {
+                                                  handleUpdateMaxMarks(subj.id, 'maxMid1', num);
+                                                }
+                                                setEditingField(null);
+                                              }}
+                                              onKeyDown={(e) => {
+                                                if (e.key === 'Enter') {
+                                                  const num = parseFloat(tempMaxVal);
+                                                  if (!isNaN(num) && num > 0) {
+                                                    handleUpdateMaxMarks(subj.id, 'maxMid1', num);
+                                                  }
+                                                  setEditingField(null);
+                                                } else if (e.key === 'Escape') {
+                                                  setEditingField(null);
+                                                }
+                                              }}
+                                            />
+                                          </span>
+                                        ) : (
+                                          <span className="inline-flex items-center gap-1 ml-1.5">
+                                            <span className="text-zinc-600 font-normal">/ {subj.maxMid1}</span>
+                                            <button
+                                              onClick={() => {
+                                                setEditingField({ subjId: subj.id, field: 'mid1' });
+                                                setTempMaxVal(subj.maxMid1.toString());
+                                              }}
+                                              className="text-zinc-500 hover:text-primary transition-colors p-0.5"
+                                              title="Edit Maximum Marks"
+                                            >
+                                              ✏️
+                                            </button>
+                                          </span>
+                                        )}
+                                      </span>
                                     </div>
                                     <input 
                                       type="range"
@@ -707,7 +906,55 @@ export default function ExamsTab({
                                   <div className="space-y-1.5 pt-1">
                                     <div className="flex justify-between items-center text-xs">
                                       <span className="font-bold text-zinc-400">Mid Semester 2</span>
-                                      <span className="font-mono font-black text-zinc-200">{subj.obtainedMid2 ?? 0} <span className="text-zinc-600 font-normal">/ {subj.maxMid2}</span></span>
+                                      <span className="font-mono font-black text-zinc-200">
+                                        {subj.obtainedMid2 ?? 0}
+                                        {editingField?.subjId === subj.id && editingField?.field === 'mid2' ? (
+                                          <span className="inline-flex items-center gap-1 ml-1.5">
+                                            <span className="text-zinc-600 font-normal">/</span>
+                                            <input
+                                              type="number"
+                                              min="1"
+                                              value={tempMaxVal}
+                                              onChange={(e) => setTempMaxVal(e.target.value)}
+                                              className="w-12 bg-zinc-950 border border-zinc-800 rounded px-1.5 py-0.5 text-xs text-zinc-100 font-mono font-bold text-center h-6"
+                                              placeholder="Max"
+                                              autoFocus
+                                              onBlur={() => {
+                                                const num = parseFloat(tempMaxVal);
+                                                if (!isNaN(num) && num > 0) {
+                                                  handleUpdateMaxMarks(subj.id, 'maxMid2', num);
+                                                }
+                                                setEditingField(null);
+                                              }}
+                                              onKeyDown={(e) => {
+                                                if (e.key === 'Enter') {
+                                                  const num = parseFloat(tempMaxVal);
+                                                  if (!isNaN(num) && num > 0) {
+                                                    handleUpdateMaxMarks(subj.id, 'maxMid2', num);
+                                                  }
+                                                  setEditingField(null);
+                                                } else if (e.key === 'Escape') {
+                                                  setEditingField(null);
+                                                }
+                                              }}
+                                            />
+                                          </span>
+                                        ) : (
+                                          <span className="inline-flex items-center gap-1 ml-1.5">
+                                            <span className="text-zinc-600 font-normal">/ {subj.maxMid2}</span>
+                                            <button
+                                              onClick={() => {
+                                                setEditingField({ subjId: subj.id, field: 'mid2' });
+                                                setTempMaxVal(subj.maxMid2.toString());
+                                              }}
+                                              className="text-zinc-500 hover:text-primary transition-colors p-0.5"
+                                              title="Edit Maximum Marks"
+                                            >
+                                              ✏️
+                                            </button>
+                                          </span>
+                                        )}
+                                      </span>
                                     </div>
                                     <input 
                                       type="range"
@@ -728,7 +975,55 @@ export default function ExamsTab({
                                     <div className="space-y-1.5 pt-1 border-t border-zinc-900 mt-2">
                                       <div className="flex justify-between items-center text-xs">
                                         <span className="font-bold text-zinc-400">Assignments</span>
-                                        <span className="font-mono font-black text-zinc-200">{subj.obtainedAssignment ?? 0} <span className="text-zinc-600 font-normal">/ {subj.maxAssignment}</span></span>
+                                        <span className="font-mono font-black text-zinc-200">
+                                          {subj.obtainedAssignment ?? 0}
+                                          {editingField?.subjId === subj.id && editingField?.field === 'assignment' ? (
+                                            <span className="inline-flex items-center gap-1 ml-1.5">
+                                              <span className="text-zinc-600 font-normal">/</span>
+                                              <input
+                                                type="number"
+                                                min="1"
+                                                value={tempMaxVal}
+                                                onChange={(e) => setTempMaxVal(e.target.value)}
+                                                className="w-12 bg-zinc-950 border border-zinc-800 rounded px-1.5 py-0.5 text-xs text-zinc-100 font-mono font-bold text-center h-6"
+                                                placeholder="Max"
+                                                autoFocus
+                                                onBlur={() => {
+                                                  const num = parseFloat(tempMaxVal);
+                                                  if (!isNaN(num) && num > 0) {
+                                                    handleUpdateMaxMarks(subj.id, 'maxAssignment', num);
+                                                  }
+                                                  setEditingField(null);
+                                                }}
+                                                onKeyDown={(e) => {
+                                                  if (e.key === 'Enter') {
+                                                    const num = parseFloat(tempMaxVal);
+                                                    if (!isNaN(num) && num > 0) {
+                                                      handleUpdateMaxMarks(subj.id, 'maxAssignment', num);
+                                                    }
+                                                    setEditingField(null);
+                                                  } else if (e.key === 'Escape') {
+                                                    setEditingField(null);
+                                                  }
+                                                }}
+                                              />
+                                            </span>
+                                          ) : (
+                                            <span className="inline-flex items-center gap-1 ml-1.5">
+                                              <span className="text-zinc-600 font-normal">/ {subj.maxAssignment}</span>
+                                              <button
+                                                onClick={() => {
+                                                  setEditingField({ subjId: subj.id, field: 'assignment' });
+                                                  setTempMaxVal(subj.maxAssignment!.toString());
+                                                }}
+                                                className="text-zinc-500 hover:text-primary transition-colors p-0.5"
+                                                title="Edit Maximum Marks"
+                                              >
+                                                ✏️
+                                              </button>
+                                            </span>
+                                          )}
+                                        </span>
                                       </div>
                                       <input 
                                         type="range"
@@ -749,12 +1044,60 @@ export default function ExamsTab({
                                   <div className="space-y-1.5 pt-2 border-t border-zinc-900 mt-2">
                                     <div className="flex justify-between items-center text-xs">
                                       <span className="font-bold text-zinc-400">End Semester Obtained (Optional)</span>
-                                      <span className="font-mono font-black text-zinc-200">{subj.obtainedEndSem ?? 0} <span className="text-zinc-600 font-normal">/ {stats.externalMax}</span></span>
+                                      <span className="font-mono font-black text-zinc-200">
+                                        {subj.obtainedEndSem ?? 0}
+                                        {editingField?.subjId === subj.id && editingField?.field === 'endSem' ? (
+                                          <span className="inline-flex items-center gap-1 ml-1.5">
+                                            <span className="text-zinc-600 font-normal">/</span>
+                                            <input
+                                              type="number"
+                                              min="1"
+                                              value={tempMaxVal}
+                                              onChange={(e) => setTempMaxVal(e.target.value)}
+                                              className="w-12 bg-zinc-950 border border-zinc-800 rounded px-1.5 py-0.5 text-xs text-zinc-100 font-mono font-bold text-center h-6"
+                                              placeholder="Max"
+                                              autoFocus
+                                              onBlur={() => {
+                                                const num = parseFloat(tempMaxVal);
+                                                if (!isNaN(num) && num > 0) {
+                                                  handleUpdateMaxMarks(subj.id, 'maxEndSem', num);
+                                                }
+                                                setEditingField(null);
+                                              }}
+                                              onKeyDown={(e) => {
+                                                if (e.key === 'Enter') {
+                                                  const num = parseFloat(tempMaxVal);
+                                                  if (!isNaN(num) && num > 0) {
+                                                    handleUpdateMaxMarks(subj.id, 'maxEndSem', num);
+                                                  }
+                                                  setEditingField(null);
+                                                } else if (e.key === 'Escape') {
+                                                  setEditingField(null);
+                                                }
+                                              }}
+                                            />
+                                          </span>
+                                        ) : (
+                                          <span className="inline-flex items-center gap-1 ml-1.5">
+                                            <span className="text-zinc-600 font-normal">/ {subj.maxEndSem ?? stats.externalMax}</span>
+                                            <button
+                                              onClick={() => {
+                                                setEditingField({ subjId: subj.id, field: 'endSem' });
+                                                setTempMaxVal((subj.maxEndSem ?? stats.externalMax).toString());
+                                              }}
+                                              className="text-zinc-500 hover:text-primary transition-colors p-0.5"
+                                              title="Edit Maximum Marks"
+                                            >
+                                              ✏️
+                                            </button>
+                                          </span>
+                                        )}
+                                      </span>
                                     </div>
                                     <input 
                                       type="range"
                                       min="0"
-                                      max={stats.externalMax}
+                                      max={subj.maxEndSem ?? stats.externalMax}
                                       step="0.5"
                                       value={subj.obtainedEndSem ?? 0}
                                       onChange={(e) => {
@@ -1066,7 +1409,8 @@ export default function ExamsTab({
                       <input 
                         type="number" 
                         value={maxMid1} 
-                        onChange={(e) => setMaxMid1(Math.max(1, parseInt(e.target.value) || 0))} 
+                        onChange={(e) => setMaxMid1(e.target.value === '' ? '' : Math.max(1, parseInt(e.target.value) || 1))} 
+                        placeholder="e.g. 40"
                         className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-3 py-2 text-zinc-100 font-mono"
                         required
                       />
@@ -1078,7 +1422,8 @@ export default function ExamsTab({
                       <input 
                         type="number" 
                         value={maxMid2} 
-                        onChange={(e) => setMaxMid2(Math.max(1, parseInt(e.target.value) || 0))} 
+                        onChange={(e) => setMaxMid2(e.target.value === '' ? '' : Math.max(1, parseInt(e.target.value) || 1))} 
+                        placeholder="e.g. 40"
                         className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-3 py-2 text-zinc-100 font-mono"
                         required
                       />
@@ -1112,7 +1457,8 @@ export default function ExamsTab({
                           <input 
                             type="number" 
                             value={maxAssignment} 
-                            onChange={(e) => setMaxAssignment(Math.max(1, parseInt(e.target.value) || 0))} 
+                            onChange={(e) => setMaxAssignment(e.target.value === '' ? '' : Math.max(1, parseInt(e.target.value) || 1))} 
+                            placeholder="e.g. 10"
                             className="w-full bg-zinc-900 border border-zinc-900 rounded-lg px-2.5 py-1.5 text-zinc-100 font-mono"
                             required
                           />
@@ -1126,7 +1472,8 @@ export default function ExamsTab({
                       <input 
                         type="number" 
                         value={maxEndSem} 
-                        onChange={(e) => setMaxEndSem(Math.max(1, parseInt(e.target.value) || 45))} 
+                        onChange={(e) => setMaxEndSem(e.target.value === '' ? '' : Math.max(1, parseInt(e.target.value) || 1))} 
+                        placeholder="e.g. 45"
                         className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-3 py-2 text-zinc-100 font-mono"
                         required
                       />

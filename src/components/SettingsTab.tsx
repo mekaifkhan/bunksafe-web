@@ -96,7 +96,7 @@ export default function SettingsTab({
   
   const [subjNameInput, setSubjNameInput] = useState('');
   const [subjTypeInput, setSubjTypeInput] = useState<'Theory' | 'Lab'>('Theory');
-  const [subjCreditsInput, setSubjCreditsInput] = useState(0);
+  const [subjCreditsInput, setSubjCreditsInput] = useState<number | ''>('');
   
   const [deleteConfirmSubjectId, setDeleteConfirmSubjectId] = useState<string | null>(null);
 
@@ -115,6 +115,10 @@ export default function SettingsTab({
   // Save subject
   const handleSaveSubject = (e: React.FormEvent) => {
     e.preventDefault();
+    if (subjCreditsInput === '' || isNaN(Number(subjCreditsInput))) {
+      alert("Please select academic credits.");
+      return;
+    }
     const formattedName = formatSubjectName(subjNameInput);
     if (!formattedName) return;
 
@@ -128,10 +132,12 @@ export default function SettingsTab({
       return;
     }
 
+    const creditsNum = Number(subjCreditsInput);
+
     if (editingSubject) {
       const updatedSubjects = subjects.map(s => 
         s.id === editingSubject.id 
-          ? { ...s, name: formattedName, type: subjTypeInput, credits: subjCreditsInput }
+          ? { ...s, name: formattedName, type: subjTypeInput, credits: creditsNum }
           : s
       );
       setSubjects(updatedSubjects);
@@ -149,7 +155,7 @@ export default function SettingsTab({
         id: `sub_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
         name: formattedName,
         type: subjTypeInput,
-        credits: subjCreditsInput
+        credits: creditsNum
       };
       setSubjects([...subjects, newSub]);
     }
@@ -157,7 +163,7 @@ export default function SettingsTab({
     setShowAddEditSubjectModal(false);
     setSubjNameInput('');
     setSubjTypeInput('Theory');
-    setSubjCreditsInput(3);
+    setSubjCreditsInput('');
   };
 
   // Delete subject with cascade cleanup
@@ -828,7 +834,7 @@ export default function SettingsTab({
                     setEditingSubject(null);
                     setSubjNameInput('');
                     setSubjTypeInput('Theory');
-                    setSubjCreditsInput(3);
+                    setSubjCreditsInput('');
                     setShowAddEditSubjectModal(true);
                   }}
                   className="flex-1 py-3 bg-primary hover:bg-primary/95 text-white rounded-xl text-xs font-black uppercase flex items-center justify-center gap-1.5 transition-all shadow-lg shadow-primary/20"
@@ -910,15 +916,19 @@ export default function SettingsTab({
                 {/* Subject Credits */}
                 <div className="space-y-1.5">
                   <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider block">Academic Credits</label>
-                  <input 
-                    type="number" 
-                    min="1"
-                    max="10"
-                    value={subjCreditsInput} 
-                    onChange={(e) => setSubjCreditsInput(parseInt(e.target.value) || 3)} 
+                  <select
+                    value={subjCreditsInput}
+                    onChange={(e) => setSubjCreditsInput(e.target.value === '' ? '' : Number(e.target.value))}
                     className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-3 py-2.5 text-zinc-100 focus:outline-none focus:border-primary font-bold"
                     required
-                  />
+                  >
+                    <option value="">Select Credits</option>
+                    <option value="1">1 Credit</option>
+                    <option value="2">2 Credits</option>
+                    <option value="3">3 Credits</option>
+                    <option value="4">4 Credits</option>
+                    <option value="5">5 Credits</option>
+                  </select>
                 </div>
 
                 {/* Footer Buttons */}
