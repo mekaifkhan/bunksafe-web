@@ -305,6 +305,7 @@ export default function App() {
 
   const [showExamModal, setShowExamModal] = useState(false);
   const [editingExam, setEditingExam] = useState<Exam | null>(null);
+  const [showAttendanceInfoModal, setShowAttendanceInfoModal] = useState(false);
 
   const [appState, setAppState] = useState<AppState>('MAIN');
 
@@ -3044,8 +3045,18 @@ export default function App() {
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
                     <div className="space-y-1">
-                      <p className="font-bold">Total Available Attendance Today</p>
-                      <p className="text-xs text-zinc-500">Theory: 1 | Labs: 2, 3, or 4 units</p>
+                      <div className="flex items-center gap-1.5">
+                        <p className="font-bold">Total Available Attendance Today</p>
+                        <button
+                          type="button"
+                          onClick={() => setShowAttendanceInfoModal(true)}
+                          className="p-1 hover:bg-zinc-850 rounded-full text-zinc-400 hover:text-primary transition-all"
+                          title="View detailed Jamia Attendance System"
+                        >
+                          <Info size={14} />
+                        </button>
+                      </div>
+                      <p className="text-xs text-zinc-500">Theory (1 hr class) = 1 | Labs = 2{(profile.semester === 'Semester 1' || profile.semester === 'Semester 2') ? ' or 4' : ''} attendance units</p>
                     </div>
                     <div className="flex items-center gap-4">
                       <Button variant="secondary" className="p-2" onClick={() => updateAttendance(today, Math.max(0, todayRecord.held - 1), Math.min(todayRecord.attended, Math.max(0, todayRecord.held - 1)), false)}><Minus size={18}/></Button>
@@ -3053,16 +3064,64 @@ export default function App() {
                       <Button variant="secondary" className="p-2" onClick={() => updateAttendance(today, todayRecord.held + 1, todayRecord.attended, false)}><Plus size={18}/></Button>
                     </div>
                   </div>
-                  <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
-                    {[1, 2, 3, 4, 5, 6].map(num => (
+
+                  {/* Attendance Guidelines Box */}
+                  <div className="bg-zinc-900/50 p-3.5 rounded-2xl border border-zinc-800/80 space-y-3">
+                    <div className="flex items-center justify-between">
                       <button
-                        key={`held-${num}`}
-                        onClick={() => updateAttendance(today, num, Math.min(todayRecord.attended, num), false)}
-                        className={`px-4 py-2 rounded-xl border text-sm font-bold transition-all shrink-0 ${todayRecord.held === num ? 'bg-primary border-primary text-white' : 'bg-zinc-800 border-zinc-700 text-zinc-400'}`}
+                        type="button"
+                        onClick={() => setShowAttendanceInfoModal(true)}
+                        className="flex items-center gap-2 text-xs font-bold text-zinc-300 hover:text-primary transition-all text-left"
                       >
-                        {num}
+                        <Info size={14} className="text-primary shrink-0" />
+                        <span>JMI Attendance Rules (Marking Guide)</span>
                       </button>
-                    ))}
+                      <button
+                        type="button"
+                        onClick={() => setShowAttendanceInfoModal(true)}
+                        className="text-[10px] text-primary hover:underline font-bold"
+                      >
+                        Detailed Guide &rarr;
+                      </button>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 text-[11px] leading-tight text-zinc-400">
+                      <div className="p-2.5 bg-zinc-950/40 rounded-xl border border-zinc-900">
+                        <strong className="text-zinc-200 block mb-0.5">Theory Classes</strong>
+                        <span>Count as <strong className="text-primary">1</strong> Attendance</span>
+                      </div>
+                      <div className="p-2.5 bg-zinc-950/40 rounded-xl border border-zinc-900">
+                        <strong className="text-zinc-200 block mb-0.5">General Labs</strong>
+                        <span>Count as <strong className="text-primary">2</strong> Attendance</span>
+                      </div>
+                    </div>
+                    {(profile.semester === 'Semester 1' || profile.semester === 'Semester 2') && (
+                      <div className="pt-2 border-t border-zinc-850 space-y-1.5">
+                        <p className="font-black text-[9px] text-zinc-500 uppercase tracking-wider">For 1st Year (Semester 1 & 2) Students:</p>
+                        <ul className="space-y-1.5 text-[11px] text-zinc-400 pl-1">
+                          <li className="flex items-start gap-1.5 leading-snug">
+                            <span className="w-1.5 h-1.5 bg-primary/80 rounded-full mt-1.5 shrink-0" />
+                            <span>Labs (Physics, Chemistry, Design Thinking, Language Lab, Engineering Mechanics Labs) = <strong className="text-zinc-200 font-bold">2 Attendance</strong></span>
+                          </li>
+                          <li className="flex items-start gap-1.5 leading-snug">
+                            <span className="w-1.5 h-1.5 bg-primary rounded-full mt-1.5 shrink-0" />
+                            <span>Mechanical Workshop & Engineering Drawing = <strong className="text-zinc-200 font-bold">4 Attendance</strong></span>
+                          </li>
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
+                    {[1, 2, 3, 4, 5, 6]
+                      .filter(num => (profile.semester === 'Semester 1' || profile.semester === 'Semester 2' || num !== 4))
+                      .map(num => (
+                        <button
+                          key={`held-${num}`}
+                          onClick={() => updateAttendance(today, num, Math.min(todayRecord.attended, num), false)}
+                          className={`px-4 py-2 rounded-xl border text-sm font-bold transition-all shrink-0 ${todayRecord.held === num ? 'bg-primary border-primary text-white' : 'bg-zinc-800 border-zinc-700 text-zinc-400'}`}
+                        >
+                          {num}
+                        </button>
+                      ))}
                   </div>
                 </div>
 
@@ -4076,6 +4135,79 @@ export default function App() {
     );
   };
 
+  const renderAttendanceInfoModal = () => {
+    if (!showAttendanceInfoModal) return null;
+
+    return (
+      <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-fade-in">
+        <motion.div 
+          initial={{ scale: 0.9, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          className="bg-zinc-900 border border-zinc-800 rounded-3xl p-6 w-full max-w-md space-y-6 shadow-2xl overflow-y-auto max-h-[85vh]"
+        >
+          <div className="space-y-2 text-center">
+            <div className="mx-auto w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mb-2">
+              <Info size={24} className="text-primary animate-pulse" />
+            </div>
+            <h2 className="text-xl font-extrabold text-zinc-100">Jamia Attendance System</h2>
+            <p className="text-xs text-zinc-400">
+              Official lecture to attendance unit mapping guide
+            </p>
+          </div>
+
+          <div className="space-y-4">
+            <div className="p-4 rounded-2xl bg-zinc-950/40 border border-zinc-850/60 space-y-1.5">
+              <h4 className="font-black text-xs text-zinc-200 flex items-center gap-1.5 uppercase tracking-wide">
+                <span className="w-1.5 h-1.5 bg-primary rounded-full" />
+                Theory Classes (Lectures)
+              </h4>
+              <p className="text-[11px] text-zinc-400 leading-relaxed">
+                Every <strong className="text-zinc-200 font-bold">1 hour class</strong> counts as <strong className="text-primary font-black">1 Attendance</strong> unit.
+              </p>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-zinc-950/40 border border-zinc-850/60 space-y-1.5">
+              <h4 className="font-black text-xs text-zinc-200 flex items-center gap-1.5 uppercase tracking-wide">
+                <span className="w-1.5 h-1.5 bg-primary rounded-full" />
+                Laboratory / Practical sessions
+              </h4>
+              <p className="text-[11px] text-zinc-400 leading-relaxed">
+                Standard <strong className="text-zinc-200 font-bold">2 hours lab classes</strong> count as <strong className="text-primary font-black">2 Attendance</strong> units.
+              </p>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-zinc-950/40 border border-zinc-850/60 space-y-1.5">
+              <h4 className="font-black text-xs text-zinc-200 flex items-center gap-1.5 uppercase tracking-wide">
+                <span className="w-1.5 h-1.5 bg-primary rounded-full" />
+                First Year Special Rules
+              </h4>
+              <p className="text-[11px] text-zinc-400 leading-relaxed">
+                For B.Tech 1st Year (Semester 1 & 2) Students:
+              </p>
+              <ul className="space-y-2 text-[11px] text-zinc-400 mt-2 pl-1">
+                <li className="flex items-start gap-1.5 leading-snug">
+                  <span className="w-1 h-1 bg-zinc-600 rounded-full mt-1.5 shrink-0" />
+                  <span><strong>Labs:</strong> Physics Lab, Chemistry Lab, Design Thinking Lab, Language Lab, and Engineering Mechanics Labs count as <strong className="text-zinc-200 font-bold">2 Attendance</strong> units.</span>
+                </li>
+                <li className="flex items-start gap-1.5 leading-snug">
+                  <span className="w-1 h-1 bg-zinc-600 rounded-full mt-1.5 shrink-0" />
+                  <span><strong>Workshops & Drawing:</strong> Mechanical Workshop and Engineering Drawing count as <strong className="text-zinc-200 font-bold">4 Attendance</strong> units.</span>
+                </li>
+              </ul>
+            </div>
+          </div>
+
+          <Button 
+            className="w-full font-bold py-3 text-sm rounded-xl"
+            onClick={() => setShowAttendanceInfoModal(false)}
+          >
+            Got it, close
+          </Button>
+        </motion.div>
+      </div>
+    );
+  };
+
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-100 font-sans selection:bg-primary/30">
       <main className="max-w-md mx-auto p-6">
@@ -4115,6 +4247,7 @@ export default function App() {
 
       {showExamModal && <ExamModal />}
       {renderFirstYearPatternModal()}
+      {renderAttendanceInfoModal()}
     </div>
   );
 }
