@@ -60,6 +60,7 @@ interface SettingsTabProps {
   setGradeSubjects: React.Dispatch<React.SetStateAction<SubjectGradeConfig[]>>;
   subjectAttendance: Record<string, { attended: number; held: number }>;
   setSubjectAttendance: React.Dispatch<React.SetStateAction<Record<string, { attended: number; held: number }>>>;
+  onShowAirtelAd?: () => void;
 }
 
 export default function SettingsTab({
@@ -86,7 +87,8 @@ export default function SettingsTab({
   gradeSubjects,
   setGradeSubjects,
   subjectAttendance,
-  setSubjectAttendance
+  setSubjectAttendance,
+  onShowAirtelAd
 }: SettingsTabProps) {
   // Local state for holiday manager
   const [newHolidayDate, setNewHolidayDate] = useState('');
@@ -825,6 +827,16 @@ export default function SettingsTab({
             <span className="flex items-center gap-2"><Heart size={14} className="text-rose-500" /> About Developer</span>
             <span className="text-[10px] text-zinc-500">Made for Students</span>
           </button>
+
+          {onShowAirtelAd && (
+            <button 
+              onClick={onShowAirtelAd}
+              className="w-full flex justify-between items-center py-2.5 px-3 bg-red-650/15 border border-red-500/20 rounded-xl text-xs font-bold text-red-400 hover:text-red-300 hover:bg-red-650/25 transition-colors cursor-pointer"
+            >
+              <span className="flex items-center gap-2"><GraduationCap size={14} className="text-red-500 animate-pulse" /> Airtel Scholarship Ad</span>
+              <span className="text-[9px] text-amber-500 font-extrabold bg-amber-500/10 px-2 py-0.5 rounded-full uppercase tracking-wider">Preview Ad</span>
+            </button>
+          )}
         </div>
       </div>
 

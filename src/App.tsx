@@ -75,6 +75,7 @@ import {
 } from './types';
 import SettingsTab from './components/SettingsTab';
 import ExamsTab from './components/ExamsTab';
+import AirtelAdModal from './components/AirtelAdModal';
 import { 
   formatDate, 
   getTodayStr, 
@@ -307,6 +308,7 @@ export default function App() {
   const [showExamModal, setShowExamModal] = useState(false);
   const [editingExam, setEditingExam] = useState<Exam | null>(null);
   const [showAttendanceInfoModal, setShowAttendanceInfoModal] = useState(false);
+  const [forceShowAd, setForceShowAd] = useState(false);
 
   const [appState, setAppState] = useState<AppState>('MAIN');
 
@@ -4125,6 +4127,7 @@ export default function App() {
         setGradeSubjects={setGradeSubjects}
         subjectAttendance={subjectAttendance}
         setSubjectAttendance={setSubjectAttendance}
+        onShowAirtelAd={() => setForceShowAd(true)}
       />
     );
   };
@@ -4316,6 +4319,7 @@ export default function App() {
       {showExamModal && <ExamModal />}
       {renderFirstYearPatternModal()}
       {renderAttendanceInfoModal()}
+      <AirtelAdModal forceShow={forceShowAd} onClose={() => setForceShowAd(false)} />
     </div>
   );
 }
