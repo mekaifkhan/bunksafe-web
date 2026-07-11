@@ -30,11 +30,10 @@ import {
   Instagram
 } from 'lucide-react';
 import { format } from 'date-fns';
-import { Profile, Semester, AttendanceRecord, SemesterHistory, AppState, Subject, SubjectGradeConfig, formatSubjectName, NotificationSettings } from '../types';
+import { Profile, Semester, AttendanceRecord, SemesterHistory, AppState, Subject, SubjectGradeConfig, formatSubjectName } from '../types';
 import { motion, AnimatePresence } from 'motion/react';
 import { logCustomEvent } from '../firebase';
 import { JMI_CURRICULUM, JMI_CIVIL_CURRICULUM, JMI_VLSI_CURRICULUM, JMI_ELECTRICAL_CURRICULUM, JMI_MECHANICAL_CURRICULUM, JMI_CSE_DS_CURRICULUM, JMI_COMP_ENG_CURRICULUM, JMI_ELECTRICAL_COMPUTER_CURRICULUM, JMI_FIRST_YEAR_SET_A, JMI_FIRST_YEAR_SET_B, getDefaultCurriculumSubjects } from '../utils/curriculum';
-import { compressImage } from '../utils/imageUtils';
 
 interface SettingsTabProps {
   profile: Profile;
@@ -61,10 +60,6 @@ interface SettingsTabProps {
   setGradeSubjects: React.Dispatch<React.SetStateAction<SubjectGradeConfig[]>>;
   subjectAttendance: Record<string, { attended: number; held: number }>;
   setSubjectAttendance: React.Dispatch<React.SetStateAction<Record<string, { attended: number; held: number }>>>;
-  profilePhoto: string | null;
-  setProfilePhoto: (photo: string | null) => void;
-  notificationSettings: NotificationSettings;
-  setNotificationSettings: React.Dispatch<React.SetStateAction<NotificationSettings>>;
 }
 
 export default function SettingsTab({
@@ -91,45 +86,12 @@ export default function SettingsTab({
   gradeSubjects,
   setGradeSubjects,
   subjectAttendance,
-  setSubjectAttendance,
-  profilePhoto,
-  setProfilePhoto,
-  notificationSettings,
-  setNotificationSettings
+  setSubjectAttendance
 }: SettingsTabProps) {
   // Local state for holiday manager
   const [newHolidayDate, setNewHolidayDate] = useState('');
   const [showPrivacyPolicy, setShowPrivacyPolicy] = useState(false);
   const [showAboutDev, setShowAboutDev] = useState(false);
-
-  // Profile photo state and handlers
-  const [photoError, setPhotoError] = useState<string | null>(null);
-
-  const handlePhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    try {
-      setPhotoError(null);
-      const base64 = await compressImage(file);
-      localStorage.setItem('profilePhoto', base64);
-      setProfilePhoto(base64);
-      setProfile({
-        ...profile,
-        avatar: base64
-      });
-    } catch (err: any) {
-      console.error(err);
-      setPhotoError(err.message || 'Failed to process image');
-    }
-  };
-
-  const toggleNotification = (key: keyof NotificationSettings) => {
-    setNotificationSettings((prev) => ({
-      ...prev,
-      [key]: !prev[key]
-    }));
-  };
 
   // Subject Manager local states
   const [showSubjectManager, setShowSubjectManager] = useState(false);
@@ -467,33 +429,9 @@ export default function SettingsTab({
 
       {/* Initials Display & Banner */}
       <div className="flex flex-col items-center gap-3 py-4 bg-zinc-900/40 border border-zinc-850 rounded-2xl p-4">
-        <label htmlFor="profile-photo-upload" className="cursor-pointer relative group flex flex-col items-center">
-          <div className="w-20 h-20 bg-primary rounded-full flex items-center justify-center text-3xl font-black text-white shadow-xl shadow-primary/20 overflow-hidden border-4 border-zinc-900 relative hover:opacity-90 transition-opacity">
-            {profilePhoto ? (
-              <img src={profilePhoto} alt="Profile" className="w-full h-full object-cover animate-fade-in" referrerPolicy="no-referrer" />
-            ) : (
-              (profile.name || 'U').charAt(0).toUpperCase()
-            )}
-            <div className="absolute inset-0 bg-black/45 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-              <Camera size={20} className="text-white" />
-            </div>
-          </div>
-          <input 
-            id="profile-photo-upload"
-            type="file" 
-            accept="image/*" 
-            className="hidden" 
-            onChange={handlePhotoChange}
-          />
-          <span className="text-xs text-primary font-extrabold mt-2 hover:underline flex items-center gap-1">
-            <Camera size={12} /> Change Profile Photo
-          </span>
-        </label>
-        {photoError && (
-          <p className="text-[11px] text-red-500 font-bold bg-red-500/10 border border-red-500/20 px-3 py-1 rounded-xl">
-            {photoError}
-          </p>
-        )}
+        <div className="w-20 h-20 bg-primary rounded-full flex items-center justify-center text-3xl font-black text-white shadow-xl shadow-primary/20 overflow-hidden border-4 border-zinc-900">
+          {(profile.name || 'U').charAt(0).toUpperCase()}
+        </div>
         <div className="text-center">
           <h2 className="text-lg font-black text-zinc-100">{profile.name}</h2>
           <p className="text-xs text-zinc-500 font-medium">{profile.college} — {profile.department}</p>
@@ -841,110 +779,7 @@ export default function SettingsTab({
         </div>
       </div>
 
-      {/* 4. NOTIFICATION PREFERENCES */}
-      <div className="space-y-3">
-        <h3 className="text-xs font-bold text-zinc-500 uppercase tracking-widest flex items-center gap-1.5 px-1">
-          <Bell size={14} className="text-primary" /> Notification Settings
-        </h3>
-        <div className="bg-zinc-900 border border-zinc-800/80 rounded-2xl p-4 space-y-4">
-          <div className="flex items-center justify-between">
-            <div className="space-y-0.5">
-              <p className="text-xs font-bold text-zinc-200">Daily Attendance Reminder</p>
-              <p className="text-[10px] text-zinc-500">Remind you to log attendance daily</p>
-            </div>
-            <button
-              onClick={() => toggleNotification('dailyAttendanceReminder')}
-              className={`w-11 h-6 flex items-center rounded-full p-1 transition-colors duration-300 focus:outline-none ${
-                notificationSettings.dailyAttendanceReminder ? 'bg-primary' : 'bg-zinc-700'
-              }`}
-            >
-              <div
-                className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform duration-300 ${
-                  notificationSettings.dailyAttendanceReminder ? 'translate-x-5' : 'translate-x-0'
-                }`}
-              />
-            </button>
-          </div>
-
-          <div className="flex items-center justify-between border-t border-zinc-800/80 pt-4">
-            <div className="space-y-0.5">
-              <p className="text-xs font-bold text-zinc-200">Exam Reminder</p>
-              <p className="text-[10px] text-zinc-500">Get alerted about upcoming exam dates</p>
-            </div>
-            <button
-              onClick={() => toggleNotification('examReminder')}
-              className={`w-11 h-6 flex items-center rounded-full p-1 transition-colors duration-300 focus:outline-none ${
-                notificationSettings.examReminder ? 'bg-primary' : 'bg-zinc-700'
-              }`}
-            >
-              <div
-                className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform duration-300 ${
-                  notificationSettings.examReminder ? 'translate-x-5' : 'translate-x-0'
-                }`}
-              />
-            </button>
-          </div>
-
-          <div className="flex items-center justify-between border-t border-zinc-800/80 pt-4">
-            <div className="space-y-0.5">
-              <p className="text-xs font-bold text-zinc-200">Timetable Reminder</p>
-              <p className="text-[10px] text-zinc-500">Get notified about daily classes and syllabus</p>
-            </div>
-            <button
-              onClick={() => toggleNotification('timetableReminder')}
-              className={`w-11 h-6 flex items-center rounded-full p-1 transition-colors duration-300 focus:outline-none ${
-                notificationSettings.timetableReminder ? 'bg-primary' : 'bg-zinc-700'
-              }`}
-            >
-              <div
-                className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform duration-300 ${
-                  notificationSettings.timetableReminder ? 'translate-x-5' : 'translate-x-0'
-                }`}
-              />
-            </button>
-          </div>
-
-          <div className="flex items-center justify-between border-t border-zinc-800/80 pt-4">
-            <div className="space-y-0.5">
-              <p className="text-xs font-bold text-zinc-200">Low Attendance Warning</p>
-              <p className="text-[10px] text-zinc-500">Alert when attendance drops below threshold</p>
-            </div>
-            <button
-              onClick={() => toggleNotification('lowAttendanceWarning')}
-              className={`w-11 h-6 flex items-center rounded-full p-1 transition-colors duration-300 focus:outline-none ${
-                notificationSettings.lowAttendanceWarning ? 'bg-primary' : 'bg-zinc-700'
-              }`}
-            >
-              <div
-                className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform duration-300 ${
-                  notificationSettings.lowAttendanceWarning ? 'translate-x-5' : 'translate-x-0'
-                }`}
-              />
-            </button>
-          </div>
-
-          <div className="flex items-center justify-between border-t border-zinc-800/80 pt-4">
-            <div className="space-y-0.5">
-              <p className="text-xs font-bold text-zinc-200">App Updates</p>
-              <p className="text-[10px] text-zinc-500">Get notified about new features and releases</p>
-            </div>
-            <button
-              onClick={() => toggleNotification('appUpdates')}
-              className={`w-11 h-6 flex items-center rounded-full p-1 transition-colors duration-300 focus:outline-none ${
-                notificationSettings.appUpdates ? 'bg-primary' : 'bg-zinc-700'
-              }`}
-            >
-              <div
-                className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform duration-300 ${
-                  notificationSettings.appUpdates ? 'translate-x-5' : 'translate-x-0'
-                }`}
-              />
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* 5. DATA SECTION */}
+      {/* 4. DATA SECTION */}
       <div className="space-y-3">
         <h3 className="text-xs font-bold text-zinc-500 uppercase tracking-widest flex items-center gap-1.5 px-1">
           <RefreshCw size={14} className="text-primary" /> Data Options
@@ -959,7 +794,7 @@ export default function SettingsTab({
         </div>
       </div>
 
-      {/* 6. APPLICATION SECTION */}
+      {/* 5. APPLICATION SECTION */}
       <div className="space-y-3">
         <h3 className="text-xs font-bold text-zinc-500 uppercase tracking-widest flex items-center gap-1.5 px-1">
           <Info size={14} className="text-primary" /> Application Info

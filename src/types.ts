@@ -92,12 +92,4 @@ export function formatSubjectName(name: string): string {
     .join(' ');
 }
 
-export interface NotificationSettings {
-  dailyAttendanceReminder: boolean;
-  examReminder: boolean;
-  timetableReminder: boolean;
-  lowAttendanceWarning: boolean;
-  appUpdates: boolean;
-}
-
 
