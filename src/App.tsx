@@ -81,7 +81,8 @@ import {
   calculateAttendance, 
   calculateBunkInfo,
   safeParse,
-  parseTimeRange
+  parseTimeRange,
+  getJamiaHoliday
 } from './utils/dateUtils';
 
 // --- Components ---
@@ -655,10 +656,21 @@ export default function App() {
     const currentMinutes = now.getHours() * 60 + now.getMinutes();
     const currentDayName = format(now, 'EEEE');
     
+    const todayHoliday = getJamiaHoliday(now);
+    if (todayHoliday.isHoliday) {
+      return {
+        isHoliday: true,
+        holidayName: todayHoliday.name || 'JMI Holiday',
+        live: null,
+        next: null
+      };
+    }
+
     const isWeekend = ['Saturday', 'Sunday'].includes(currentDayName);
     if (isWeekend) {
       return {
         isWeekend: true,
+        holidayName: 'Weekend',
         live: null,
         next: null
       };
@@ -775,11 +787,14 @@ export default function App() {
     const tableData = currentMonthDays.map(day => {
       const dateStr = formatDate(day);
       const record = records[dateStr];
+      const jmiHoliday = getJamiaHoliday(day);
+      const isHoliday = (record && record.isHoliday) || jmiHoliday.isHoliday;
+      const holidayName = jmiHoliday.name || (record && record.holidayName) || 'Holiday';
       return [
         format(day, 'dd/MM/yyyy (EEE)'),
-        record ? (record.isHoliday ? 'Holiday' : record.held) : '-',
-        record ? (record.isHoliday ? '-' : record.attended) : '-',
-        record ? (record.isHoliday ? '-' : (record.held > 0 ? `${((record.attended / record.held) * 100).toFixed(0)}%` : '-')) : '-'
+        isHoliday ? `Holiday: ${holidayName}` : (record ? record.held : '-'),
+        isHoliday ? '-' : (record ? record.attended : '-'),
+        isHoliday ? '-' : (record && record.held > 0 ? `${((record.attended / record.held) * 100).toFixed(0)}%` : '-')
       ];
     });
 
@@ -928,7 +943,8 @@ export default function App() {
           if (!estart || !eend || !d) return false;
           return startOfDay(d) >= startOfDay(estart) && startOfDay(d) <= startOfDay(eend);
         });
-        if (!r.isHoliday && !isExam) {
+        const jmiHoliday = getJamiaHoliday(date);
+        if (!r.isHoliday && !jmiHoliday.isHoliday && !isExam) {
           held += r.held;
           attended += r.attended;
         }
@@ -1024,8 +1040,9 @@ export default function App() {
     
     let held = 0;
     let attended = 0;
-    monthRecords.forEach(([_, r]) => {
-      if (!r.isHoliday) {
+    monthRecords.forEach(([date, r]) => {
+      const jmiHoliday = getJamiaHoliday(date);
+      if (!r.isHoliday && !jmiHoliday.isHoliday) {
         held += r.held;
         attended += r.attended;
       }
@@ -1062,7 +1079,8 @@ export default function App() {
       const days = eachDayOfInterval({ start, end: yesterday });
       return days.filter(day => {
         const dateStr = formatDate(day);
-        return !records[dateStr];
+        const jmiHoliday = getJamiaHoliday(day);
+        return !records[dateStr] && !jmiHoliday.isHoliday;
       }).map(d => formatDate(d));
     } catch (e) {
       return [];
@@ -2819,6 +2837,10 @@ export default function App() {
     const parsedStartDate = semester.startDate ? parseISO(semester.startDate) : null;
     const isNotStarted = parsedStartDate && !isNaN(parsedStartDate.getTime()) && isBefore(startOfDay(new Date()), startOfDay(parsedStartDate));
 
+    const todayHolidayInfo = getJamiaHoliday(new Date());
+    const isTodayHoliday = todayRecord.isHoliday || todayHolidayInfo.isHoliday;
+    const todayHolidayName = todayHolidayInfo.name || todayRecord.holidayName || 'Holiday';
+
     return (
       <div className="space-y-6 pb-24">
         <header className="flex justify-between items-center">
@@ -2985,10 +3007,12 @@ export default function App() {
                           {liveClassInfo.live ? 'LIVE NOW' : 'NO CLASS RUNNING'}
                         </span>
                       </div>
-                      {liveClassInfo.isWeekend ? (
+                      {liveClassInfo.isHoliday || liveClassInfo.isWeekend ? (
                         <div className="space-y-0.5">
-                          <h4 className="font-extrabold text-white text-xs">Weekend</h4>
-                          <p className="text-zinc-500 text-[10px] leading-tight">Enjoy your days off!</p>
+                          <h4 className="font-extrabold text-amber-500 text-xs truncate max-w-[130px] md:max-w-[200px]">
+                            {liveClassInfo.holidayName}
+                          </h4>
+                          <p className="text-zinc-500 text-[10px] leading-tight font-medium">No classes scheduled today</p>
                         </div>
                       ) : liveClassInfo.live ? (
                         <div className="space-y-0.5">
@@ -3014,7 +3038,12 @@ export default function App() {
                         <BookOpen size={10} className="text-primary" />
                         <span>NEXT UP</span>
                       </div>
-                      {liveClassInfo.next ? (
+                      {liveClassInfo.isHoliday || liveClassInfo.isWeekend ? (
+                        <div className="space-y-0.5">
+                          <h4 className="font-bold text-zinc-500 text-[11px] italic">Enjoy your day!</h4>
+                          <p className="text-zinc-500 text-[9px]">Classes resume next working day</p>
+                        </div>
+                      ) : liveClassInfo.next ? (
                         <div className="space-y-0.5">
                           <h4 className="font-extrabold text-zinc-200 text-xs truncate max-w-[130px] md:max-w-[200px]" title={liveClassInfo.next.subject}>
                             {liveClassInfo.next.subject}
@@ -3041,144 +3070,163 @@ export default function App() {
                 Daily Entry <span className="text-zinc-500 text-sm font-normal">— {format(new Date(), 'dd/MM/yyyy')}</span>
               </h3>
               <Card className="space-y-8">
-                {/* Held Section */}
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-1.5">
-                        <p className="font-bold">Total Available Attendance Today</p>
-                        <button
-                          type="button"
-                          onClick={() => setShowAttendanceInfoModal(true)}
-                          className="p-1 hover:bg-zinc-850 rounded-full text-zinc-400 hover:text-primary transition-all"
-                          title="View detailed Jamia Attendance System"
-                        >
-                          <Info size={14} />
-                        </button>
-                      </div>
-                      <p className="text-xs text-zinc-500">Theory (1 hr class) = 1 | Labs = 2{(profile.semester === 'Semester 1' || profile.semester === 'Semester 2') ? ' or 4' : ''} attendance units</p>
+                {isTodayHoliday ? (
+                  <div className="text-center py-8 px-4 space-y-4">
+                    <div className="w-16 h-16 bg-amber-500/10 text-amber-500 rounded-full mx-auto flex items-center justify-center animate-bounce">
+                      <CalendarDays size={32} />
                     </div>
-                    <div className="flex items-center gap-4">
-                      <Button variant="secondary" className="p-2" onClick={() => updateAttendance(today, Math.max(0, todayRecord.held - 1), Math.min(todayRecord.attended, Math.max(0, todayRecord.held - 1)), false)}><Minus size={18}/></Button>
-                      <span className="text-2xl font-bold w-6 text-center">{todayRecord.held}</span>
-                      <Button variant="secondary" className="p-2" onClick={() => updateAttendance(today, todayRecord.held + 1, todayRecord.attended, false)}><Plus size={18}/></Button>
+                    <div className="space-y-2">
+                      <h4 className="text-lg font-black text-amber-500">Today is a Holiday!</h4>
+                      <p className="text-sm text-zinc-300 font-extrabold bg-zinc-950/50 py-2 px-4 rounded-xl border border-zinc-800/80 inline-block">
+                        🎉 {todayHolidayName}
+                      </p>
+                      <p className="text-xs text-zinc-500 max-w-[280px] mx-auto leading-relaxed">
+                        No attendance marking is required today as per JMI academic calendar rules. Enjoy your day off!
+                      </p>
                     </div>
                   </div>
+                ) : (
+                  <>
+                    {/* Held Section */}
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-1.5">
+                            <p className="font-bold">Total Available Attendance Today</p>
+                            <button
+                              type="button"
+                              onClick={() => setShowAttendanceInfoModal(true)}
+                              className="p-1 hover:bg-zinc-850 rounded-full text-zinc-400 hover:text-primary transition-all"
+                              title="View detailed Jamia Attendance System"
+                            >
+                              <Info size={14} />
+                            </button>
+                          </div>
+                          <p className="text-xs text-zinc-500">Theory (1 hr class) = 1 | Labs = 2{(profile.semester === 'Semester 1' || profile.semester === 'Semester 2') ? ' or 4' : ''} attendance units</p>
+                        </div>
+                        <div className="flex items-center gap-4">
+                          <Button variant="secondary" className="p-2" onClick={() => updateAttendance(today, Math.max(0, todayRecord.held - 1), Math.min(todayRecord.attended, Math.max(0, todayRecord.held - 1)), false)}><Minus size={18}/></Button>
+                          <span className="text-2xl font-bold w-6 text-center">{todayRecord.held}</span>
+                          <Button variant="secondary" className="p-2" onClick={() => updateAttendance(today, todayRecord.held + 1, todayRecord.attended, false)}><Plus size={18}/></Button>
+                        </div>
+                      </div>
 
-                  {/* Attendance Guidelines Box */}
-                  <div className="bg-zinc-900/50 p-3.5 rounded-2xl border border-zinc-800/80 space-y-3">
-                    <div className="flex items-center justify-between">
-                      <button
-                        type="button"
-                        onClick={() => setShowAttendanceInfoModal(true)}
-                        className="flex items-center gap-2 text-xs font-bold text-zinc-300 hover:text-primary transition-all text-left"
-                      >
-                        <Info size={14} className="text-primary shrink-0" />
-                        <span>JMI Attendance Rules (Marking Guide)</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setShowAttendanceInfoModal(true)}
-                        className="text-[10px] text-primary hover:underline font-bold"
-                      >
-                        Detailed Guide &rarr;
-                      </button>
+                      {/* Attendance Guidelines Box */}
+                      <div className="bg-zinc-900/50 p-3.5 rounded-2xl border border-zinc-800/80 space-y-3">
+                        <div className="flex items-center justify-between">
+                          <button
+                            type="button"
+                            onClick={() => setShowAttendanceInfoModal(true)}
+                            className="flex items-center gap-2 text-xs font-bold text-zinc-300 hover:text-primary transition-all text-left"
+                          >
+                            <Info size={14} className="text-primary shrink-0" />
+                            <span>JMI Attendance Rules (Marking Guide)</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setShowAttendanceInfoModal(true)}
+                            className="text-[10px] text-primary hover:underline font-bold"
+                          >
+                            Detailed Guide &rarr;
+                          </button>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2 text-[11px] leading-tight text-zinc-400">
+                          <div className="p-2.5 bg-zinc-950/40 rounded-xl border border-zinc-900">
+                            <strong className="text-zinc-200 block mb-0.5">Theory Classes</strong>
+                            <span>Count as <strong className="text-primary">1</strong> Attendance</span>
+                          </div>
+                          <div className="p-2.5 bg-zinc-950/40 rounded-xl border border-zinc-900">
+                            <strong className="text-zinc-200 block mb-0.5">General Labs</strong>
+                            <span>Count as <strong className="text-primary">2</strong> Attendance</span>
+                          </div>
+                        </div>
+                        {(profile.semester === 'Semester 1' || profile.semester === 'Semester 2') && (
+                          <div className="pt-2 border-t border-zinc-850 space-y-1.5">
+                            <p className="font-black text-[9px] text-zinc-500 uppercase tracking-wider">For 1st Year (Semester 1 & 2) Students:</p>
+                            <ul className="space-y-1.5 text-[11px] text-zinc-400 pl-1">
+                              <li className="flex items-start gap-1.5 leading-snug">
+                                <span className="w-1.5 h-1.5 bg-primary/80 rounded-full mt-1.5 shrink-0" />
+                                <span>Labs (Physics, Chemistry, Design Thinking, Language Lab, Engineering Mechanics Labs) = <strong className="text-zinc-200 font-bold">2 Attendance</strong></span>
+                              </li>
+                              <li className="flex items-start gap-1.5 leading-snug">
+                                <span className="w-1.5 h-1.5 bg-primary rounded-full mt-1.5 shrink-0" />
+                                <span>Mechanical Workshop & Engineering Drawing = <strong className="text-zinc-200 font-bold">4 Attendance</strong></span>
+                              </li>
+                            </ul>
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
+                        {[1, 2, 3, 4, 5, 6]
+                          .filter(num => (profile.semester === 'Semester 1' || profile.semester === 'Semester 2' || num !== 4))
+                          .map(num => (
+                            <button
+                              key={`held-${num}`}
+                              onClick={() => updateAttendance(today, num, Math.min(todayRecord.attended, num), false)}
+                              className={`px-4 py-2 rounded-xl border text-sm font-bold transition-all shrink-0 ${todayRecord.held === num ? 'bg-primary border-primary text-white' : 'bg-zinc-800 border-zinc-700 text-zinc-400'}`}
+                            >
+                              {num}
+                            </button>
+                          ))}
+                      </div>
                     </div>
-                    <div className="grid grid-cols-2 gap-2 text-[11px] leading-tight text-zinc-400">
-                      <div className="p-2.5 bg-zinc-950/40 rounded-xl border border-zinc-900">
-                        <strong className="text-zinc-200 block mb-0.5">Theory Classes</strong>
-                        <span>Count as <strong className="text-primary">1</strong> Attendance</span>
-                      </div>
-                      <div className="p-2.5 bg-zinc-950/40 rounded-xl border border-zinc-900">
-                        <strong className="text-zinc-200 block mb-0.5">General Labs</strong>
-                        <span>Count as <strong className="text-primary">2</strong> Attendance</span>
-                      </div>
-                    </div>
-                    {(profile.semester === 'Semester 1' || profile.semester === 'Semester 2') && (
-                      <div className="pt-2 border-t border-zinc-850 space-y-1.5">
-                        <p className="font-black text-[9px] text-zinc-500 uppercase tracking-wider">For 1st Year (Semester 1 & 2) Students:</p>
-                        <ul className="space-y-1.5 text-[11px] text-zinc-400 pl-1">
-                          <li className="flex items-start gap-1.5 leading-snug">
-                            <span className="w-1.5 h-1.5 bg-primary/80 rounded-full mt-1.5 shrink-0" />
-                            <span>Labs (Physics, Chemistry, Design Thinking, Language Lab, Engineering Mechanics Labs) = <strong className="text-zinc-200 font-bold">2 Attendance</strong></span>
-                          </li>
-                          <li className="flex items-start gap-1.5 leading-snug">
-                            <span className="w-1.5 h-1.5 bg-primary rounded-full mt-1.5 shrink-0" />
-                            <span>Mechanical Workshop & Engineering Drawing = <strong className="text-zinc-200 font-bold">4 Attendance</strong></span>
-                          </li>
-                        </ul>
-                      </div>
-                    )}
-                  </div>
-                  <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
-                    {[1, 2, 3, 4, 5, 6]
-                      .filter(num => (profile.semester === 'Semester 1' || profile.semester === 'Semester 2' || num !== 4))
-                      .map(num => (
-                        <button
-                          key={`held-${num}`}
-                          onClick={() => updateAttendance(today, num, Math.min(todayRecord.attended, num), false)}
-                          className={`px-4 py-2 rounded-xl border text-sm font-bold transition-all shrink-0 ${todayRecord.held === num ? 'bg-primary border-primary text-white' : 'bg-zinc-800 border-zinc-700 text-zinc-400'}`}
-                        >
-                          {num}
-                        </button>
-                      ))}
-                  </div>
-                </div>
 
-                {/* Attended Section */}
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-1">
-                      <p className="font-bold">Classes Attended</p>
-                      <p className="text-xs text-zinc-500">How many did you go to?</p>
+                    {/* Attended Section */}
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <div className="space-y-1">
+                          <p className="font-bold">Classes Attended</p>
+                          <p className="text-xs text-zinc-500">How many did you go to?</p>
+                        </div>
+                        <div className="flex items-center gap-4">
+                          <Button variant="secondary" className="p-2" onClick={() => updateAttendance(today, todayRecord.held, Math.max(0, todayRecord.attended - 1), false)}><Minus size={18}/></Button>
+                          <span className="text-2xl font-bold w-6 text-center text-primary">{todayRecord.attended}</span>
+                          <Button variant="secondary" className="p-2" onClick={() => updateAttendance(today, todayRecord.held, Math.min(todayRecord.held, todayRecord.attended + 1), false)}><Plus size={18}/></Button>
+                        </div>
+                      </div>
+                      <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
+                        {Array.from({ length: todayRecord.held + 1 }, (_, i) => i).map(num => (
+                          <button
+                            key={`attended-${num}`}
+                            onClick={() => updateAttendance(today, todayRecord.held, num, false)}
+                            className={`px-4 py-2 rounded-xl border text-sm font-bold transition-all shrink-0 ${todayRecord.attended === num ? 'bg-primary border-primary text-white' : 'bg-zinc-800 border-zinc-700 text-zinc-400'}`}
+                          >
+                            {num}
+                          </button>
+                        ))}
+                        {todayRecord.held > 0 && (
+                          <button
+                            onClick={() => updateAttendance(today, todayRecord.held, todayRecord.held, false)}
+                            className="px-4 py-2 rounded-xl bg-primary/10 border border-primary/20 text-primary text-sm font-bold shrink-0"
+                          >
+                            All
+                          </button>
+                        )}
+                      </div>
                     </div>
-                    <div className="flex items-center gap-4">
-                      <Button variant="secondary" className="p-2" onClick={() => updateAttendance(today, todayRecord.held, Math.max(0, todayRecord.attended - 1), false)}><Minus size={18}/></Button>
-                      <span className="text-2xl font-bold w-6 text-center text-primary">{todayRecord.attended}</span>
-                      <Button variant="secondary" className="p-2" onClick={() => updateAttendance(today, todayRecord.held, Math.min(todayRecord.held, todayRecord.attended + 1), false)}><Plus size={18}/></Button>
-                    </div>
-                  </div>
-                  <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
-                    {Array.from({ length: todayRecord.held + 1 }, (_, i) => i).map(num => (
-                      <button
-                        key={`attended-${num}`}
-                        onClick={() => updateAttendance(today, todayRecord.held, num, false)}
-                        className={`px-4 py-2 rounded-xl border text-sm font-bold transition-all shrink-0 ${todayRecord.attended === num ? 'bg-primary border-primary text-white' : 'bg-zinc-800 border-zinc-700 text-zinc-400'}`}
-                      >
-                        {num}
-                      </button>
-                    ))}
-                    {todayRecord.held > 0 && (
-                      <button
-                        onClick={() => updateAttendance(today, todayRecord.held, todayRecord.held, false)}
-                        className="px-4 py-2 rounded-xl bg-primary/10 border border-primary/20 text-primary text-sm font-bold shrink-0"
-                      >
-                        All
-                      </button>
-                    )}
-                  </div>
-                </div>
 
-                <div className="space-y-4 pt-4 border-t border-zinc-800">
-                  <button 
-                    onClick={() => updateAttendance(today, 0, 0, !todayRecord.isHoliday)}
-                    style={{ backgroundColor: '#afb910' }}
-                    className={`w-full py-3 rounded-lg font-bold transition-all active:scale-95 flex items-center justify-center gap-2 shadow-lg ${
-                      todayRecord.isHoliday 
-                        ? 'bg-amber-500 text-black shadow-amber-500/40 ring-2 ring-white/20' 
-                        : 'bg-primary text-white opacity-90 hover:opacity-100 shadow-primary/40'
-                    }`}
-                  >
-                    {todayRecord.isHoliday ? 'Today is a Holiday' : 'Mark Today as Holiday'}
-                  </button>
-                  <Button 
-                    onClick={() => alert("Attendance Saved!")} 
-                    style={{ backgroundColor: '#b91010' }}
-                    className="w-full py-3 text-lg"
-                  >
-                    Save Attendance
-                  </Button>
-                </div>
+                    <div className="space-y-4 pt-4 border-t border-zinc-800">
+                      <button 
+                        onClick={() => updateAttendance(today, 0, 0, !todayRecord.isHoliday)}
+                        style={{ backgroundColor: '#afb910' }}
+                        className={`w-full py-3 rounded-lg font-bold transition-all active:scale-95 flex items-center justify-center gap-2 shadow-lg ${
+                          todayRecord.isHoliday 
+                            ? 'bg-amber-500 text-black shadow-amber-500/40 ring-2 ring-white/20' 
+                            : 'bg-primary text-white opacity-90 hover:opacity-100 shadow-primary/40'
+                        }`}
+                      >
+                        {todayRecord.isHoliday ? 'Today is a Holiday' : 'Mark Today as Holiday'}
+                      </button>
+                      <Button 
+                        onClick={() => alert("Attendance Saved!")} 
+                        style={{ backgroundColor: '#b91010' }}
+                        className="w-full py-3 text-lg"
+                      >
+                        Save Attendance
+                      </Button>
+                    </div>
+                  </>
+                )}
               </Card>
             </div>
 
@@ -3556,6 +3604,9 @@ export default function App() {
                   const isLocked = parsedLocked && !isNaN(parsedLocked.getTime()) && !isAfter(day, parsedLocked);
                   const exam = getExamForDate(day);
                   
+                  const jmiHoliday = getJamiaHoliday(day);
+                  const isHoliday = (record && record.isHoliday) || jmiHoliday.isHoliday;
+
                   let bgColor = 'bg-zinc-900';
                   let borderColor = 'border-zinc-800';
                   let textColor = 'text-zinc-100';
@@ -3564,12 +3615,12 @@ export default function App() {
                     bgColor = 'bg-amber-500/20';
                     borderColor = 'border-amber-500/30';
                     textColor = 'text-amber-500';
-                  } else if (record && !isBeforeSemester) {
-                    if (record.isHoliday) {
+                  } else if ((record || jmiHoliday.isHoliday) && !isBeforeSemester) {
+                    if (isHoliday) {
                       bgColor = 'bg-blue-500/20';
                       borderColor = 'border-blue-500/30';
                       textColor = 'text-blue-500';
-                    } else if (record.held > 0) {
+                    } else if (record && record.held > 0) {
                       if (record.attended === record.held) {
                         bgColor = 'bg-primary/20';
                         borderColor = 'border-primary/30';
@@ -3599,11 +3650,13 @@ export default function App() {
                       className={`aspect-square rounded-xl border flex flex-col items-center justify-center relative transition-all active:scale-95 ${bgColor} ${borderColor} ${textColor} ${isToday(day) ? 'ring-2 ring-primary ring-offset-2 ring-offset-zinc-950' : ''} ${selectedDate === dateStr ? 'ring-2 ring-white ring-offset-2 ring-offset-zinc-950' : ''}`}
                     >
                       <span className="text-sm font-bold">{format(day, 'd')}</span>
-                      {record && record.held > 0 && !record.isHoliday && (
+                      {record && record.held > 0 && !isHoliday && (
                         <span className="text-[9px] font-black mt-0.5 opacity-80">{record.attended}/{record.held}</span>
                       )}
-                      {record && record.isHoliday && (
-                        <span className="text-[8px] font-bold mt-0.5 opacity-60">H</span>
+                      {isHoliday && (
+                        <span className="text-[8px] font-bold mt-0.5 opacity-60" title={jmiHoliday.name || 'Holiday'}>
+                          {jmiHoliday.name ? (jmiHoliday.name === 'Saturday' ? 'SAT' : jmiHoliday.name === 'Sunday' ? 'SUN' : 'HOL') : 'H'}
+                        </span>
                       )}
                       {exam && (
                         <span className="text-[8px] font-bold mt-0.5 opacity-80">EXAM</span>
@@ -3624,89 +3677,104 @@ export default function App() {
                     className="mt-4"
                   >
                     <Card className="border-t-4 border-t-primary">
-                      <div className="flex justify-between items-start mb-4">
-                        <div>
-                          <h3 className="text-lg font-bold">
-                            {selectedDate && !isNaN(parseISO(selectedDate).getTime()) ? format(parseISO(selectedDate), 'EEEE, dd/MM/yyyy') : 'N/A'}
-                          </h3>
-                          <p className="text-zinc-500 text-xs uppercase tracking-wider font-bold">
-                            {selectedDate && !isNaN(parseISO(selectedDate).getTime()) && getExamForDate(parseISO(selectedDate)) ? `Exam: ${getExamForDate(parseISO(selectedDate))?.label}` : records[selectedDate]?.isHoliday ? 'Holiday' : 'Regular Class Day'}
-                          </p>
-                        </div>
-                        <div className="flex gap-2">
-                          <Button 
-                            variant="secondary" 
-                            className="text-xs py-1.5 px-3" 
-                            onClick={() => {
-                              const record = records[selectedDate];
-                              const parsedSelDate = selectedDate ? parseISO(selectedDate) : null;
-                              const parsedLocked = semester.lockedUntil ? parseISO(semester.lockedUntil) : null;
-                              const isLocked = semester.lockedUntil && parsedSelDate && !isNaN(parsedSelDate.getTime()) && parsedLocked && !isNaN(parsedLocked.getTime()) && !isAfter(parsedSelDate, parsedLocked);
-                              if (isLocked) {
-                                alert("This attendance data was initialized during setup and cannot be edited.");
-                                return;
-                              }
-                              const held = prompt("Total classes?", record?.held.toString() || "0");
-                              const attended = prompt("Attended classes?", record?.attended.toString() || "0");
-                              if (held !== null && attended !== null) {
-                                updateAttendance(selectedDate, parseInt(held), parseInt(attended), false);
-                              }
-                            }}
-                          >
-                            Edit
-                          </Button>
-                        </div>
-                      </div>
-                      
-                      {records[selectedDate] && !records[selectedDate].isHoliday && records[selectedDate].held > 0 ? (
-                        <div className="space-y-4">
-                          <div className="grid grid-cols-2 gap-4">
-                            <div className="bg-zinc-800/50 p-4 rounded-2xl text-center border border-zinc-800">
-                              <p className="text-zinc-500 text-[10px] uppercase font-bold tracking-widest mb-1">Attended</p>
-                              <p className="text-3xl font-black text-primary">{records[selectedDate].attended}</p>
+                      {(() => {
+                        const selJmiHoliday = getJamiaHoliday(selectedDate);
+                        const isSelHoliday = (records[selectedDate] && records[selectedDate].isHoliday) || selJmiHoliday.isHoliday;
+                        const selHolidayName = selJmiHoliday.name || (records[selectedDate] && records[selectedDate].holidayName) || 'Holiday';
+                        return (
+                          <>
+                            <div className="flex justify-between items-start mb-4">
+                              <div>
+                                <h3 className="text-lg font-bold">
+                                  {selectedDate && !isNaN(parseISO(selectedDate).getTime()) ? format(parseISO(selectedDate), 'EEEE, dd/MM/yyyy') : 'N/A'}
+                                </h3>
+                                <p className="text-zinc-500 text-xs uppercase tracking-wider font-bold">
+                                  {selectedDate && !isNaN(parseISO(selectedDate).getTime()) && getExamForDate(parseISO(selectedDate)) 
+                                    ? `Exam: ${getExamForDate(parseISO(selectedDate))?.label}` 
+                                    : isSelHoliday 
+                                      ? `Holiday: ${selHolidayName}` 
+                                      : 'Regular Class Day'}
+                                </p>
+                              </div>
+                              <div className="flex gap-2">
+                                {!isSelHoliday && (
+                                  <Button 
+                                    variant="secondary" 
+                                    className="text-xs py-1.5 px-3" 
+                                    onClick={() => {
+                                      const record = records[selectedDate];
+                                      const parsedSelDate = selectedDate ? parseISO(selectedDate) : null;
+                                      const parsedLocked = semester.lockedUntil ? parseISO(semester.lockedUntil) : null;
+                                      const isLocked = semester.lockedUntil && parsedSelDate && !isNaN(parsedSelDate.getTime()) && parsedLocked && !isNaN(parsedLocked.getTime()) && !isAfter(parsedSelDate, parsedLocked);
+                                      if (isLocked) {
+                                        alert("This attendance data was initialized during setup and cannot be edited.");
+                                        return;
+                                      }
+                                      const held = prompt("Total classes?", record?.held.toString() || "0");
+                                      const attended = prompt("Attended classes?", record?.attended.toString() || "0");
+                                      if (held !== null && attended !== null) {
+                                        updateAttendance(selectedDate, parseInt(held), parseInt(attended), false);
+                                      }
+                                    }}
+                                  >
+                                    Edit
+                                  </Button>
+                                )}
+                              </div>
                             </div>
-                            <div className="bg-zinc-800/50 p-4 rounded-2xl text-center border border-zinc-800">
-                              <p className="text-zinc-500 text-[10px] uppercase font-bold tracking-widest mb-1">Total Held</p>
-                              <p className="text-3xl font-black text-zinc-100">{records[selectedDate].held}</p>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-3 bg-primary/5 border border-primary/10 p-3 rounded-xl">
-                            <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center text-primary">
-                              <BarChart3 size={20} />
-                            </div>
-                            <div>
-                              <p className="text-xs font-bold text-primary/80 uppercase tracking-wider">Daily Percentage</p>
-                              <p className="text-lg font-bold text-primary">
-                                {((records[selectedDate].attended / records[selectedDate].held) * 100).toFixed(1)}%
-                              </p>
-                            </div>
-                          </div>
-                        </div>
-                      ) : records[selectedDate]?.isHoliday ? (
-                        <div className="bg-zinc-800/50 border border-zinc-700 p-6 rounded-2xl text-center">
-                          <Info className="mx-auto mb-2 text-zinc-500" size={32} />
-                          <p className="text-zinc-400 font-bold">This day is marked as a holiday.</p>
-                          <p className="text-zinc-500 text-xs mt-1">No classes were held on this date.</p>
-                        </div>
-                      ) : (
-                        <div className="bg-zinc-800/50 p-8 rounded-2xl text-center border border-zinc-800 border-dashed">
-                          <AlertCircle className="mx-auto mb-2 text-zinc-700" size={32} />
-                          <p className="text-zinc-500 font-medium italic">No attendance data recorded for this date.</p>
-                          <Button 
-                            variant="ghost" 
-                            className="mt-4 text-xs text-primary"
-                            onClick={() => {
-                              const held = prompt("Total classes?", "0");
-                              const attended = prompt("Attended classes?", "0");
-                              if (held !== null && attended !== null) {
-                                updateAttendance(selectedDate, parseInt(held), parseInt(attended), false);
-                              }
-                            }}
-                          >
-                            + Add Record
-                          </Button>
-                        </div>
-                      )}
+                            
+                            {records[selectedDate] && !isSelHoliday && records[selectedDate].held > 0 ? (
+                              <div className="space-y-4">
+                                <div className="grid grid-cols-2 gap-4">
+                                  <div className="bg-zinc-800/50 p-4 rounded-2xl text-center border border-zinc-800">
+                                    <p className="text-zinc-500 text-[10px] uppercase font-bold tracking-widest mb-1">Attended</p>
+                                    <p className="text-3xl font-black text-primary">{records[selectedDate].attended}</p>
+                                  </div>
+                                  <div className="bg-zinc-800/50 p-4 rounded-2xl text-center border border-zinc-800">
+                                    <p className="text-zinc-500 text-[10px] uppercase font-bold tracking-widest mb-1">Total Held</p>
+                                    <p className="text-3xl font-black text-zinc-100">{records[selectedDate].held}</p>
+                                  </div>
+                                </div>
+                                <div className="flex items-center gap-3 bg-primary/5 border border-primary/10 p-3 rounded-xl">
+                                  <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center text-primary">
+                                    <BarChart3 size={20} />
+                                  </div>
+                                  <div>
+                                    <p className="text-xs font-bold text-primary/80 uppercase tracking-wider">Daily Percentage</p>
+                                    <p className="text-lg font-bold text-primary">
+                                      {((records[selectedDate].attended / records[selectedDate].held) * 100).toFixed(1)}%
+                                    </p>
+                                  </div>
+                                </div>
+                              </div>
+                            ) : isSelHoliday ? (
+                              <div className="bg-zinc-800/50 border border-zinc-700 p-6 rounded-2xl text-center">
+                                <Info className="mx-auto mb-2 text-primary" size={32} />
+                                <p className="text-zinc-200 font-extrabold text-sm uppercase tracking-wide">Holiday: {selHolidayName}</p>
+                                <p className="text-zinc-500 text-xs mt-1">No attendance marking is required. Enjoy your day off!</p>
+                              </div>
+                            ) : (
+                              <div className="bg-zinc-800/50 p-8 rounded-2xl text-center border border-zinc-800 border-dashed">
+                                <AlertCircle className="mx-auto mb-2 text-zinc-700" size={32} />
+                                <p className="text-zinc-500 font-medium italic">No attendance data recorded for this date.</p>
+                                <Button 
+                                  variant="ghost" 
+                                  className="mt-4 text-xs text-primary"
+                                  onClick={() => {
+                                    const held = prompt("Total classes?", "0");
+                                    const attended = prompt("Attended classes?", "0");
+                                    if (held !== null && attended !== null) {
+                                      updateAttendance(selectedDate, parseInt(held), parseInt(attended), false);
+                                    }
+                                  }}
+                                >
+                                  + Add Record
+                                </Button>
+                              </div>
+                            )}
+                          </>
+                        );
+                      })()}
                     </Card>
                   </motion.div>
                 )}

@@ -52,6 +52,52 @@ export const formatDate = (date: Date | string) => {
 
 export const getTodayStr = () => formatDate(new Date());
 
+export const getJamiaHoliday = (date: Date | string | null | undefined): { isHoliday: boolean; name?: string } => {
+  const d = safeParse(date);
+  if (!d) return { isHoliday: false };
+
+  const dayName = format(d, 'EEEE');
+  if (dayName === 'Saturday' || dayName === 'Sunday') {
+    return { isHoliday: true, name: dayName };
+  }
+
+  const dateStr = format(d, 'yyyy-MM-dd');
+  const holidays2026: Record<string, string> = {
+    '2026-01-26': 'Republic Day',
+    '2026-02-15': 'Maha Shivratri',
+    '2026-03-03': 'Holi',
+    '2026-03-04': 'Holi',
+    '2026-03-20': 'Jumatul Wida*',
+    '2026-03-21': 'Eidul Fitr*',
+    '2026-03-22': 'Eidul Fitr*',
+    '2026-03-26': 'Ram Navmi',
+    '2026-03-31': 'Mahavir Jayanti',
+    '2026-04-03': 'Good Friday',
+    '2026-05-01': 'Buddha Purnima',
+    '2026-05-27': 'Eidul-Azha*',
+    '2026-05-28': 'Eidul-Azha*',
+    '2026-06-25': 'Muharram*',
+    '2026-06-26': 'Muharram*',
+    '2026-08-05': 'Chehellum*',
+    '2026-08-15': 'Independence day',
+    '2026-08-26': 'Eid- Milad-Un-Nabi*',
+    '2026-09-04': 'Janamashtami',
+    '2026-10-02': 'Gandhi Jayanti',
+    '2026-10-19': 'Dussehra',
+    '2026-10-20': 'Dussehra',
+    '2026-11-07': 'Diwali (Deepavali)',
+    '2026-11-08': 'Diwali (Deepavali)',
+    '2026-11-24': 'Guru Nanak Jayanti',
+    '2026-12-25': 'Christmas Day',
+  };
+
+  if (holidays2026[dateStr]) {
+    return { isHoliday: true, name: holidays2026[dateStr] };
+  }
+
+  return { isHoliday: false };
+};
+
 export const calculateAttendance = (records: Record<string, any>, initialHeld = 0, initialAttended = 0, startDate?: string, exams: any[] = []) => {
   let totalHeld = initialHeld;
   let totalAttended = initialAttended;
@@ -83,7 +129,8 @@ export const calculateAttendance = (records: Record<string, any>, initialHeld = 
       }
     }
     
-    if (!record.isHoliday && !isExamDay(date)) {
+    const jamiaHoliday = getJamiaHoliday(date);
+    if (!record.isHoliday && !jamiaHoliday.isHoliday && !isExamDay(date)) {
       totalHeld += record.held;
       totalAttended += record.attended;
     }
