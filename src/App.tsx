@@ -71,10 +71,12 @@ import {
   Exam,
   SubjectGradeConfig,
   Subject,
-  formatSubjectName
+  formatSubjectName,
+  NotificationSettings
 } from './types';
 import SettingsTab from './components/SettingsTab';
 import ExamsTab from './components/ExamsTab';
+import { getDeviceToken } from './utils/androidUtils';
 import { 
   formatDate, 
   getTodayStr, 
@@ -247,7 +249,7 @@ const JAMIA_FACULTIES_DEPARTMENTS: Record<string, string[]> = {
 export default function App() {
   // Persistence
   const [profile, setProfile] = useState<Profile>(() => {
-    const saved = localStorage.getItem('bs_profile');
+    const saved = localStorage.getItem('bs_profile') || localStorage.getItem('profile');
     const defaultProfile = { name: 'Kaif Khan', email: 'kaif@example.com', college: 'IIT Delhi', department: 'Computer Science', semester: 'Semester 1', mobile: '', avatar: '' };
     if (!saved) return defaultProfile;
     const parsed = JSON.parse(saved);
@@ -267,6 +269,47 @@ export default function App() {
     }
     return profileMerged;
   });
+
+  const [profilePhoto, setProfilePhoto] = useState<string | null>(() => {
+    return localStorage.getItem('profilePhoto');
+  });
+
+  const [notificationSettings, setNotificationSettings] = useState<NotificationSettings>(() => {
+    const saved = localStorage.getItem('notificationSettings');
+    const defaultSettings: NotificationSettings = {
+      dailyAttendanceReminder: true,
+      examReminder: true,
+      timetableReminder: true,
+      lowAttendanceWarning: true,
+      appUpdates: true
+    };
+    if (!saved) return defaultSettings;
+    try {
+      return { ...defaultSettings, ...JSON.parse(saved) };
+    } catch (e) {
+      return defaultSettings;
+    }
+  });
+
+  useEffect(() => {
+    localStorage.setItem('notificationSettings', JSON.stringify(notificationSettings));
+  }, [notificationSettings]);
+
+  useEffect(() => {
+    const token = getDeviceToken();
+    if (token) {
+      console.log('App started with deviceToken:', token);
+    }
+    
+    const handleTokenUpdated = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      console.log('Device token injected from Android:', customEvent.detail);
+    };
+    window.addEventListener('deviceTokenUpdated', handleTokenUpdated);
+    return () => {
+      window.removeEventListener('deviceTokenUpdated', handleTokenUpdated);
+    };
+  }, []);
 
   const [semester, setSemester] = useState<Semester>(() => {
     const saved = localStorage.getItem('bs_semester');
@@ -1001,6 +1044,7 @@ export default function App() {
   // Effects for saving
   useEffect(() => {
     localStorage.setItem('bs_profile', JSON.stringify(profile));
+    localStorage.setItem('profile', JSON.stringify(profile));
     if (profile.email) {
       saveUserProfileToFirestore(profile.email, profile);
     }
@@ -2846,9 +2890,13 @@ export default function App() {
         <header className="flex justify-between items-center">
           <div className="flex items-center gap-3">
             <div 
-              className="w-12 h-12 bg-primary rounded-full flex items-center justify-center text-white font-black text-lg border border-zinc-800 shadow-md shadow-primary/10 select-none"
+              className="w-12 h-12 bg-primary rounded-full flex items-center justify-center text-white font-black text-lg border border-zinc-800 shadow-md shadow-primary/10 select-none overflow-hidden"
             >
-              {profile.name.charAt(0).toUpperCase()}
+              {profilePhoto ? (
+                <img src={profilePhoto} alt="Profile" className="w-full h-full object-cover animate-fade-in" referrerPolicy="no-referrer" />
+              ) : (
+                profile.name.charAt(0).toUpperCase()
+              )}
             </div>
             <div>
               <p className="text-zinc-500 text-sm">
@@ -4125,6 +4173,10 @@ export default function App() {
         setGradeSubjects={setGradeSubjects}
         subjectAttendance={subjectAttendance}
         setSubjectAttendance={setSubjectAttendance}
+        profilePhoto={profilePhoto}
+        setProfilePhoto={setProfilePhoto}
+        notificationSettings={notificationSettings}
+        setNotificationSettings={setNotificationSettings}
       />
     );
   };
