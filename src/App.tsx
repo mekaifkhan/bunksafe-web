@@ -190,7 +190,12 @@ const JAMIA_FACULTIES_DEPARTMENTS: Record<string, string[]> = {
     "Electronics & Communication Engineering",
     "Mechanical Engineering",
     "Applied Sciences & Humanities",
-    "University Polytechnic"
+    "University Polytechnic",
+    "Civil Engineering (Construction Technology) (Self-Financed)",
+    "Electrical & Computer Engineering (Self-Financed)",
+    "Robotics & Artificial Intelligence (Self-Financed)",
+    "Electronics (VLSI Design & Technology) (Self-Financed)",
+    "Computer Science & Engineering (Data Sciences) (Self-Financed)"
   ],
   "Faculty of Fine Arts": [
     "Applied Art",
@@ -2230,7 +2235,7 @@ export default function App() {
                   >
                     <div className="text-center pb-2">
                       <h2 className="text-2xl font-black text-white">Welcome to BunkSafe</h2>
-                      <p className="text-zinc-400 text-sm mt-2">Are you a B.Tech student?</p>
+                      <p className="text-zinc-400 text-sm mt-2">Are you a Jamia B.Tech student?</p>
                     </div>
 
                     <div className="space-y-3">
@@ -2248,7 +2253,7 @@ export default function App() {
                         <div className="flex-1 space-y-1">
                           <h3 className="font-bold text-zinc-200 group-hover:text-white transition-all">✅ Yes</h3>
                           <p className="text-xs text-zinc-500 leading-relaxed">
-                            Continue with the B.Tech student academic calendar, syllabus & exam tracking.
+                            Continue with the Jamia B.Tech student academic calendar, syllabus & exam tracking.
                           </p>
                         </div>
                       </button>
