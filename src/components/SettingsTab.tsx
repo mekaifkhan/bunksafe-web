@@ -26,14 +26,14 @@ import {
   ArrowDown,
   Sliders,
   AlertTriangle,
-  Camera
+  Camera,
+  Instagram
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { Profile, Semester, AttendanceRecord, SemesterHistory, AppState, Subject, SubjectGradeConfig, formatSubjectName } from '../types';
 import { motion, AnimatePresence } from 'motion/react';
 import { logCustomEvent } from '../firebase';
 import { JMI_CURRICULUM, JMI_CIVIL_CURRICULUM, JMI_VLSI_CURRICULUM, JMI_ELECTRICAL_CURRICULUM, JMI_MECHANICAL_CURRICULUM, JMI_CSE_DS_CURRICULUM, JMI_COMP_ENG_CURRICULUM, JMI_ELECTRICAL_COMPUTER_CURRICULUM, JMI_FIRST_YEAR_SET_A, JMI_FIRST_YEAR_SET_B, getDefaultCurriculumSubjects } from '../utils/curriculum';
-import AvatarPickerModal from './AvatarPickerModal';
 
 interface SettingsTabProps {
   profile: Profile;
@@ -92,7 +92,6 @@ export default function SettingsTab({
   const [newHolidayDate, setNewHolidayDate] = useState('');
   const [showPrivacyPolicy, setShowPrivacyPolicy] = useState(false);
   const [showAboutDev, setShowAboutDev] = useState(false);
-  const [isAvatarModalOpen, setIsAvatarModalOpen] = useState(false);
 
   // Subject Manager local states
   const [showSubjectManager, setShowSubjectManager] = useState(false);
@@ -428,29 +427,10 @@ export default function SettingsTab({
         </span>
       </header>
 
-      {/* Avatar Display & Banner */}
+      {/* Initials Display & Banner */}
       <div className="flex flex-col items-center gap-3 py-4 bg-zinc-900/40 border border-zinc-850 rounded-2xl p-4">
-        <div className="relative group cursor-pointer" onClick={() => setIsAvatarModalOpen(true)}>
-          <div className="w-20 h-20 bg-primary rounded-full flex items-center justify-center text-3xl font-black text-white shadow-xl shadow-primary/20 overflow-hidden border-4 border-zinc-900 hover:brightness-95 transition-all">
-            {profile.avatar ? (
-              <img src={profile.avatar} alt="Profile" className="w-full h-full object-cover" />
-            ) : (
-              (profile.name || 'U').charAt(0).toUpperCase()
-            )}
-            <div className="absolute inset-0 bg-black/45 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity rounded-full">
-              <Camera size={20} className="text-white" />
-            </div>
-          </div>
-          <button 
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              setIsAvatarModalOpen(true);
-            }}
-            className="absolute bottom-0 right-0 bg-primary text-white p-1.5 rounded-full shadow-lg active:scale-90 transition-all border border-zinc-900"
-          >
-            <Camera size={12} />
-          </button>
+        <div className="w-20 h-20 bg-primary rounded-full flex items-center justify-center text-3xl font-black text-white shadow-xl shadow-primary/20 overflow-hidden border-4 border-zinc-900">
+          {(profile.name || 'U').charAt(0).toUpperCase()}
         </div>
         <div className="text-center">
           <h2 className="text-lg font-black text-zinc-100">{profile.name}</h2>
@@ -829,11 +809,13 @@ export default function SettingsTab({
           </button>
 
           <a 
-            href="mailto:feedback@bunksafe.app?subject=BunkSafe%20Feedback"
+            href="https://chat.whatsapp.com/IAsmtq8aMkZ54EAhkZ25tu?s=cl&p=a&ilr=4"
+            target="_blank"
+            rel="noreferrer"
             className="w-full flex justify-between items-center py-2.5 px-3 bg-zinc-950/40 border border-zinc-850/60 rounded-xl text-xs font-bold text-zinc-300 hover:text-white transition-colors"
           >
-            <span className="flex items-center gap-2"><MessageSquare size={14} className="text-primary" /> Send Feedback</span>
-            <span className="text-[10px] text-zinc-500">Email Dev</span>
+            <span className="flex items-center gap-2"><MessageSquare size={14} className="text-primary" /> Join Feedback Community and report bug</span>
+            <span className="text-[10px] text-emerald-500">WhatsApp Group</span>
           </a>
 
           <button 
@@ -890,12 +872,12 @@ export default function SettingsTab({
 
             <div className="pt-1">
               <a 
-                href="https://www.linkedin.com/in/kaif-khan-011a57302?utm_source=share_via&utm_content=profile&utm_medium=member_android" 
+                href="https://www.instagram.com/me_kaifkhan" 
                 target="_blank" 
                 rel="noreferrer"
-                className="inline-flex items-center justify-center gap-1.5 w-full py-2.5 px-4 bg-[#0077b5] hover:bg-[#0077b5]/90 text-white rounded-xl text-xs font-bold transition-all"
+                className="inline-flex items-center justify-center gap-1.5 w-full py-2.5 px-4 bg-gradient-to-r from-purple-600 via-pink-600 to-orange-500 hover:opacity-95 text-white rounded-xl text-xs font-bold transition-all"
               >
-                Connect on LinkedIn
+                <Instagram size={14} /> Follow @me_kaifkhan on Instagram
               </a>
             </div>
 
@@ -1247,17 +1229,6 @@ export default function SettingsTab({
           </motion.div>
         )}
       </AnimatePresence>
-
-      <AvatarPickerModal
-        isOpen={isAvatarModalOpen}
-        onClose={() => setIsAvatarModalOpen(false)}
-        currentAvatar={profile.avatar}
-        onSave={(avatarUrl) => {
-          setProfile({ ...profile, avatar: avatarUrl || undefined });
-          logCustomEvent('avatar_changed', { has_avatar: !!avatarUrl });
-        }}
-        profileName={profile.name}
-      />
     </div>
   );
 }

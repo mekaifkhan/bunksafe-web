@@ -74,7 +74,6 @@ import {
   formatSubjectName
 } from './types';
 import SettingsTab from './components/SettingsTab';
-import AvatarPickerModal from './components/AvatarPickerModal';
 import ExamsTab from './components/ExamsTab';
 import { 
   formatDate, 
@@ -308,7 +307,6 @@ export default function App() {
   const [editingExam, setEditingExam] = useState<Exam | null>(null);
 
   const [appState, setAppState] = useState<AppState>('MAIN');
-  const [isHomeAvatarModalOpen, setIsHomeAvatarModalOpen] = useState(false);
 
   const [isSplashVisible, setIsSplashVisible] = useState(true);
   const [onboardingCompleted, setOnboardingCompleted] = useState<boolean>(() => {
@@ -2324,6 +2322,29 @@ export default function App() {
                                     setOnboardDept('');
                                     setOnboardProgramme('Regular');
                                   }
+
+                                  // Jamia B.Tech-specific Odd/Even academic calendar preset dates
+                                  const semNum = parseInt(sem.split(' ')[1]) || 1;
+                                  const isEvenSem = semNum % 2 === 0;
+                                  if (isEvenSem) {
+                                    setOnboardStartDate('2026-01-05');
+                                    setOnboardEndDate('2026-05-10');
+                                    setOnboardMid1Start('2026-03-02');
+                                    setOnboardMid1End('2026-03-06');
+                                    setOnboardMid2Start('2026-04-20');
+                                    setOnboardMid2End('2026-04-24');
+                                    setOnboardEndSemStart('2026-05-15');
+                                    setOnboardEndSemEnd('2026-06-10');
+                                  } else {
+                                    setOnboardStartDate('2026-07-17');
+                                    setOnboardEndDate('2026-11-20');
+                                    setOnboardMid1Start('2026-09-14');
+                                    setOnboardMid1End('2026-09-18');
+                                    setOnboardMid2Start('2026-11-02');
+                                    setOnboardMid2End('2026-11-06');
+                                    setOnboardEndSemStart('2026-11-25');
+                                    setOnboardEndSemEnd('2026-12-20');
+                                  }
                                 }}
                                 className={`py-2 px-1 rounded-lg text-xs font-bold border transition-all ${onboardSem === sem ? 'bg-primary border-primary text-white font-black' : 'bg-zinc-800 border-zinc-700/60 text-zinc-400'}`}
                               >
@@ -2802,17 +2823,9 @@ export default function App() {
         <header className="flex justify-between items-center">
           <div className="flex items-center gap-3">
             <div 
-              onClick={() => setIsHomeAvatarModalOpen(true)}
-              className="w-12 h-12 bg-zinc-900 rounded-full border border-zinc-800 flex items-center justify-center overflow-hidden cursor-pointer hover:ring-2 hover:ring-primary/50 active:scale-95 transition-all relative group"
-              title="Change Profile Picture"
+              className="w-12 h-12 bg-primary rounded-full flex items-center justify-center text-white font-black text-lg border border-zinc-800 shadow-md shadow-primary/10 select-none"
             >
-              {profile.avatar ? (
-                <img src={profile.avatar} alt="Profile" className="w-full h-full object-cover" />
-              ) : (
-                <div className="w-full h-full bg-primary flex items-center justify-center text-white font-bold text-lg">
-                  {profile.name.charAt(0)}
-                </div>
-              )}
+              {profile.name.charAt(0).toUpperCase()}
             </div>
             <div>
               <p className="text-zinc-500 text-sm">
@@ -4102,15 +4115,6 @@ export default function App() {
 
       {showExamModal && <ExamModal />}
       {renderFirstYearPatternModal()}
-      <AvatarPickerModal
-        isOpen={isHomeAvatarModalOpen}
-        onClose={() => setIsHomeAvatarModalOpen(false)}
-        currentAvatar={profile.avatar}
-        onSave={(avatarUrl) => {
-          setProfile({ ...profile, avatar: avatarUrl || undefined });
-        }}
-        profileName={profile.name}
-      />
     </div>
   );
 }
