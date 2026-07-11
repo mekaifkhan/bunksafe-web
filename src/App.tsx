@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { logCustomEvent, saveUserSubjectsToFirestore, loadUserSubjectsFromFirestore } from './firebase';
+import { logCustomEvent, saveUserSubjectsToFirestore, loadUserSubjectsFromFirestore, saveUserProfileToFirestore, loadUserProfileFromFirestore } from './firebase';
 import { getDefaultCurriculumSubjects } from './utils/curriculum';
 import { 
   LayoutDashboard, 
@@ -16,6 +16,8 @@ import {
   Minus, 
   ChevronLeft, 
   ChevronRight,
+  Search,
+  Star,
   Lock,
   AlertCircle,
   CheckCircle2,
@@ -144,6 +146,97 @@ const Input = ({ label, value, onChange, type = "text", placeholder = "" }: any)
   </div>
 );
 
+const UNIVERSITIES_LIST = [
+  "Delhi University",
+  "Jawaharlal Nehru University",
+  "Banaras Hindu University",
+  "Aligarh Muslim University",
+  "Jamia Hamdard",
+  "IIT Delhi",
+  "IIT Bombay",
+  "IIT Madras",
+  "IIT Kanpur",
+  "IIT Kharagpur",
+  "IIT Guwahati",
+  "IIT Roorkee",
+  "IIT Hyderabad",
+  "IIIT Delhi",
+  "IIIT Allahabad",
+  "NIT Trichy",
+  "NIT Surathkal",
+  "NIT Warangal",
+  "Anna University",
+  "Jadavpur University",
+  "VIT",
+  "SRM",
+  "LPU",
+  "Manipal",
+  "BITS Pilani",
+  "Amity",
+  "Chandigarh University",
+  "Sharda University",
+  "Galgotias University",
+  "Noida International University"
+];
+
+const JAMIA_FACULTIES_DEPARTMENTS: Record<string, string[]> = {
+  "Faculty of Architecture & Ekistics": ["Architecture", "Planning"],
+  "Faculty of Dentistry": ["Dental Sciences"],
+  "Faculty of Education": ["Teacher Training", "Educational Studies"],
+  "Faculty of Engineering & Technology": [
+    "Civil Engineering",
+    "Computer Engineering",
+    "Electrical Engineering",
+    "Electronics & Communication Engineering",
+    "Mechanical Engineering",
+    "Applied Sciences & Humanities",
+    "University Polytechnic"
+  ],
+  "Faculty of Fine Arts": [
+    "Applied Art",
+    "Painting",
+    "Graphic Art",
+    "Sculpture",
+    "Art Education",
+    "Art History",
+    "Design & Innovation"
+  ],
+  "Faculty of Humanities & Languages": [
+    "English",
+    "Hindi",
+    "Urdu",
+    "Arabic",
+    "Persian",
+    "Sanskrit",
+    "Islamic Studies",
+    "History & Culture",
+    "Foreign Languages"
+  ],
+  "Faculty of Law": ["Law"],
+  "Faculty of Life Sciences": ["Biosciences", "Biotechnology"],
+  "Faculty of Management Studies": [
+    "Management Studies",
+    "Tourism & Hospitality",
+    "Hospital Management"
+  ],
+  "Faculty of Sciences": [
+    "Mathematics",
+    "Physics",
+    "Chemistry",
+    "Computer Science",
+    "Environmental Science"
+  ],
+  "Faculty of Social Sciences": [
+    "Economics",
+    "Political Science",
+    "Psychology",
+    "Sociology",
+    "Social Work",
+    "Commerce & Business Studies",
+    "Adult & Continuing Education"
+  ]
+};
+
 // --- Main App ---
 
 export default function App() {
@@ -218,6 +311,26 @@ export default function App() {
   });
   const [onboardingStep, setOnboardingStep] = useState<number>(1);
   const [isJamiaStudent, setIsJamiaStudent] = useState<boolean | null>(null);
+
+  // New Manual Onboarding States
+  const [isManualOnboarding, setIsManualOnboarding] = useState<boolean>(false);
+  const [manualOnboardingStep, setManualOnboardingStep] = useState<number>(1);
+  const [manualName, setManualName] = useState<string>('');
+  const [manualUniversity, setManualUniversity] = useState<string>('Jamia Millia Islamia');
+  const [manualUniversityInput, setManualUniversityInput] = useState<string>('');
+  const [univSearchQuery, setUnivSearchQuery] = useState<string>('');
+  const [manualFaculty, setManualFaculty] = useState<string>('Faculty of Engineering & Technology');
+  const [manualFacultyInput, setManualFacultyInput] = useState<string>('');
+  const [facultySearchQuery, setFacultySearchQuery] = useState<string>('');
+  const [manualDept, setManualDept] = useState<string>('Computer Engineering');
+  const [manualDeptInput, setManualDeptInput] = useState<string>('');
+  const [deptSearchQuery, setDeptSearchQuery] = useState<string>('');
+  const [manualSem, setManualSem] = useState<string>('Semester 1');
+  const [manualSemInput, setManualSemInput] = useState<string>('');
+  const [manualStartDate, setManualStartDate] = useState<string>('2026-07-17');
+  const [manualEndDate, setManualEndDate] = useState<string>('2026-11-20');
+  const [manualTargetAttendance, setManualTargetAttendance] = useState<number>(75);
+  const [syllabusLoadStatus, setSyllabusLoadStatus] = useState<'none' | 'loaded' | 'not_found'>('none');
 
   const [onboardName, setOnboardName] = useState('');
   const [onboardProgramme, setOnboardProgramme] = useState<'Regular' | 'Self-Financed' | ''>('');
@@ -866,7 +979,12 @@ export default function App() {
   });
 
   // Effects for saving
-  useEffect(() => localStorage.setItem('bs_profile', JSON.stringify(profile)), [profile]);
+  useEffect(() => {
+    localStorage.setItem('bs_profile', JSON.stringify(profile));
+    if (profile.email) {
+      saveUserProfileToFirestore(profile.email, profile);
+    }
+  }, [profile]);
   useEffect(() => localStorage.setItem('bs_semester', JSON.stringify(semester)), [semester]);
   useEffect(() => localStorage.setItem('bs_records', JSON.stringify(records)), [records]);
   useEffect(() => localStorage.setItem('bs_history', JSON.stringify(history)), [history]);
@@ -1478,6 +1596,13 @@ export default function App() {
   };
 
   function renderOnboarding() {
+    // Pin Jamia Millia Islamia at the top
+    const displayUniversities = (() => {
+      const baseList = ["Jamia Millia Islamia", ...UNIVERSITIES_LIST, "Other"];
+      if (!univSearchQuery) return baseList;
+      return baseList.filter(u => u.toLowerCase().includes(univSearchQuery.toLowerCase()));
+    })();
+
     return (
       <div className="min-h-screen bg-zinc-950 text-zinc-100 flex items-center justify-center p-4">
         <div className="w-full max-w-md space-y-6">
@@ -1490,395 +1615,993 @@ export default function App() {
           </div>
 
           <AnimatePresence mode="wait">
-            {onboardingStep === 1 && (
-              <motion.div
-                key="step1"
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: 20 }}
-                className="space-y-4"
-              >
-                <div className="text-center pb-2">
-                  <h2 className="text-xl font-bold">Choose Setup Option</h2>
-                  <p className="text-zinc-500 text-sm mt-1">Select an option to initialize your academic calendar.</p>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsJamiaStudent(true);
-                    setOnboardingStep(2);
-                  }}
-                  className="w-full text-left p-5 rounded-2xl bg-zinc-900 border border-zinc-800 hover:border-primary/50 transition-all hover:bg-zinc-900/80 group flex gap-4 items-center"
-                >
-                  <div className="p-3 bg-primary/10 text-primary rounded-xl group-hover:bg-primary group-hover:text-white transition-all">
-                    <GraduationCap size={24} />
-                  </div>
-                  <div className="flex-1 space-y-1">
-                    <h3 className="font-bold text-zinc-200 group-hover:text-white transition-all">Jamia BTech Student</h3>
-                    <p className="text-xs text-zinc-500 leading-relaxed">
-                      Auto-load Jamia academic calendar, mid-sems & end-sem dates instantly.
-                    </p>
-                  </div>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsJamiaStudent(false);
-                    localStorage.setItem('bs_onboarding_completed', 'true');
-                    setSemester({
-                      title: 'Semester 1',
-                      startDate: '',
-                      endDate: '',
-                      targetAttendance: 75,
-                      isInitialized: false,
-                      initialHeld: 0,
-                      initialAttended: 0
-                    });
-                    setOnboardingCompleted(true);
-                  }}
-                  className="w-full text-left p-5 rounded-2xl bg-zinc-900 border border-zinc-800 hover:border-zinc-700 transition-all hover:bg-zinc-900/80 group flex gap-4 items-center"
-                >
-                  <div className="p-3 bg-zinc-800 text-zinc-400 rounded-xl group-hover:bg-zinc-700 group-hover:text-zinc-200 transition-all">
-                    <Settings size={24} />
-                  </div>
-                  <div className="flex-1 space-y-1">
-                    <h3 className="font-bold text-zinc-300">Manual College Setup</h3>
-                    <p className="text-xs text-zinc-500 leading-relaxed">
-                      Manually enter your own semester start/end dates and customize attendance goals.
-                    </p>
-                  </div>
-                </button>
-              </motion.div>
-            )}
-
-            {onboardingStep === 2 && (() => {
-              const isSem1or2 = onboardSem === 'Semester 1' || onboardSem === 'Semester 2';
-              const isFormValid = !!(onboardName.trim() && onboardSem && (isSem1or2 || (onboardProgramme && onboardDept)));
-
-              return (
-                <motion.div
-                  key="step2"
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: 20 }}
-                  className="space-y-5"
-                >
-                  <div className="text-center">
-                    <h2 className="text-xl font-bold">Your Details</h2>
-                    <p className="text-zinc-500 text-sm mt-1">Please enter your academic information.</p>
-                  </div>
-
-                  <Card className="space-y-4 p-5">
-                    <Input 
-                      label="Full Name" 
-                      value={onboardName} 
-                      onChange={setOnboardName} 
-                      placeholder="Enter your name" 
-                    />
-
-                    <div className="space-y-2 text-left">
-                      <label className="text-xs font-bold text-zinc-500 uppercase tracking-widest block">Semester</label>
-                      <div className="grid grid-cols-4 gap-2">
-                        {Array.from({ length: 8 }, (_, i) => `Semester ${i + 1}`).map(sem => (
-                          <button
-                            key={sem}
-                            type="button"
-                            onClick={() => {
-                              setOnboardSem(sem);
-                              logCustomEvent('semester_selected', { semester: sem });
-                              const is1or2 = sem === 'Semester 1' || sem === 'Semester 2';
-                              if (is1or2) {
-                                setOnboardDept('Applied Science & Humanities');
-                                setOnboardProgramme('');
-                                logCustomEvent('branch_selected', { branch: 'Applied Science & Humanities' });
-                              } else {
-                                setOnboardDept('');
-                                setOnboardProgramme('Regular');
-                              }
-                            }}
-                            className={`py-2 px-1 rounded-lg text-xs font-bold border transition-all ${onboardSem === sem ? 'bg-primary border-primary text-white font-black' : 'bg-zinc-800 border-zinc-700/60 text-zinc-400'}`}
-                          >
-                            Sem {sem.split(' ')[1]}
-                          </button>
-                        ))}
-                      </div>
+            {isManualOnboarding ? (
+              <div className="space-y-4">
+                {manualOnboardingStep === 1 && (
+                  <motion.div key="manual_step1" initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 10 }} className="space-y-4">
+                    <div className="text-center pb-2">
+                      <span className="text-xs font-bold text-primary uppercase tracking-widest">Step 1 of 7</span>
+                      <h2 className="text-xl font-bold mt-1">Choose Your University</h2>
+                      <p className="text-zinc-500 text-sm mt-1">Which university or college do you attend?</p>
                     </div>
+                    
+                    <Card className="space-y-4 p-5 text-left">
+                      <Input
+                        label="Full Name"
+                        value={manualName}
+                        onChange={setManualName}
+                        placeholder="Enter your name"
+                      />
 
-                    <AnimatePresence mode="popLayout">
-                      {!isSem1or2 && (
-                        <motion.div
-                          initial={{ opacity: 0, height: 0 }}
-                          animate={{ opacity: 1, height: 'auto' }}
-                          exit={{ opacity: 0, height: 0 }}
-                          className="space-y-4 overflow-hidden"
-                        >
-                          <div className="space-y-2 text-left">
-                            <label className="text-xs font-bold text-zinc-500 uppercase tracking-widest block">Programme</label>
-                            <div className="grid grid-cols-2 gap-2">
-                              {(['Regular', 'Self-Financed'] as const).map(prog => (
-                                <button
-                                  key={prog}
-                                  type="button"
-                                  onClick={() => {
-                                    setOnboardProgramme(prog);
-                                    setOnboardDept('');
-                                  }}
-                                  className={`py-2.5 px-2 rounded-xl text-xs font-bold border transition-all ${onboardProgramme === prog ? 'bg-primary border-primary text-white font-black' : 'bg-zinc-950 border-zinc-800 text-zinc-500 hover:text-zinc-400'}`}
-                                >
-                                  {prog}
-                                </button>
-                              ))}
-                            </div>
-                          </div>
-
-                          {onboardProgramme && (
-                            <motion.div
-                              initial={{ opacity: 0, y: -10 }}
-                              animate={{ opacity: 1, y: 0 }}
-                              className="space-y-1 text-left"
-                            >
-                              <label className="text-xs font-bold text-zinc-500 uppercase tracking-widest block">Branch</label>
-                              <select
-                                value={onboardDept}
-                                onChange={(e) => {
-                                  setOnboardDept(e.target.value);
-                                  logCustomEvent('branch_selected', { branch: e.target.value });
+                      <div className="space-y-1.5 relative">
+                        <label className="text-xs font-medium text-zinc-500 uppercase tracking-wider block">Search University</label>
+                        <div className="relative">
+                          <Search size={18} className="absolute left-3 top-3 text-zinc-500" />
+                          <input
+                            type="text"
+                            placeholder="Search university..."
+                            value={univSearchQuery}
+                            onChange={(e) => setUnivSearchQuery(e.target.value)}
+                            className="w-full bg-zinc-950 border border-zinc-800 rounded-xl pl-10 pr-4 py-3 text-zinc-100 focus:outline-none focus:border-primary transition-colors text-sm font-semibold"
+                          />
+                        </div>
+                        
+                        <div className="mt-2 max-h-48 overflow-y-auto bg-zinc-950 border border-zinc-800/80 rounded-xl p-1 divide-y divide-zinc-900 custom-scrollbar">
+                          {displayUniversities.map((univ) => {
+                            const isSelected = manualUniversity === univ;
+                            return (
+                              <button
+                                key={univ}
+                                type="button"
+                                onClick={() => {
+                                  setManualUniversity(univ);
+                                  if (univ !== 'Other') {
+                                    setManualUniversityInput('');
+                                  }
                                 }}
-                                className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3 text-zinc-100 focus:outline-none focus:border-primary transition-colors text-sm font-bold"
+                                className={`w-full text-left px-3 py-2.5 rounded-lg text-xs font-bold flex items-center justify-between transition-all ${isSelected ? 'bg-primary/15 text-primary font-extrabold' : 'text-zinc-400 hover:bg-zinc-900 hover:text-zinc-200'}`}
                               >
-                                <option value="">Select your branch</option>
-                                {onboardProgramme === 'Regular' ? (
-                                  <>
-                                    <option value="Civil Engineering">Civil Engineering</option>
-                                    <option value="Electrical Engineering">Electrical Engineering</option>
-                                    <option value="Mechanical Engineering">Mechanical Engineering</option>
-                                    <option value="Electronics & Communication Engineering">Electronics & Communication Engineering</option>
-                                    <option value="Computer Engineering">Computer Engineering</option>
-                                  </>
-                                ) : (
-                                  <>
-                                    <option value="Civil Engineering (Construction Technology) (Self-Financed)">Civil Engineering (Construction Technology) (Self-Financed)</option>
-                                    <option value="Electrical & Computer Engineering (Self-Financed)">Electrical & Computer Engineering (Self-Financed)</option>
-                                    <option value="Robotics & Artificial Intelligence (Self-Financed)">Robotics & Artificial Intelligence (Self-Financed)</option>
-                                    <option value="Electronics (VLSI Design & Technology) (Self-Financed)">Electronics (VLSI Design & Technology) (Self-Financed)</option>
-                                    <option value="Computer Science & Engineering (Data Sciences) (Self-Financed)">Computer Science & Engineering (Data Sciences) (Self-Financed)</option>
-                                  </>
-                                )}
-                              </select>
-                            </motion.div>
-                          )}
+                                <span className="flex items-center gap-1.5">
+                                  {univ === "Jamia Millia Islamia" && <Star size={12} className="text-yellow-500 fill-yellow-500 animate-pulse" />}
+                                  {univ}
+                                </span>
+                                {isSelected && <Check size={14} className="text-primary" />}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      {manualUniversity === 'Other' && (
+                        <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
+                          <Input
+                            label="Enter University Name"
+                            value={manualUniversityInput}
+                            onChange={setManualUniversityInput}
+                            placeholder="Enter your college or university name"
+                          />
                         </motion.div>
                       )}
-                    </AnimatePresence>
-                  </Card>
+                    </Card>
 
-                  <div className="flex gap-3">
-                    <Button variant="secondary" className="flex-1" onClick={() => setOnboardingStep(1)}>
-                      Back
-                    </Button>
-                    <Button 
-                      className="flex-1" 
+                    <div className="flex gap-3">
+                      <Button variant="secondary" className="flex-1" onClick={() => {
+                        setIsManualOnboarding(false);
+                        setOnboardingStep(1);
+                      }}>
+                        Back
+                      </Button>
+                      <Button
+                        className="flex-1"
+                        disabled={!manualName.trim() || !manualUniversity || (manualUniversity === 'Other' && !manualUniversityInput.trim())}
+                        onClick={() => setManualOnboardingStep(2)}
+                      >
+                        Next
+                      </Button>
+                    </div>
+                  </motion.div>
+                )}
+
+                {manualOnboardingStep === 2 && (() => {
+                  const isJmi = manualUniversity === "Jamia Millia Islamia";
+                  const facultiesList = Object.keys(JAMIA_FACULTIES_DEPARTMENTS);
+                  const filteredFaculties = [...facultiesList, "Other"].filter(f =>
+                    f.toLowerCase().includes(facultySearchQuery.toLowerCase())
+                  );
+                  
+                  return (
+                    <motion.div key="manual_step2" initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 10 }} className="space-y-4">
+                      <div className="text-center pb-2">
+                        <span className="text-xs font-bold text-primary uppercase tracking-widest">Step 2 of 7</span>
+                        <h2 className="text-xl font-bold mt-1">Choose Your Faculty</h2>
+                        <p className="text-zinc-500 text-sm mt-1">Specify your academic department group or faculty.</p>
+                      </div>
+
+                      <Card className="space-y-4 p-5 text-left">
+                        {isJmi ? (
+                          <div className="space-y-1.5 relative">
+                            <label className="text-xs font-medium text-zinc-500 uppercase tracking-wider block">Search Faculty</label>
+                            <div className="relative">
+                              <Search size={18} className="absolute left-3 top-3 text-zinc-500" />
+                              <input
+                                type="text"
+                                placeholder="Search JMI faculties..."
+                                value={facultySearchQuery}
+                                onChange={(e) => setFacultySearchQuery(e.target.value)}
+                                className="w-full bg-zinc-950 border border-zinc-800 rounded-xl pl-10 pr-4 py-3 text-zinc-100 focus:outline-none focus:border-primary transition-colors text-sm font-semibold"
+                              />
+                            </div>
+
+                            <div className="mt-2 max-h-48 overflow-y-auto bg-zinc-950 border border-zinc-800/80 rounded-xl p-1 divide-y divide-zinc-900 custom-scrollbar">
+                              {filteredFaculties.map((fac) => {
+                                const isSelected = manualFaculty === fac;
+                                return (
+                                  <button
+                                    key={fac}
+                                    type="button"
+                                    onClick={() => {
+                                      setManualFaculty(fac);
+                                      if (fac !== 'Other') {
+                                        setManualFacultyInput('');
+                                        const firstDept = JAMIA_FACULTIES_DEPARTMENTS[fac]?.[0] || '';
+                                        setManualDept(firstDept);
+                                      } else {
+                                        setManualDept('Other');
+                                      }
+                                    }}
+                                    className={`w-full text-left px-3 py-2.5 rounded-lg text-xs font-bold flex items-center justify-between transition-all ${isSelected ? 'bg-primary/15 text-primary font-extrabold' : 'text-zinc-400 hover:bg-zinc-900 hover:text-zinc-200'}`}
+                                  >
+                                    <span>{fac}</span>
+                                    {isSelected && <Check size={14} className="text-primary" />}
+                                  </button>
+                                );
+                              })}
+                            </div>
+
+                            {manualFaculty === 'Other' && (
+                              <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="pt-2">
+                                <Input
+                                  label="Enter Faculty Name"
+                                  value={manualFacultyInput}
+                                  onChange={setManualFacultyInput}
+                                  placeholder="e.g. Faculty of Engineering"
+                                />
+                              </motion.div>
+                            )}
+                          </div>
+                        ) : (
+                          <Input
+                            label="Faculty"
+                            value={manualFacultyInput}
+                            onChange={setManualFacultyInput}
+                            placeholder="e.g. Engineering & Technology"
+                          />
+                        )}
+                      </Card>
+
+                      <div className="flex gap-3">
+                        <Button variant="secondary" className="flex-1" onClick={() => setManualOnboardingStep(1)}>
+                          Back
+                        </Button>
+                        <Button
+                          className="flex-1"
+                          disabled={isJmi ? (!manualFaculty || (manualFaculty === 'Other' && !manualFacultyInput.trim())) : !manualFacultyInput.trim()}
+                          onClick={() => setManualOnboardingStep(3)}
+                        >
+                          Next
+                        </Button>
+                      </div>
+                    </motion.div>
+                  );
+                })()}
+
+                {manualOnboardingStep === 3 && (() => {
+                  const isJmi = manualUniversity === "Jamia Millia Islamia";
+                  let deptsList: string[] = [];
+                  if (isJmi && manualFaculty !== 'Other') {
+                    deptsList = JAMIA_FACULTIES_DEPARTMENTS[manualFaculty] || [];
+                  }
+                  const filteredDepts = [...deptsList, "Other"].filter(d =>
+                    d.toLowerCase().includes(deptSearchQuery.toLowerCase())
+                  );
+
+                  return (
+                    <motion.div key="manual_step3" initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 10 }} className="space-y-4">
+                      <div className="text-center pb-2">
+                        <span className="text-xs font-bold text-primary uppercase tracking-widest">Step 3 of 7</span>
+                        <h2 className="text-xl font-bold mt-1">Choose Your Department</h2>
+                        <p className="text-zinc-500 text-sm mt-1">Which branch, major, or department are you in?</p>
+                      </div>
+
+                      <Card className="space-y-4 p-5 text-left">
+                        {isJmi && manualFaculty !== 'Other' ? (
+                          <div className="space-y-1.5 relative">
+                            <label className="text-xs font-medium text-zinc-500 uppercase tracking-wider block">Search Department</label>
+                            <div className="relative">
+                              <Search size={18} className="absolute left-3 top-3 text-zinc-500" />
+                              <input
+                                type="text"
+                                placeholder="Search departments..."
+                                value={deptSearchQuery}
+                                onChange={(e) => setDeptSearchQuery(e.target.value)}
+                                className="w-full bg-zinc-950 border border-zinc-800 rounded-xl pl-10 pr-4 py-3 text-zinc-100 focus:outline-none focus:border-primary transition-colors text-sm font-semibold"
+                              />
+                            </div>
+
+                            <div className="mt-2 max-h-48 overflow-y-auto bg-zinc-950 border border-zinc-800/80 rounded-xl p-1 divide-y divide-zinc-900 custom-scrollbar">
+                              {filteredDepts.map((dept) => {
+                                const isSelected = manualDept === dept;
+                                return (
+                                  <button
+                                    key={dept}
+                                    type="button"
+                                    onClick={() => {
+                                      setManualDept(dept);
+                                      if (dept !== 'Other') {
+                                        setManualDeptInput('');
+                                      }
+                                    }}
+                                    className={`w-full text-left px-3 py-2.5 rounded-lg text-xs font-bold flex items-center justify-between transition-all ${isSelected ? 'bg-primary/15 text-primary font-extrabold' : 'text-zinc-400 hover:bg-zinc-900 hover:text-zinc-200'}`}
+                                  >
+                                    <span>{dept}</span>
+                                    {isSelected && <Check size={14} className="text-primary" />}
+                                  </button>
+                                );
+                              })}
+                            </div>
+
+                            {manualDept === 'Other' && (
+                              <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="pt-2">
+                                <Input
+                                  label="Enter Department Name"
+                                  value={manualDeptInput}
+                                  onChange={setManualDeptInput}
+                                  placeholder="e.g. Information Technology"
+                                />
+                              </motion.div>
+                            )}
+                          </div>
+                        ) : (
+                          <Input
+                            label="Department / Branch"
+                            value={manualDeptInput}
+                            onChange={setManualDeptInput}
+                            placeholder="e.g. Computer Science"
+                          />
+                        )}
+                      </Card>
+
+                      <div className="flex gap-3">
+                        <Button variant="secondary" className="flex-1" onClick={() => setManualOnboardingStep(2)}>
+                          Back
+                        </Button>
+                        <Button
+                          className="flex-1"
+                          disabled={(isJmi && manualFaculty !== 'Other') ? (!manualDept || (manualDept === 'Other' && !manualDeptInput.trim())) : !manualDeptInput.trim()}
+                          onClick={() => setManualOnboardingStep(4)}
+                        >
+                          Next
+                        </Button>
+                      </div>
+                    </motion.div>
+                  );
+                })()}
+
+                {manualOnboardingStep === 4 && (
+                  <motion.div key="manual_step4" initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 10 }} className="space-y-4">
+                    <div className="text-center pb-2">
+                      <span className="text-xs font-bold text-primary uppercase tracking-widest">Step 4 of 7</span>
+                      <h2 className="text-xl font-bold mt-1">Select Your Semester</h2>
+                      <p className="text-zinc-500 text-sm mt-1">Which semester are you currently in?</p>
+                    </div>
+
+                    <Card className="space-y-4 p-5 text-left">
+                      <div className="space-y-2">
+                        <label className="text-xs font-bold text-zinc-500 uppercase tracking-widest block">Semester</label>
+                        <div className="grid grid-cols-3 gap-2">
+                          {Array.from({ length: 10 }, (_, i) => `Semester ${i + 1}`).map(sem => {
+                            const isSelected = manualSem === sem;
+                            return (
+                              <button
+                                key={sem}
+                                type="button"
+                                onClick={() => {
+                                  setManualSem(sem);
+                                  setManualSemInput('');
+                                }}
+                                className={`py-3 px-2 rounded-xl text-xs font-bold border transition-all ${isSelected ? 'bg-primary border-primary text-white font-black shadow-lg shadow-primary/25' : 'bg-zinc-800 border-zinc-700/60 text-zinc-400 hover:text-zinc-200'}`}
+                              >
+                                Sem {sem.split(' ')[1]}
+                              </button>
+                            );
+                          })}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setManualSem('Other');
+                            }}
+                            className={`py-3 px-2 rounded-xl text-xs font-bold border transition-all ${manualSem === 'Other' ? 'bg-primary border-primary text-white font-black shadow-lg shadow-primary/25' : 'bg-zinc-800 border-zinc-700/60 text-zinc-400 hover:text-zinc-200'}`}
+                          >
+                            Other
+                          </button>
+                        </div>
+                      </div>
+
+                      {manualSem === 'Other' && (
+                        <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
+                          <Input
+                            label="Enter Semester Name"
+                            value={manualSemInput}
+                            onChange={setManualSemInput}
+                            placeholder="e.g. Trimester 1, Year 2"
+                          />
+                        </motion.div>
+                      )}
+                    </Card>
+
+                    <div className="flex gap-3">
+                      <Button variant="secondary" className="flex-1" onClick={() => setManualOnboardingStep(3)}>
+                        Back
+                      </Button>
+                      <Button
+                        className="flex-1"
+                        disabled={!manualSem || (manualSem === 'Other' && !manualSemInput.trim())}
+                        onClick={() => setManualOnboardingStep(5)}
+                      >
+                        Next
+                      </Button>
+                    </div>
+                  </motion.div>
+                )}
+
+                {manualOnboardingStep === 5 && (
+                  <motion.div key="manual_step5" initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 10 }} className="space-y-4">
+                    <div className="text-center pb-2">
+                      <span className="text-xs font-bold text-primary uppercase tracking-widest">Step 5 of 7</span>
+                      <h2 className="text-xl font-bold mt-1">Semester Start Date</h2>
+                      <p className="text-zinc-500 text-sm mt-1">When does your current semester begin?</p>
+                    </div>
+
+                    <Card className="p-5 text-left space-y-4">
+                      <Input
+                        type="date"
+                        label="Start Date"
+                        value={manualStartDate}
+                        onChange={setManualStartDate}
+                      />
+                    </Card>
+
+                    <div className="flex gap-3">
+                      <Button variant="secondary" className="flex-1" onClick={() => setManualOnboardingStep(4)}>
+                        Back
+                      </Button>
+                      <Button
+                        className="flex-1"
+                        disabled={!manualStartDate}
+                        onClick={() => setManualOnboardingStep(6)}
+                      >
+                        Next
+                      </Button>
+                    </div>
+                  </motion.div>
+                )}
+
+                {manualOnboardingStep === 6 && (
+                  <motion.div key="manual_step6" initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 10 }} className="space-y-4">
+                    <div className="text-center pb-2">
+                      <span className="text-xs font-bold text-primary uppercase tracking-widest">Step 6 of 7</span>
+                      <h2 className="text-xl font-bold mt-1">Semester End Date</h2>
+                      <p className="text-zinc-500 text-sm mt-1">When does your semester classes or examinations end?</p>
+                    </div>
+
+                    <Card className="p-5 text-left space-y-4">
+                      <Input
+                        type="date"
+                        label="End Date"
+                        value={manualEndDate}
+                        onChange={setManualEndDate}
+                      />
+                      {manualStartDate && manualEndDate && manualEndDate < manualStartDate && (
+                        <p className="text-xs text-red-500 font-semibold mt-1">⚠️ End Date must be after Start Date.</p>
+                      )}
+                    </Card>
+
+                    <div className="flex gap-3">
+                      <Button variant="secondary" className="flex-1" onClick={() => setManualOnboardingStep(5)}>
+                        Back
+                      </Button>
+                      <Button
+                        className="flex-1"
+                        disabled={!manualEndDate || (manualStartDate && manualEndDate < manualStartDate)}
+                        onClick={() => setManualOnboardingStep(7)}
+                      >
+                        Next
+                      </Button>
+                    </div>
+                  </motion.div>
+                )}
+
+                {manualOnboardingStep === 7 && (
+                  <motion.div key="manual_step7" initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 10 }} className="space-y-4">
+                    <div className="text-center pb-2">
+                      <span className="text-xs font-bold text-primary uppercase tracking-widest">Step 7 of 7</span>
+                      <h2 className="text-xl font-bold mt-1">Set Target Attendance</h2>
+                      <p className="text-zinc-500 text-sm mt-1">Choose the minimum attendance percentage you want to maintain.</p>
+                    </div>
+
+                    <Card className="space-y-4 p-5 text-left">
+                      <div className="space-y-2 pt-2">
+                        <label className="text-xs font-bold text-zinc-500 uppercase tracking-widest block">Attendance Goal (%)</label>
+                        <div className="grid grid-cols-3 gap-2">
+                          {[60, 70, 75, 80, 85, 90].map(t => (
+                            <button 
+                              key={t}
+                              type="button"
+                              onClick={() => setManualTargetAttendance(t)}
+                              className={`py-3 px-1 rounded-xl border text-sm transition-all font-bold ${manualTargetAttendance === t ? 'bg-primary border-primary text-white shadow-lg shadow-primary/25 font-black' : 'bg-zinc-800 border-zinc-700/60 text-zinc-400 hover:text-zinc-200'}`}
+                            >
+                              {t}%
+                            </button>
+                          ))}
+                        </div>
+                        <div className="pt-2">
+                          <Input 
+                            type="number" 
+                            placeholder="Custom Target" 
+                            value={manualTargetAttendance} 
+                            onChange={(v: string) => setManualTargetAttendance(parseInt(v) || 75)} 
+                          />
+                        </div>
+                      </div>
+                    </Card>
+
+                    <div className="flex gap-3">
+                      <Button variant="secondary" className="flex-1" onClick={() => setManualOnboardingStep(6)}>
+                        Back
+                      </Button>
+                      <Button
+                        className="flex-1"
+                        onClick={() => {
+                          const isJmi = (manualUniversity === 'Jamia Millia Islamia');
+                          const isEngTech = (manualFaculty === 'Faculty of Engineering & Technology');
+                          const deptValue = manualDept === 'Other' ? manualDeptInput : manualDept;
+                          
+                          const isJmiECE = deptValue === 'Electronics & Communication Engineering';
+                          const isJmiCivil = deptValue.includes('Civil Engineering');
+                          const isJmiVLSI = deptValue.includes('VLSI Design');
+                          const isJmiElec = deptValue === 'Electrical Engineering';
+                          const isJmiMech = deptValue === 'Mechanical Engineering';
+                          const isJmiCsds = deptValue.includes('Computer Science') && deptValue.includes('Data Science');
+                          const isJmiCompEng = deptValue === 'Computer Engineering' || (deptValue.includes('Computer') && !deptValue.includes('Data Science') && !deptValue.includes('Electrical'));
+                          const isJmiEec = deptValue.includes('Electrical & Computer');
+                          
+                          const semTitleValue = manualSem === 'Other' ? manualSemInput : manualSem;
+                          const isSupportedBranch = isJmiECE || isJmiCivil || isJmiVLSI || isJmiElec || isJmiMech || isJmiCsds || isJmiCompEng || isJmiEec;
+                          
+                          let loadedSubjects: any[] = [];
+                          if (isJmi && isEngTech && isSupportedBranch) {
+                            const { subjects: defaultSubs } = getDefaultCurriculumSubjects(semTitleValue, deptValue, 'SetA');
+                            if (defaultSubs && defaultSubs.length > 0) {
+                              loadedSubjects = defaultSubs;
+                            }
+                          }
+
+                          const calculatedProfile = {
+                            name: manualName || 'Student',
+                            email: profile.email || 'student@jmi.ac.in',
+                            college: manualUniversity === 'Other' ? manualUniversityInput : manualUniversity,
+                            department: deptValue,
+                            semester: semTitleValue,
+                            mobile: '',
+                            avatar: profile.avatar || '',
+                            faculty: manualFaculty === 'Other' ? manualFacultyInput : manualFaculty,
+                            semesterStartDate: manualStartDate,
+                            semesterEndDate: manualEndDate,
+                            attendanceTarget: manualTargetAttendance,
+                            programme: 'Regular'
+                          };
+                          setProfile(calculatedProfile);
+
+                          setSemester({
+                            title: semTitleValue,
+                            startDate: manualStartDate,
+                            endDate: manualEndDate,
+                            targetAttendance: manualTargetAttendance,
+                            isInitialized: true,
+                            initialHeld: 0,
+                            initialAttended: 0
+                          });
+
+                          if (loadedSubjects.length > 0) {
+                            setSubjects(loadedSubjects);
+                            setSyllabusLoadStatus('loaded');
+                          } else {
+                            setSubjects([]);
+                            setSyllabusLoadStatus('not_found');
+                          }
+
+                          setManualOnboardingStep(8);
+                        }}
+                      >
+                        Finish Setup
+                      </Button>
+                    </div>
+                  </motion.div>
+                )}
+
+                {manualOnboardingStep === 8 && (
+                  <motion.div key="manual_step8" initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 10 }} className="space-y-4">
+                    <div className="text-center pb-2">
+                      <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mx-auto text-primary mb-2">
+                        <Sparkles size={24} className="animate-pulse" />
+                      </div>
+                      <h2 className="text-xl font-bold">Setup Completed!</h2>
+                      <p className="text-zinc-500 text-sm mt-1">Here is your customized setup overview.</p>
+                    </div>
+
+                    <Card className="space-y-4 p-5 text-left max-h-[320px] overflow-y-auto custom-scrollbar">
+                      <div>
+                        <label className="text-xs font-medium text-zinc-500 uppercase tracking-wider block">University</label>
+                        <span className="text-sm font-bold text-white block mt-0.5">{manualUniversity === 'Other' ? manualUniversityInput : manualUniversity}</span>
+                      </div>
+                      
+                      <div>
+                        <label className="text-xs font-medium text-zinc-500 uppercase tracking-wider block">Faculty & Department</label>
+                        <span className="text-sm font-bold text-white block mt-0.5">
+                          {manualFaculty === 'Other' ? manualFacultyInput : manualFaculty} &rarr; {manualDept === 'Other' ? manualDeptInput : manualDept}
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="text-xs font-medium text-zinc-500 uppercase tracking-wider block">Semester</label>
+                          <span className="text-sm font-bold text-white block mt-0.5">{manualSem === 'Other' ? manualSemInput : manualSem}</span>
+                        </div>
+                        <div>
+                          <label className="text-xs font-medium text-zinc-500 uppercase tracking-wider block">Attendance Goal</label>
+                          <span className="text-sm font-bold text-white block mt-0.5">{manualTargetAttendance}%</span>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="text-xs font-medium text-zinc-500 uppercase tracking-wider block">Start Date</label>
+                          <span className="text-sm font-bold text-white block mt-0.5">{manualStartDate}</span>
+                        </div>
+                        <div>
+                          <label className="text-xs font-medium text-zinc-500 uppercase tracking-wider block">End Date</label>
+                          <span className="text-sm font-bold text-white block mt-0.5">{manualEndDate}</span>
+                        </div>
+                      </div>
+
+                      <hr className="border-zinc-850" />
+
+                      {syllabusLoadStatus === 'loaded' ? (
+                        <div className="bg-primary/10 border border-primary/20 rounded-xl p-3.5 space-y-2">
+                          <div className="flex gap-2 items-center text-primary">
+                            <CheckCircle2 size={16} />
+                            <h4 className="text-xs font-black uppercase tracking-wider">JMI B.Tech Syllabus Loaded</h4>
+                          </div>
+                          <p className="text-xs text-zinc-300 leading-relaxed">
+                            We found a pre-configured JMI syllabus for your branch and successfully loaded all the subjects for you.
+                          </p>
+                          <div className="flex flex-wrap gap-1.5 pt-1">
+                            {subjects.map(s => (
+                              <span key={s.id} className="text-[10px] font-bold px-2 py-0.5 bg-primary/20 text-primary-light rounded-md">
+                                {s.name.split(' ').slice(1).join(' ') || s.name}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="bg-zinc-950 border border-zinc-850 rounded-xl p-3.5 space-y-2">
+                          <div className="flex gap-2 items-center text-amber-500">
+                            <AlertCircle size={16} />
+                            <h4 className="text-xs font-black uppercase tracking-wider">No Default Syllabus Available</h4>
+                          </div>
+                          <p className="text-xs text-zinc-400 leading-relaxed">
+                            No pre-configured syllabus was found for your specific course combinations. Don't worry! You can manually add your classes and subjects exactly as you like directly on your dashboard.
+                          </p>
+                        </div>
+                      )}
+                    </Card>
+
+                    <Button
+                      className="w-full py-3.5 shadow-lg shadow-primary/20 text-sm font-bold mt-2"
                       onClick={() => {
-                        if (isFormValid) {
-                          setOnboardingStep(3);
-                        }
+                        localStorage.setItem('bs_onboarding_completed', 'true');
+                        setOnboardingCompleted(true);
                       }}
-                      disabled={!isFormValid}
                     >
-                      Next
+                      Go to Dashboard &rarr;
                     </Button>
-                  </div>
-                </motion.div>
-              );
-            })()}
-
-            {onboardingStep === 3 && (
-              <motion.div
-                key="step3"
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: 20 }}
-                className="space-y-5"
-              >
-                <div className="text-center space-y-1">
-                  <h2 className="text-xl font-bold text-primary">Academic Calendar</h2>
-                  <p className="text-zinc-500 text-sm">Review & customize dates loaded from Jamia calendar.</p>
-                </div>
-
-                <div className="bg-primary/10 border border-primary/25 rounded-2xl p-4 flex gap-3 items-start text-left">
-                  <Info size={18} className="text-primary shrink-0 mt-0.5" />
-                  <p className="text-xs text-primary/90 leading-relaxed font-medium">
-                    We have fetched these details as per Jamia academic calendar. Feel free to edit them now, or you can modify them anytime in the app settings later.
-                  </p>
-                </div>
-
-                <Card className="space-y-4 p-5 max-h-[350px] overflow-y-auto custom-scrollbar text-left">
-                  <div>
-                    <h3 className="text-xs font-black text-zinc-500 uppercase tracking-widest mb-3">Semester Timeline</h3>
-                    <div className="grid grid-cols-2 gap-2">
-                      <Input 
-                        type="date" 
-                        label="Start Date" 
-                        value={onboardStartDate} 
-                        onChange={setOnboardStartDate} 
-                      />
-                      <Input 
-                        type="date" 
-                        label="End Date" 
-                        value={onboardEndDate} 
-                        onChange={setOnboardEndDate} 
-                      />
+                  </motion.div>
+                )}
+              </div>
+            ) : (
+              <>
+                {onboardingStep === 1 && (
+                  <motion.div
+                    key="step1"
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: 20 }}
+                    className="space-y-6"
+                  >
+                    <div className="text-center pb-2">
+                      <h2 className="text-2xl font-black text-white">Welcome to BunkSafe</h2>
+                      <p className="text-zinc-400 text-sm mt-2">Are you a B.Tech student?</p>
                     </div>
-                  </div>
 
-                  <hr className="border-zinc-800" />
+                    <div className="space-y-3">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsJamiaStudent(true);
+                          setOnboardingStep(2);
+                        }}
+                        className="w-full text-left p-5 rounded-2xl bg-zinc-900 border border-zinc-850 hover:border-primary/50 transition-all hover:bg-zinc-900/80 group flex gap-4 items-center"
+                      >
+                        <div className="p-3 bg-primary/10 text-primary rounded-xl group-hover:bg-primary group-hover:text-white transition-all">
+                          <GraduationCap size={24} />
+                        </div>
+                        <div className="flex-1 space-y-1">
+                          <h3 className="font-bold text-zinc-200 group-hover:text-white transition-all">✅ Yes</h3>
+                          <p className="text-xs text-zinc-500 leading-relaxed">
+                            Continue with the B.Tech student academic calendar, syllabus & exam tracking.
+                          </p>
+                        </div>
+                      </button>
 
-                  <div>
-                    <h3 className="text-xs font-black text-zinc-500 uppercase tracking-widest mb-3">1st Mid Sem Exam</h3>
-                    <div className="grid grid-cols-2 gap-2">
-                      <Input 
-                        type="date" 
-                        label="Start Date" 
-                        value={onboardMid1Start} 
-                        onChange={setOnboardMid1Start} 
-                      />
-                      <Input 
-                        type="date" 
-                        label="End Date" 
-                        value={onboardMid1End} 
-                        onChange={setOnboardMid1End} 
-                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsManualOnboarding(true);
+                          setManualOnboardingStep(1);
+                        }}
+                        className="w-full text-left p-5 rounded-2xl bg-zinc-900 border border-zinc-850 hover:border-zinc-700 transition-all hover:bg-zinc-900/80 group flex gap-4 items-center"
+                      >
+                        <div className="p-3 bg-zinc-850 text-zinc-400 rounded-xl group-hover:bg-zinc-700 group-hover:text-zinc-200 transition-all">
+                          <Settings size={24} />
+                        </div>
+                        <div className="flex-1 space-y-1">
+                          <h3 className="font-bold text-zinc-300 group-hover:text-white transition-all">❌ No (Manual Setup)</h3>
+                          <p className="text-xs text-zinc-500 leading-relaxed">
+                            Set up custom college, department, semester dates, and target attendance.
+                          </p>
+                        </div>
+                      </button>
                     </div>
-                  </div>
+                  </motion.div>
+                )}
 
-                  <hr className="border-zinc-800" />
+                {onboardingStep === 2 && (() => {
+                  const isSem1or2 = onboardSem === 'Semester 1' || onboardSem === 'Semester 2';
+                  const isFormValid = !!(onboardName.trim() && onboardSem && (isSem1or2 || (onboardProgramme && onboardDept)));
 
-                  <div>
-                    <h3 className="text-xs font-black text-zinc-500 uppercase tracking-widest mb-3">2nd Mid Sem Exam</h3>
-                    <div className="grid grid-cols-2 gap-2">
-                      <Input 
-                        type="date" 
-                        label="Start Date" 
-                        value={onboardMid2Start} 
-                        onChange={setOnboardMid2Start} 
-                      />
-                      <Input 
-                        type="date" 
-                        label="End Date" 
-                        value={onboardMid2End} 
-                        onChange={setOnboardMid2End} 
-                      />
+                  return (
+                    <motion.div
+                      key="step2"
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: 20 }}
+                      className="space-y-5"
+                    >
+                      <div className="text-center">
+                        <h2 className="text-xl font-bold">Your Details</h2>
+                        <p className="text-zinc-500 text-sm mt-1">Please enter your academic information.</p>
+                      </div>
+
+                      <Card className="space-y-4 p-5">
+                        <Input 
+                          label="Full Name" 
+                          value={onboardName} 
+                          onChange={setOnboardName} 
+                          placeholder="Enter your name" 
+                        />
+
+                        <div className="space-y-2 text-left">
+                          <label className="text-xs font-bold text-zinc-500 uppercase tracking-widest block">Semester</label>
+                          <div className="grid grid-cols-4 gap-2">
+                            {Array.from({ length: 8 }, (_, i) => `Semester ${i + 1}`).map(sem => (
+                              <button
+                                key={sem}
+                                type="button"
+                                onClick={() => {
+                                  setOnboardSem(sem);
+                                  logCustomEvent('semester_selected', { semester: sem });
+                                  const is1or2 = sem === 'Semester 1' || sem === 'Semester 2';
+                                  if (is1or2) {
+                                    setOnboardDept('Applied Science & Humanities');
+                                    setOnboardProgramme('');
+                                    logCustomEvent('branch_selected', { branch: 'Applied Science & Humanities' });
+                                  } else {
+                                    setOnboardDept('');
+                                    setOnboardProgramme('Regular');
+                                  }
+                                }}
+                                className={`py-2 px-1 rounded-lg text-xs font-bold border transition-all ${onboardSem === sem ? 'bg-primary border-primary text-white font-black' : 'bg-zinc-800 border-zinc-700/60 text-zinc-400'}`}
+                              >
+                                Sem {sem.split(' ')[1]}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+
+                        <AnimatePresence mode="popLayout">
+                          {!isSem1or2 && (
+                            <motion.div
+                              initial={{ opacity: 0, height: 0 }}
+                              animate={{ opacity: 1, height: 'auto' }}
+                              exit={{ opacity: 0, height: 0 }}
+                              className="space-y-4 overflow-hidden"
+                            >
+                              <div className="space-y-2 text-left">
+                                <label className="text-xs font-bold text-zinc-500 uppercase tracking-widest block">Programme</label>
+                                <div className="grid grid-cols-2 gap-2">
+                                  {(['Regular', 'Self-Financed'] as const).map(prog => (
+                                    <button
+                                      key={prog}
+                                      type="button"
+                                      onClick={() => {
+                                        setOnboardProgramme(prog);
+                                        setOnboardDept('');
+                                      }}
+                                      className={`py-2.5 px-2 rounded-xl text-xs font-bold border transition-all ${onboardProgramme === prog ? 'bg-primary border-primary text-white font-black' : 'bg-zinc-950 border-zinc-800 text-zinc-500 hover:text-zinc-400'}`}
+                                    >
+                                      {prog}
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
+
+                              {onboardProgramme && (
+                                <motion.div
+                                  initial={{ opacity: 0, y: -10 }}
+                                  animate={{ opacity: 1, y: 0 }}
+                                  className="space-y-1 text-left"
+                                >
+                                  <label className="text-xs font-bold text-zinc-500 uppercase tracking-widest block">Branch</label>
+                                  <select
+                                    value={onboardDept}
+                                    onChange={(e) => {
+                                      setOnboardDept(e.target.value);
+                                      logCustomEvent('branch_selected', { branch: e.target.value });
+                                    }}
+                                    className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3 text-zinc-100 focus:outline-none focus:border-primary transition-colors text-sm font-bold"
+                                  >
+                                    <option value="">Select your branch</option>
+                                    {onboardProgramme === 'Regular' ? (
+                                      <>
+                                        <option value="Civil Engineering">Civil Engineering</option>
+                                        <option value="Electrical Engineering">Electrical Engineering</option>
+                                        <option value="Mechanical Engineering">Mechanical Engineering</option>
+                                        <option value="Electronics & Communication Engineering">Electronics & Communication Engineering</option>
+                                        <option value="Computer Engineering">Computer Engineering</option>
+                                      </>
+                                    ) : (
+                                      <>
+                                        <option value="Civil Engineering (Construction Technology) (Self-Financed)">Civil Engineering (Construction Technology) (Self-Financed)</option>
+                                        <option value="Electrical & Computer Engineering (Self-Financed)">Electrical & Computer Engineering (Self-Financed)</option>
+                                        <option value="Robotics & Artificial Intelligence (Self-Financed)">Robotics & Artificial Intelligence (Self-Financed)</option>
+                                        <option value="Electronics (VLSI Design & Technology) (Self-Financed)">Electronics (VLSI Design & Technology) (Self-Financed)</option>
+                                        <option value="Computer Science & Engineering (Data Sciences) (Self-Financed)">Computer Science & Engineering (Data Sciences) (Self-Financed)</option>
+                                      </>
+                                    )}
+                                  </select>
+                                </motion.div>
+                              )}
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+                      </Card>
+
+                      <div className="flex gap-3">
+                        <Button variant="secondary" className="flex-1" onClick={() => setOnboardingStep(1)}>
+                          Back
+                        </Button>
+                        <Button 
+                          className="flex-1" 
+                          onClick={() => {
+                            if (isFormValid) {
+                              setOnboardingStep(3);
+                            }
+                          }}
+                          disabled={!isFormValid}
+                        >
+                          Next
+                        </Button>
+                      </div>
+                    </motion.div>
+                  );
+                })()}
+
+                {onboardingStep === 3 && (
+                  <motion.div
+                    key="step3"
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: 20 }}
+                    className="space-y-5"
+                  >
+                    <div className="text-center space-y-1">
+                      <h2 className="text-xl font-bold text-primary">Academic Calendar</h2>
+                      <p className="text-zinc-500 text-sm">Review & customize dates loaded from Jamia calendar.</p>
                     </div>
-                  </div>
 
-                  <hr className="border-zinc-800" />
-
-                  <div>
-                    <h3 className="text-xs font-black text-zinc-500 uppercase tracking-widest mb-3">End Sem Exam</h3>
-                    <div className="grid grid-cols-2 gap-2">
-                      <Input 
-                        type="date" 
-                        label="Start Date" 
-                        value={onboardEndSemStart} 
-                        onChange={setOnboardEndSemStart} 
-                      />
-                      <Input 
-                        type="date" 
-                        label="End Date" 
-                        value={onboardEndSemEnd} 
-                        onChange={setOnboardEndSemEnd} 
-                      />
+                    <div className="bg-primary/10 border border-primary/25 rounded-2xl p-4 flex gap-3 items-start text-left">
+                      <Info size={18} className="text-primary shrink-0 mt-0.5" />
+                      <p className="text-xs text-primary/90 leading-relaxed font-medium">
+                        We have fetched these details as per Jamia academic calendar. Feel free to edit them now, or you can modify them anytime in the app settings later.
+                      </p>
                     </div>
-                  </div>
-                </Card>
 
-                <div className="flex gap-3">
-                  <Button variant="secondary" className="flex-1" onClick={() => setOnboardingStep(2)}>
-                    Back
-                  </Button>
-                  <Button className="flex-1" onClick={() => {
-                    setProfile({
-                      name: onboardName,
-                      email: profile.email || 'student@jmi.ac.in',
-                      college: 'Jamia Millia Islamia',
-                      department: onboardDept,
-                      semester: onboardSem,
-                      mobile: '',
-                      avatar: '',
-                      programme: (onboardSem === 'Semester 1' || onboardSem === 'Semester 2') ? 'Regular' : onboardProgramme
-                    });
+                    <Card className="space-y-4 p-5 max-h-[350px] overflow-y-auto custom-scrollbar text-left">
+                      <div>
+                        <h3 className="text-xs font-black text-zinc-500 uppercase tracking-widest mb-3">Semester Timeline</h3>
+                        <div className="grid grid-cols-2 gap-2">
+                          <Input 
+                            type="date" 
+                            label="Start Date" 
+                            value={onboardStartDate} 
+                            onChange={setOnboardStartDate} 
+                          />
+                          <Input 
+                            type="date" 
+                            label="End Date" 
+                            value={onboardEndDate} 
+                            onChange={setOnboardEndDate} 
+                          />
+                        </div>
+                      </div>
 
-                    logCustomEvent('branch_selected', { branch: onboardDept });
-                    logCustomEvent('semester_selected', { semester: onboardSem });
+                      <hr className="border-zinc-800" />
 
-                    setSemester({
-                      title: onboardSem,
-                      startDate: onboardStartDate,
-                      endDate: onboardEndDate,
-                      targetAttendance: 75,
-                      isInitialized: true,
-                      initialHeld: 0,
-                      initialAttended: 0
-                    });
+                      <div>
+                        <h3 className="text-xs font-black text-zinc-500 uppercase tracking-widest mb-3">1st Mid Sem Exam</h3>
+                        <div className="grid grid-cols-2 gap-2">
+                          <Input 
+                            type="date" 
+                            label="Start Date" 
+                            value={onboardMid1Start} 
+                            onChange={setOnboardMid1Start} 
+                          />
+                          <Input 
+                            type="date" 
+                            label="End Date" 
+                            value={onboardMid1End} 
+                            onChange={setOnboardMid1End} 
+                          />
+                        </div>
+                      </div>
 
-                    const preparedExams: Exam[] = [
-                      {
-                        id: 'j_mid1',
-                        type: 'Mid-sem',
-                        label: '1st Mid Sem',
-                        startDate: onboardMid1Start,
-                        endDate: onboardMid1End
-                      },
-                      {
-                        id: 'j_mid2',
-                        type: 'Mid-sem',
-                        label: '2nd Mid Sem',
-                        startDate: onboardMid2Start,
-                        endDate: onboardMid2End
-                      },
-                      {
-                        id: 'j_endsem',
-                        type: 'End-sem',
-                        label: 'End-sem Exam',
-                        startDate: onboardEndSemStart,
-                        endDate: onboardEndSemEnd
-                      }
-                    ];
-                    setExams(preparedExams);
+                      <hr className="border-zinc-800" />
 
-                    const finalProg = (onboardSem === 'Semester 1' || onboardSem === 'Semester 2') ? 'Regular' : onboardProgramme;
-                    const isJmiECE = onboardDept === 'Electronics & Communication Engineering';
-                    const isJmiCivil = onboardDept.includes('Civil Engineering');
-                    const isJmiVLSI = onboardDept.includes('VLSI Design');
-                    const isJmiElec = onboardDept === 'Electrical Engineering';
-                    const isJmiMech = onboardDept === 'Mechanical Engineering';
-                    const isJmiCsds = onboardDept.includes('Computer Science') && onboardDept.includes('Data Science');
-                    const isJmiCompEng = onboardDept === 'Computer Engineering' || (onboardDept.includes('Computer') && !onboardDept.includes('Data Science') && !onboardDept.includes('Electrical'));
-                    const isJmiEec = onboardDept.includes('Electrical & Computer');
-                    const isFirstYear = onboardSem === 'Semester 1' || onboardSem === 'Semester 2';
+                      <div>
+                        <h3 className="text-xs font-black text-zinc-500 uppercase tracking-widest mb-3">2nd Mid Sem Exam</h3>
+                        <div className="grid grid-cols-2 gap-2">
+                          <Input 
+                            type="date" 
+                            label="Start Date" 
+                            value={onboardMid2Start} 
+                            onChange={setOnboardMid2Start} 
+                          />
+                          <Input 
+                            type="date" 
+                            label="End Date" 
+                            value={onboardMid2End} 
+                            onChange={setOnboardMid2End} 
+                          />
+                        </div>
+                      </div>
 
-                    if (isFirstYear || isJmiECE || isJmiCivil || isJmiVLSI || isJmiElec || isJmiMech || isJmiCsds || isJmiCompEng || isJmiEec) {
-                      const { subjects: defaultSubs } = getDefaultCurriculumSubjects(onboardSem, onboardDept, 'SetA');
-                      if (defaultSubs && defaultSubs.length > 0) {
-                        setSubjects(defaultSubs);
-                      }
-                    }
+                      <hr className="border-zinc-800" />
 
-                    localStorage.setItem('bs_onboarding_completed', 'true');
-                    setOnboardingCompleted(true);
-                  }}>
-                    Finish & Activate
-                  </Button>
-                </div>
-              </motion.div>
+                      <div>
+                        <h3 className="text-xs font-black text-zinc-500 uppercase tracking-widest mb-3">End Sem Exam</h3>
+                        <div className="grid grid-cols-2 gap-2">
+                          <Input 
+                            type="date" 
+                            label="Start Date" 
+                            value={onboardEndSemStart} 
+                            onChange={setOnboardEndSemStart} 
+                          />
+                          <Input 
+                            type="date" 
+                            label="End Date" 
+                            value={onboardEndSemEnd} 
+                            onChange={setOnboardEndSemEnd} 
+                          />
+                        </div>
+                      </div>
+                    </Card>
+
+                    <div className="flex gap-3">
+                      <Button variant="secondary" className="flex-1" onClick={() => setOnboardingStep(2)}>
+                        Back
+                      </Button>
+                      <Button className="flex-1" onClick={() => {
+                        setProfile({
+                          name: onboardName,
+                          email: profile.email || 'student@jmi.ac.in',
+                          college: 'Jamia Millia Islamia',
+                          department: onboardDept,
+                          semester: onboardSem,
+                          mobile: '',
+                          avatar: '',
+                          programme: (onboardSem === 'Semester 1' || onboardSem === 'Semester 2') ? 'Regular' : onboardProgramme
+                        });
+
+                        logCustomEvent('branch_selected', { branch: onboardDept });
+                        logCustomEvent('semester_selected', { semester: onboardSem });
+
+                        setSemester({
+                          title: onboardSem,
+                          startDate: onboardStartDate,
+                          endDate: onboardEndDate,
+                          targetAttendance: 75,
+                          isInitialized: true,
+                          initialHeld: 0,
+                          initialAttended: 0
+                        });
+
+                        const preparedExams: Exam[] = [
+                          {
+                            id: 'j_mid1',
+                            type: 'Mid-sem',
+                            label: '1st Mid Sem',
+                            startDate: onboardMid1Start,
+                            endDate: onboardMid1End
+                          },
+                          {
+                            id: 'j_mid2',
+                            type: 'Mid-sem',
+                            label: '2nd Mid Sem',
+                            startDate: onboardMid2Start,
+                            endDate: onboardMid2End
+                          },
+                          {
+                            id: 'j_endsem',
+                            type: 'End-sem',
+                            label: 'End-sem Exam',
+                            startDate: onboardEndSemStart,
+                            endDate: onboardEndSemEnd
+                          }
+                        ];
+                        setExams(preparedExams);
+
+                        const isJmiECE = onboardDept === 'Electronics & Communication Engineering';
+                        const isJmiCivil = onboardDept.includes('Civil Engineering');
+                        const isJmiVLSI = onboardDept.includes('VLSI Design');
+                        const isJmiElec = onboardDept === 'Electrical Engineering';
+                        const isJmiMech = onboardDept === 'Mechanical Engineering';
+                        const isJmiCsds = onboardDept.includes('Computer Science') && onboardDept.includes('Data Science');
+                        const isJmiCompEng = onboardDept === 'Computer Engineering' || (onboardDept.includes('Computer') && !onboardDept.includes('Data Science') && !onboardDept.includes('Electrical'));
+                        const isJmiEec = onboardDept.includes('Electrical & Computer');
+                        const isFirstYear = onboardSem === 'Semester 1' || onboardSem === 'Semester 2';
+
+                        if (isFirstYear || isJmiECE || isJmiCivil || isJmiVLSI || isJmiElec || isJmiMech || isJmiCsds || isJmiCompEng || isJmiEec) {
+                          const { subjects: defaultSubs } = getDefaultCurriculumSubjects(onboardSem, onboardDept, 'SetA');
+                          if (defaultSubs && defaultSubs.length > 0) {
+                            setSubjects(defaultSubs);
+                          }
+                        }
+
+                        localStorage.setItem('bs_onboarding_completed', 'true');
+                        setOnboardingCompleted(true);
+                      }}>
+                        Finish & Activate
+                      </Button>
+                    </div>
+                  </motion.div>
+                )}
+              </>
             )}
           </AnimatePresence>
         </div>
       </div>
     );
-  };
+  };;
 
   const renderGapHandling = () => {
     if (gapDays.length === 0 || currentGapIndex >= gapDays.length) return null;

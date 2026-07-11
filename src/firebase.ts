@@ -58,6 +58,47 @@ export async function saveUserSubjectsToFirestore(email: string, subjects: any[]
 }
 
 /**
+ * Sync user profile to Firestore
+ */
+export async function saveUserProfileToFirestore(email: string, profile: any) {
+  if (!db || !email) return;
+  try {
+    const userDocRef = doc(db, 'users', email.toLowerCase().trim());
+    await setDoc(userDocRef, { profile }, { merge: true });
+    console.log('Successfully synced profile to Firestore for:', email);
+  } catch (error: any) {
+    const isOffline = error instanceof Error && (
+      error.message.toLowerCase().includes('offline') || 
+      error.message.toLowerCase().includes('unavailable') || 
+      (error as any).code === 'unavailable'
+    );
+    if (isOffline) {
+      console.warn('Firestore is offline. Profile sync to cloud will resume when online.');
+    } else {
+      console.error('Error syncing profile to Firestore:', error);
+    }
+  }
+}
+
+/**
+ * Load user profile from Firestore
+ */
+export async function loadUserProfileFromFirestore(email: string): Promise<any | null> {
+  if (!db || !email) return null;
+  try {
+    const userDocRef = doc(db, 'users', email.toLowerCase().trim());
+    const docSnap = await getDoc(userDocRef);
+    if (docSnap.exists()) {
+      const data = docSnap.data();
+      return data.profile || null;
+    }
+  } catch (error: any) {
+    console.error('Error loading profile from Firestore:', error);
+  }
+  return null;
+}
+
+/**
  * Load subjects list from Firestore
  */
 export async function loadUserSubjectsFromFirestore(email: string): Promise<any[] | null> {

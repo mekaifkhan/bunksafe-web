@@ -9,6 +9,10 @@ export interface Profile {
   academicSession?: string;
   programme?: string;
   firstYearPattern?: 'SetA' | 'SetB';
+  faculty?: string;
+  semesterStartDate?: string;
+  semesterEndDate?: string;
+  attendanceTarget?: number;
 }
 
 export interface Semester {
