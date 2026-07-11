@@ -72,6 +72,7 @@ import {
   formatSubjectName
 } from './types';
 import SettingsTab from './components/SettingsTab';
+import AvatarPickerModal from './components/AvatarPickerModal';
 import ExamsTab from './components/ExamsTab';
 import { 
   formatDate, 
@@ -209,6 +210,7 @@ export default function App() {
   const [editingExam, setEditingExam] = useState<Exam | null>(null);
 
   const [appState, setAppState] = useState<AppState>('MAIN');
+  const [isHomeAvatarModalOpen, setIsHomeAvatarModalOpen] = useState(false);
 
   const [isSplashVisible, setIsSplashVisible] = useState(true);
   const [onboardingCompleted, setOnboardingCompleted] = useState<boolean>(() => {
@@ -2071,7 +2073,11 @@ export default function App() {
       <div className="space-y-6 pb-24">
         <header className="flex justify-between items-center">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 bg-zinc-900 rounded-full border border-zinc-800 flex items-center justify-center overflow-hidden">
+            <div 
+              onClick={() => setIsHomeAvatarModalOpen(true)}
+              className="w-12 h-12 bg-zinc-900 rounded-full border border-zinc-800 flex items-center justify-center overflow-hidden cursor-pointer hover:ring-2 hover:ring-primary/50 active:scale-95 transition-all relative group"
+              title="Change Profile Picture"
+            >
               {profile.avatar ? (
                 <img src={profile.avatar} alt="Profile" className="w-full h-full object-cover" />
               ) : (
@@ -3368,6 +3374,15 @@ export default function App() {
 
       {showExamModal && <ExamModal />}
       {renderFirstYearPatternModal()}
+      <AvatarPickerModal
+        isOpen={isHomeAvatarModalOpen}
+        onClose={() => setIsHomeAvatarModalOpen(false)}
+        currentAvatar={profile.avatar}
+        onSave={(avatarUrl) => {
+          setProfile({ ...profile, avatar: avatarUrl || undefined });
+        }}
+        profileName={profile.name}
+      />
     </div>
   );
 }

@@ -25,13 +25,15 @@ import {
   ArrowUp,
   ArrowDown,
   Sliders,
-  AlertTriangle
+  AlertTriangle,
+  Camera
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { Profile, Semester, AttendanceRecord, SemesterHistory, AppState, Subject, SubjectGradeConfig, formatSubjectName } from '../types';
 import { motion, AnimatePresence } from 'motion/react';
 import { logCustomEvent } from '../firebase';
 import { JMI_CURRICULUM, JMI_CIVIL_CURRICULUM, JMI_VLSI_CURRICULUM, JMI_ELECTRICAL_CURRICULUM, JMI_MECHANICAL_CURRICULUM, JMI_CSE_DS_CURRICULUM, JMI_COMP_ENG_CURRICULUM, JMI_ELECTRICAL_COMPUTER_CURRICULUM, JMI_FIRST_YEAR_SET_A, JMI_FIRST_YEAR_SET_B, getDefaultCurriculumSubjects } from '../utils/curriculum';
+import AvatarPickerModal from './AvatarPickerModal';
 
 interface SettingsTabProps {
   profile: Profile;
@@ -90,6 +92,7 @@ export default function SettingsTab({
   const [newHolidayDate, setNewHolidayDate] = useState('');
   const [showPrivacyPolicy, setShowPrivacyPolicy] = useState(false);
   const [showAboutDev, setShowAboutDev] = useState(false);
+  const [isAvatarModalOpen, setIsAvatarModalOpen] = useState(false);
 
   // Subject Manager local states
   const [showSubjectManager, setShowSubjectManager] = useState(false);
@@ -427,32 +430,27 @@ export default function SettingsTab({
 
       {/* Avatar Display & Banner */}
       <div className="flex flex-col items-center gap-3 py-4 bg-zinc-900/40 border border-zinc-850 rounded-2xl p-4">
-        <div className="relative group">
-          <div className="w-20 h-20 bg-primary rounded-full flex items-center justify-center text-3xl font-black text-white shadow-xl shadow-primary/20 overflow-hidden border-4 border-zinc-900">
+        <div className="relative group cursor-pointer" onClick={() => setIsAvatarModalOpen(true)}>
+          <div className="w-20 h-20 bg-primary rounded-full flex items-center justify-center text-3xl font-black text-white shadow-xl shadow-primary/20 overflow-hidden border-4 border-zinc-900 hover:brightness-95 transition-all">
             {profile.avatar ? (
               <img src={profile.avatar} alt="Profile" className="w-full h-full object-cover" />
             ) : (
               (profile.name || 'U').charAt(0).toUpperCase()
             )}
+            <div className="absolute inset-0 bg-black/45 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity rounded-full">
+              <Camera size={20} className="text-white" />
+            </div>
           </div>
-          <label className="absolute bottom-0 right-0 bg-primary text-white p-1.5 rounded-full cursor-pointer shadow-lg active:scale-90 transition-all border border-zinc-900">
-            <Edit2 size={12} />
-            <input 
-              type="file" 
-              className="hidden" 
-              accept="image/*" 
-              onChange={(e) => {
-                const file = e.target.files?.[0];
-                if (file) {
-                  const reader = new FileReader();
-                  reader.onloadend = () => {
-                    setProfile({ ...profile, avatar: reader.result as string });
-                  };
-                  reader.readAsDataURL(file);
-                }
-              }}
-            />
-          </label>
+          <button 
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              setIsAvatarModalOpen(true);
+            }}
+            className="absolute bottom-0 right-0 bg-primary text-white p-1.5 rounded-full shadow-lg active:scale-90 transition-all border border-zinc-900"
+          >
+            <Camera size={12} />
+          </button>
         </div>
         <div className="text-center">
           <h2 className="text-lg font-black text-zinc-100">{profile.name}</h2>
@@ -1249,6 +1247,17 @@ export default function SettingsTab({
           </motion.div>
         )}
       </AnimatePresence>
+
+      <AvatarPickerModal
+        isOpen={isAvatarModalOpen}
+        onClose={() => setIsAvatarModalOpen(false)}
+        currentAvatar={profile.avatar}
+        onSave={(avatarUrl) => {
+          setProfile({ ...profile, avatar: avatarUrl || undefined });
+          logCustomEvent('avatar_changed', { has_avatar: !!avatarUrl });
+        }}
+        profileName={profile.name}
+      />
     </div>
   );
 }
