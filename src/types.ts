@@ -6,13 +6,6 @@ export interface Profile {
   semester: string;
   mobile: string;
   avatar?: string;
-  photoURL?: string;
-  fcmToken?: string;
-  timezone?: string;
-  lastAttendanceMarkedDate?: string;
-  joinedDate?: string;
-  lastSync?: string;
-  googleConnected?: boolean;
   academicSession?: string;
   programme?: string;
   firstYearPattern?: 'SetA' | 'SetB';

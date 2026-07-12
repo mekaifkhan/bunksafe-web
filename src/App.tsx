@@ -4,15 +4,7 @@
  */
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { 
-  logCustomEvent, 
-  saveUserSubjectsToFirestore, 
-  loadUserSubjectsFromFirestore, 
-  saveUserProfileToFirestore, 
-  loadUserProfileFromFirestore,
-  saveUserAttendanceStatusToFirestore,
-  auth
-} from './firebase';
+import { logCustomEvent, saveUserSubjectsToFirestore, loadUserSubjectsFromFirestore, saveUserProfileToFirestore, loadUserProfileFromFirestore } from './firebase';
 import { getDefaultCurriculumSubjects } from './utils/curriculum';
 import { 
   LayoutDashboard, 
@@ -83,7 +75,6 @@ import {
 } from './types';
 import SettingsTab from './components/SettingsTab';
 import ExamsTab from './components/ExamsTab';
-import AirtelAdModal from './components/AirtelAdModal';
 import { 
   formatDate, 
   getTodayStr, 
@@ -316,7 +307,6 @@ export default function App() {
   const [showExamModal, setShowExamModal] = useState(false);
   const [editingExam, setEditingExam] = useState<Exam | null>(null);
   const [showAttendanceInfoModal, setShowAttendanceInfoModal] = useState(false);
-  const [forceShowAd, setForceShowAd] = useState(false);
 
   const [appState, setAppState] = useState<AppState>('MAIN');
 
@@ -1321,15 +1311,6 @@ export default function App() {
         branch: profile.department || 'Unknown',
         semester: profile.semester || 'Unknown'
       });
-    }
-
-    // Sync marked status to Firestore if user is authenticated
-    const currentUser = auth?.currentUser;
-    if (currentUser) {
-      const isToday = date === getTodayStr();
-      if (isToday) {
-        saveUserAttendanceStatusToFirestore(currentUser.uid, date, held > 0 && !isHoliday);
-      }
     }
   };
 
@@ -4144,7 +4125,6 @@ export default function App() {
         setGradeSubjects={setGradeSubjects}
         subjectAttendance={subjectAttendance}
         setSubjectAttendance={setSubjectAttendance}
-        onShowAirtelAd={() => setForceShowAd(true)}
       />
     );
   };
@@ -4336,7 +4316,6 @@ export default function App() {
       {showExamModal && <ExamModal />}
       {renderFirstYearPatternModal()}
       {renderAttendanceInfoModal()}
-      <AirtelAdModal forceShow={forceShowAd} onClose={() => setForceShowAd(false)} />
     </div>
   );
 }

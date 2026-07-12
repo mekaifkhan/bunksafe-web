@@ -6,9 +6,6 @@
 import { initializeApp, getApps, getApp } from 'firebase/app';
 import { getAnalytics, logEvent, Analytics } from 'firebase/analytics';
 import { getFirestore, doc, setDoc, getDoc } from 'firebase/firestore';
-import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from 'firebase/auth';
-import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { getMessaging, getToken, onMessage } from 'firebase/messaging';
 
 // WARNING: Client-side exposure of third-party API keys is acceptable here as it is standard practice
 // for Firebase Client SDK configuration, but keep in mind that these keys are readable in browser builds.
@@ -25,23 +22,13 @@ const firebaseConfig = {
 const isBrowser = typeof window !== 'undefined';
 const isProd = !!(import.meta as any).env?.PROD;
 
-let app: any;
+let app;
 let analytics: Analytics | undefined;
 let db: any;
-let auth: any;
-let storage: any;
-let messaging: any;
 
 if (isBrowser) {
   app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
   db = getFirestore(app);
-  auth = getAuth(app);
-  storage = getStorage(app);
-  try {
-    messaging = getMessaging(app);
-  } catch (e) {
-    console.warn('Firebase Messaging is not supported in this browser/environment:', e);
-  }
   if (isProd) {
     analytics = getAnalytics(app);
   }
@@ -215,110 +202,4 @@ if (isBrowser && isProd) {
   }
 }
 
-export { 
-  app, 
-  analytics, 
-  db, 
-  auth, 
-  storage, 
-  messaging, 
-  GoogleAuthProvider, 
-  signInWithPopup, 
-  signOut, 
-  onAuthStateChanged,
-  getToken,
-  onMessage
-};
-
-/**
- * Sign in with Google Popup
- */
-export async function signInWithGoogle() {
-  if (!auth) throw new Error("Auth is not initialized");
-  const provider = new GoogleAuthProvider();
-  const result = await signInWithPopup(auth, provider);
-  return result.user;
-}
-
-/**
- * Sign out current user
- */
-export async function logoutUser() {
-  if (!auth) throw new Error("Auth is not initialized");
-  await signOut(auth);
-}
-
-/**
- * Upload profile photo to Storage, save download URL in Firestore
- */
-export async function uploadProfilePhoto(uid: string, fileBlob: Blob): Promise<string> {
-  if (!storage) throw new Error("Storage is not initialized");
-  
-  // Create a unique name for the file
-  const photoRef = ref(storage, `users/${uid}/profile_photo_${Date.now()}.jpg`);
-  
-  // Upload bytes
-  await uploadBytes(photoRef, fileBlob, { contentType: 'image/jpeg' });
-  
-  // Get download url
-  const downloadURL = await getDownloadURL(photoRef);
-  
-  // Update in Firestore under users/{uid}
-  if (db) {
-    const uidDocRef = doc(db, 'users', uid);
-    await setDoc(uidDocRef, { photoURL: downloadURL }, { merge: true });
-    
-    // Also save in users/{email} if logged in and has email
-    const currentUser = auth.currentUser;
-    if (currentUser && currentUser.email) {
-      const emailDocRef = doc(db, 'users', currentUser.email.toLowerCase().trim());
-      await setDoc(emailDocRef, { photoURL: downloadURL }, { merge: true });
-    }
-  }
-  
-  return downloadURL;
-}
-
-/**
- * Save FCM token to Firestore
- */
-export async function saveFCMTokenToFirestore(uid: string, token: string) {
-  if (!db) return;
-  try {
-    const uidDocRef = doc(db, 'users', uid);
-    await setDoc(uidDocRef, { fcmToken: token }, { merge: true });
-    
-    const currentUser = auth?.currentUser;
-    if (currentUser && currentUser.email) {
-      const emailDocRef = doc(db, 'users', currentUser.email.toLowerCase().trim());
-      await setDoc(emailDocRef, { fcmToken: token }, { merge: true });
-    }
-    console.log('Saved FCM Token to Firestore successfully.');
-  } catch (error) {
-    console.error('Error saving FCM Token to Firestore:', error);
-  }
-}
-
-/**
- * Save current user attendance state for the scheduler to check
- */
-export async function saveUserAttendanceStatusToFirestore(uid: string, markedDate: string, marked: boolean) {
-  if (!db) return;
-  try {
-    const statusData = {
-      lastAttendanceMarkedDate: marked ? markedDate : '',
-      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'Asia/Kolkata',
-      lastSync: new Date().toISOString()
-    };
-    await setDoc(doc(db, 'users', uid), statusData, { merge: true });
-    
-    const currentUser = auth?.currentUser;
-    if (currentUser && currentUser.email) {
-      await setDoc(doc(db, 'users', currentUser.email.toLowerCase().trim()), statusData, { merge: true });
-    }
-    console.log('Saved user attendance status successfully.');
-  } catch (error) {
-    console.error('Error saving user attendance status to Firestore:', error);
-  }
-}
-
+export { app, analytics };
