@@ -4,7 +4,15 @@
  */
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { logCustomEvent, saveUserSubjectsToFirestore, loadUserSubjectsFromFirestore, saveUserProfileToFirestore, loadUserProfileFromFirestore } from './firebase';
+import { 
+  logCustomEvent, 
+  saveUserSubjectsToFirestore, 
+  loadUserSubjectsFromFirestore, 
+  saveUserProfileToFirestore, 
+  loadUserProfileFromFirestore,
+  saveUserAttendanceStatusToFirestore,
+  auth
+} from './firebase';
 import { getDefaultCurriculumSubjects } from './utils/curriculum';
 import { 
   LayoutDashboard, 
@@ -1313,6 +1321,15 @@ export default function App() {
         branch: profile.department || 'Unknown',
         semester: profile.semester || 'Unknown'
       });
+    }
+
+    // Sync marked status to Firestore if user is authenticated
+    const currentUser = auth?.currentUser;
+    if (currentUser) {
+      const isToday = date === getTodayStr();
+      if (isToday) {
+        saveUserAttendanceStatusToFirestore(currentUser.uid, date, held > 0 && !isHoliday);
+      }
     }
   };
 
