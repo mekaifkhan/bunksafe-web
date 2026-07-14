@@ -13,6 +13,7 @@ export interface Profile {
   semesterStartDate?: string;
   semesterEndDate?: string;
   attendanceTarget?: number;
+  registeredAt?: string;
 }
 
 export interface Semester {

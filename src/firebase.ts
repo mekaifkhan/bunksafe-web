@@ -24,7 +24,7 @@ const isProd = !!(import.meta as any).env?.PROD;
 
 let app;
 let analytics: Analytics | undefined;
-let db: any;
+export let db: any;
 
 if (isBrowser) {
   app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();

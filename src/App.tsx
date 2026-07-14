@@ -4,6 +4,7 @@
  */
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
+import BAA from './components/BAA';
 import { logCustomEvent, saveUserSubjectsToFirestore, loadUserSubjectsFromFirestore, saveUserProfileToFirestore, loadUserProfileFromFirestore } from './firebase';
 import { getDefaultCurriculumSubjects } from './utils/curriculum';
 import { 
@@ -248,10 +249,22 @@ export default function App() {
   // Persistence
   const [profile, setProfile] = useState<Profile>(() => {
     const saved = localStorage.getItem('bs_profile');
-    const defaultProfile = { name: 'Kaif Khan', email: 'kaif@example.com', college: 'IIT Delhi', department: 'Computer Science', semester: 'Semester 1', mobile: '', avatar: '' };
+    const defaultProfile = { 
+      name: 'Kaif Khan', 
+      email: 'kaif@example.com', 
+      college: 'IIT Delhi', 
+      department: 'Computer Science', 
+      semester: 'Semester 1', 
+      mobile: '', 
+      avatar: '',
+      registeredAt: new Date().toISOString()
+    };
     if (!saved) return defaultProfile;
     const parsed = JSON.parse(saved);
     const profileMerged = { ...defaultProfile, ...parsed };
+    if (parsed && !parsed.hasOwnProperty('registeredAt')) {
+      delete profileMerged.registeredAt;
+    }
 
     // Backward compatibility: If an existing profile has a department (branch), migrate/infer programme safely
     if (profileMerged.department && !profileMerged.programme) {
@@ -307,6 +320,7 @@ export default function App() {
   const [showExamModal, setShowExamModal] = useState(false);
   const [editingExam, setEditingExam] = useState<Exam | null>(null);
   const [showAttendanceInfoModal, setShowAttendanceInfoModal] = useState(false);
+  const [isBaaOpen, setIsBaaOpen] = useState(false);
 
   const [appState, setAppState] = useState<AppState>('MAIN');
 
@@ -3230,6 +3244,41 @@ export default function App() {
               </Card>
             </div>
 
+            {/* BAA Promotion Card */}
+            <Card className="relative overflow-hidden p-5 border-zinc-800 bg-zinc-900/10 hover:bg-zinc-900/20 transition-all group">
+              {/* Decorative Glow */}
+              <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full blur-2xl group-hover:bg-primary/10 transition-all pointer-events-none" />
+              <div className="relative z-10 space-y-4">
+                <div className="flex items-start justify-between">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-10 h-10 bg-primary/10 rounded-xl flex items-center justify-center border border-primary/20 shrink-0">
+                      <Sparkles size={20} className="text-primary animate-pulse" />
+                    </div>
+                    <div>
+                      <h3 className="font-extrabold text-base text-zinc-100 flex items-center gap-1.5">
+                        🤖 BAA
+                        <span className="text-[9px] font-black bg-primary/10 text-primary px-1.5 py-0.5 rounded-full uppercase tracking-wider font-mono">Premium AI</span>
+                      </h3>
+                      <p className="text-xs text-zinc-400 font-bold">Your Personal BunkSafe AI Assistant</p>
+                    </div>
+                  </div>
+                </div>
+                
+                <p className="text-xs text-zinc-400 leading-relaxed max-w-md font-medium">
+                  Ask anything related to studies, coding, mathematics, engineering, assignments, exams, projects, career guidance or general knowledge.
+                </p>
+
+                <div className="pt-1">
+                  <button
+                    onClick={() => setIsBaaOpen(true)}
+                    className="w-full sm:w-auto inline-flex items-center justify-center gap-2 py-3 px-5 text-xs font-bold text-white bg-primary hover:bg-primary/95 rounded-xl uppercase tracking-wider transition-all shadow-md shadow-primary/10 cursor-pointer border border-primary/10"
+                  >
+                    Open BAA
+                  </button>
+                </div>
+              </div>
+            </Card>
+
             {/* Today's Class Schedule */}
             {isWeekday && (
               <div className="space-y-4">
@@ -4316,6 +4365,9 @@ export default function App() {
       {showExamModal && <ExamModal />}
       {renderFirstYearPatternModal()}
       {renderAttendanceInfoModal()}
+
+      {/* BAA study assistant premium screen modal */}
+      {isBaaOpen && <BAA profile={profile} onClose={() => setIsBaaOpen(false)} />}
     </div>
   );
 }
