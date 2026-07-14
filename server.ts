@@ -229,9 +229,14 @@ async function startServer() {
         }
       }
 
+      // Ensure contents is robustly shaped for @google/genai
+      const contentsPayload = (typeof finalContents === "object" && finalContents !== null && "parts" in finalContents)
+        ? { role: "user", parts: finalContents.parts }
+        : finalContents;
+
       const response = await ai.models.generateContent({
         model: "gemini-3.5-flash",
-        contents: finalContents,
+        contents: contentsPayload,
         config: {
           systemInstruction,
           temperature: 0.7,

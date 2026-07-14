@@ -228,12 +228,24 @@ export default function BAA({ profile, onClose }: BAAProps) {
         signal: abortControllerRef.current.signal
       });
 
-      if (!response.ok) {
-        throw new Error('Failed to fetch response from BAA server');
+      let result: any = null;
+      try {
+        const textResponse = await response.text();
+        try {
+          result = JSON.parse(textResponse);
+        } catch (e) {
+          result = { error: textResponse };
+        }
+      } catch (err: any) {
+        console.error('Failed to read response:', err);
       }
 
-      const result = await response.json();
-      if (result.success && result.text) {
+      if (!response.ok) {
+        const errorDetail = result?.message || result?.error || `Server returned status ${response.status}`;
+        throw new Error(errorDetail);
+      }
+
+      if (result && result.success && result.text) {
         const newModelMessage: Message = {
           id: `msg_model_${Date.now()}`,
           role: 'model',
@@ -255,7 +267,7 @@ export default function BAA({ profile, onClose }: BAAProps) {
           });
         }
       } else {
-        throw new Error(result.error || 'Unknown BAA Error');
+        throw new Error(result?.error || result?.message || 'Unknown BAA Error');
       }
     } catch (error: any) {
       if (error.name === 'AbortError') {
