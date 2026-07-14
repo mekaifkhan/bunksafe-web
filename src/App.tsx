@@ -113,8 +113,23 @@ const Button = ({
   type?: 'button' | 'submit' | 'reset',
   style?: React.CSSProperties
 }) => {
+  const getPrimaryTextColor = () => {
+    try {
+      const saved = localStorage.getItem('bs_theme_color') || '#facc15';
+      const hex = saved.replace('#', '');
+      if (hex.length === 6) {
+        const r = parseInt(hex.substring(0, 2), 16);
+        const g = parseInt(hex.substring(2, 4), 16);
+        const b = parseInt(hex.substring(4, 6), 16);
+        const yiq = ((r * 299) + (g * 587) + (b * 114)) / 1000;
+        return yiq >= 150 ? 'text-zinc-950 font-bold' : 'text-white';
+      }
+    } catch (e) {}
+    return 'text-white';
+  };
+
   const variants = {
-    primary: 'bg-primary text-white hover:bg-primary-hover',
+    primary: `bg-primary ${getPrimaryTextColor()} hover:opacity-95`,
     secondary: 'bg-zinc-800 text-zinc-100 hover:bg-zinc-700',
     danger: 'bg-red-500/10 text-red-500 border border-red-500/20 hover:bg-red-500/20',
     ghost: 'bg-transparent text-zinc-400 hover:text-zinc-100'
@@ -395,6 +410,21 @@ export default function App() {
     }
     return saved;
   });
+
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
+
+  const showToast = (message: string, type: 'success' | 'error' | 'info' = 'success') => {
+    setToast({ message, type });
+  };
+
+  useEffect(() => {
+    if (toast) {
+      const timer = setTimeout(() => {
+        setToast(null);
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [toast]);
 
   // Daily Class Schedule States
   const [classSchedule, setClassSchedule] = useState<Record<string, Record<number, string>>>(() => {
@@ -2871,12 +2901,12 @@ export default function App() {
         <header className="flex justify-between items-center">
           <div className="flex items-center gap-3">
             <div 
-              className="w-12 h-12 bg-primary rounded-full flex items-center justify-center text-white font-black text-lg border border-zinc-800 shadow-md shadow-primary/10 select-none"
+              className="w-12 h-12 bg-primary rounded-full flex items-center justify-center font-black text-lg border border-zinc-800 shadow-md shadow-primary/10 select-none text-zinc-950"
             >
               {profile.name.charAt(0).toUpperCase()}
             </div>
             <div>
-              <p className="text-zinc-500 text-sm">
+              <p className="text-zinc-500 text-xs font-semibold uppercase tracking-wider">
                 {(() => {
                   const hours = new Date().getHours();
                   if (hours < 10) return "Good Morning";
@@ -2884,11 +2914,17 @@ export default function App() {
                   return "Good Evening";
                 })()}
               </p>
-              <h1 className="text-2xl font-bold">{profile.name}</h1>
+              <h1 className="text-xl font-extrabold text-zinc-100 tracking-tight">{profile.name}</h1>
             </div>
           </div>
-          <div className="bg-zinc-900 p-2 rounded-full border border-zinc-800">
-            <Sparkles size={24} className="text-primary" />
+          <div className="flex flex-col items-end gap-1">
+            <div className="bg-zinc-900 p-2 rounded-full border border-zinc-800 shadow-sm shadow-primary/5">
+              <Sparkles size={18} className="text-primary" />
+            </div>
+            <div className="flex items-center gap-1.5 bg-primary/10 border border-primary/20 px-2 py-0.5 rounded-full">
+              <div className="w-1 h-1 bg-primary rounded-full animate-pulse" />
+              <span className="text-[8px] font-black text-primary uppercase tracking-wider">{onlineCount} Live</span>
+            </div>
           </div>
         </header>
 
@@ -3232,21 +3268,25 @@ export default function App() {
 
                     <div className="space-y-4 pt-4 border-t border-zinc-800">
                       <button 
-                        onClick={() => updateAttendance(today, 0, 0, !todayRecord.isHoliday)}
-                        style={{ backgroundColor: '#afb910' }}
-                        className={`w-full py-3 rounded-lg font-bold transition-all active:scale-95 flex items-center justify-center gap-2 shadow-lg ${
+                        onClick={() => {
+                          updateAttendance(today, 0, 0, !todayRecord.isHoliday);
+                          showToast(todayRecord.isHoliday ? 'Holiday removed!' : 'Marked today as Holiday!', 'info');
+                        }}
+                        className={`w-full py-3 rounded-2xl font-bold transition-all active:scale-95 flex items-center justify-center gap-2 border shadow-lg ${
                           todayRecord.isHoliday 
-                            ? 'bg-amber-500 text-black shadow-amber-500/40 ring-2 ring-white/20' 
-                            : 'bg-primary text-white opacity-90 hover:opacity-100 shadow-primary/40'
+                            ? 'bg-amber-500/10 border-amber-500/30 text-amber-400 hover:bg-amber-500/20' 
+                            : 'bg-zinc-900 border-zinc-800 text-zinc-400 hover:text-white hover:bg-zinc-850'
                         }`}
                       >
-                        {todayRecord.isHoliday ? 'Today is a Holiday' : 'Mark Today as Holiday'}
+                        <CalendarDays size={16} />
+                        {todayRecord.isHoliday ? 'Remove Holiday marking' : 'Mark Today as Holiday'}
                       </button>
                       <Button 
-                        onClick={() => alert("Attendance Saved!")} 
-                        style={{ backgroundColor: '#b91010' }}
-                        className="w-full py-3 text-lg"
+                        onClick={() => showToast("Attendance saved successfully!", "success")} 
+                        variant="primary"
+                        className="w-full py-3 rounded-2xl font-bold flex items-center justify-center gap-2 shadow-lg shadow-primary/10 border border-primary/20"
                       >
+                        <CheckCircle2 size={16} />
                         Save Attendance
                       </Button>
                     </div>
@@ -3732,7 +3772,7 @@ export default function App() {
                                       const parsedLocked = semester.lockedUntil ? parseISO(semester.lockedUntil) : null;
                                       const isLocked = semester.lockedUntil && parsedSelDate && !isNaN(parsedSelDate.getTime()) && parsedLocked && !isNaN(parsedLocked.getTime()) && !isAfter(parsedSelDate, parsedLocked);
                                       if (isLocked) {
-                                        alert("This attendance data was initialized during setup and cannot be edited.");
+                                        showToast("This attendance was initialized during setup and cannot be edited.", "info");
                                         return;
                                       }
                                       const held = prompt("Total classes?", record?.held.toString() || "0");
@@ -4150,6 +4190,7 @@ export default function App() {
         setGradeSubjects={setGradeSubjects}
         subjectAttendance={subjectAttendance}
         setSubjectAttendance={setSubjectAttendance}
+        showToast={showToast}
       />
     );
   };
@@ -4303,6 +4344,30 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-100 font-sans selection:bg-primary/30">
+      <AnimatePresence>
+        {toast && (
+          <motion.div
+            initial={{ opacity: 0, y: -20, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -20, scale: 0.95 }}
+            className="fixed top-4 left-4 right-4 z-[150] flex justify-center pointer-events-none"
+          >
+            <div className={`px-4 py-3 rounded-2xl shadow-xl border flex items-center gap-2.5 max-w-sm w-full pointer-events-auto ${
+              toast.type === 'success' 
+                ? 'bg-zinc-900 border-emerald-500/30 text-emerald-400' 
+                : toast.type === 'error' 
+                  ? 'bg-zinc-900 border-red-500/30 text-red-400' 
+                  : 'bg-zinc-900 border-primary/30 text-primary'
+            }`}>
+              {toast.type === 'success' && <CheckCircle2 size={16} className="shrink-0 text-emerald-400" />}
+              {toast.type === 'error' && <XCircle size={16} className="shrink-0 text-red-400" />}
+              {toast.type === 'info' && <Info size={16} className="shrink-0 text-primary" />}
+              <span className="text-xs font-bold text-zinc-200">{toast.message}</span>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <main className="max-w-md mx-auto p-6">
         <AnimatePresence mode="wait">
           <motion.div
@@ -4321,28 +4386,20 @@ export default function App() {
         </AnimatePresence>
       </main>
 
-      {/* Online Status Floating Badge */}
-      <div className="fixed bottom-20 left-4 z-40 flex items-center gap-2 bg-primary/10 border border-primary/20 px-3 py-1.5 rounded-full backdrop-blur-md">
-        <div className="w-1.5 h-1.5 bg-primary rounded-full animate-pulse" />
-        <span className="text-[10px] font-bold text-primary uppercase tracking-wider">{onlineCount} Live Users</span>
-      </div>
-
-      {/* Bottom Navigation */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-zinc-950/80 backdrop-blur-xl border-t border-zinc-800 px-6 py-3 z-50">
-        <div className="max-w-md mx-auto flex justify-between items-center">
-          <NavButton active={activeTab === 'dashboard'} onClick={() => setActiveTab('dashboard')} icon={<LayoutDashboard size={24} />} label="Home" />
-          <NavButton active={activeTab === 'calendar'} onClick={() => { setActiveTab('calendar'); setScheduleSubTab('schedule'); }} icon={<CalendarIcon size={24} />} label="Schedule" />
-          <NavButton active={activeTab === 'special'} onClick={() => setActiveTab('special')} icon={<Sparkles size={24} />} label="Special" />
-          <NavButton active={activeTab === 'exams'} onClick={() => setActiveTab('exams')} icon={<GraduationCap size={24} />} label="Exams" />
-          <NavButton active={activeTab === 'settings'} onClick={() => setActiveTab('settings')} icon={<Settings size={24} />} label="Settings" />
+      {/* Premium Floating Bottom Navigation Dock */}
+      <nav className="fixed bottom-4 left-1/2 -translate-x-1/2 w-[calc(100%-2rem)] max-w-md bg-zinc-900/90 backdrop-blur-xl border border-zinc-800/80 px-4 py-2.5 rounded-2xl shadow-2xl z-50">
+        <div className="flex justify-between items-center">
+          <NavButton active={activeTab === 'dashboard'} onClick={() => setActiveTab('dashboard')} icon={<LayoutDashboard size={20} />} label="Home" />
+          <NavButton active={activeTab === 'calendar'} onClick={() => { setActiveTab('calendar'); setScheduleSubTab('schedule'); }} icon={<CalendarIcon size={20} />} label="Schedule" />
+          <NavButton active={activeTab === 'special'} onClick={() => setActiveTab('special')} icon={<Sparkles size={20} />} label="Special" />
+          <NavButton active={activeTab === 'exams'} onClick={() => setActiveTab('exams')} icon={<GraduationCap size={20} />} label="Exams" />
+          <NavButton active={activeTab === 'settings'} onClick={() => setActiveTab('settings')} icon={<Settings size={20} />} label="Settings" />
         </div>
       </nav>
 
       {showExamModal && <ExamModal />}
       {renderFirstYearPatternModal()}
       {renderAttendanceInfoModal()}
-
-
     </div>
   );
 }
@@ -4351,12 +4408,21 @@ function NavButton({ active, onClick, icon, label }: any) {
   return (
     <button 
       onClick={onClick}
-      className={`flex flex-col items-center gap-1 transition-all ${active ? 'text-primary' : 'text-zinc-500'}`}
+      className={`relative flex flex-col items-center gap-1 py-1 px-2 transition-all duration-200 outline-none select-none ${
+        active ? 'text-primary scale-105' : 'text-zinc-500 hover:text-zinc-300'
+      }`}
     >
-      <div className={`p-1 rounded-xl transition-all ${active ? 'bg-primary/10' : ''}`}>
+      <div className={`p-1 rounded-xl transition-all duration-300 ${active ? 'bg-primary/10' : 'bg-transparent'}`}>
         {icon}
       </div>
-      <span className="text-[10px] font-bold uppercase tracking-tighter">{label}</span>
+      <span className="text-[9px] font-bold uppercase tracking-wider">{label}</span>
+      {active && (
+        <motion.div 
+          layoutId="nav-active-dot" 
+          className="absolute -bottom-1 w-1 h-1 rounded-full bg-primary" 
+          transition={{ type: "spring", stiffness: 380, damping: 30 }}
+        />
+      )}
     </button>
   );
 }

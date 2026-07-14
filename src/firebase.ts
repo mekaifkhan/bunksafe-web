@@ -5,7 +5,7 @@
 
 import { initializeApp, getApps, getApp } from 'firebase/app';
 import { getAnalytics, logEvent, Analytics } from 'firebase/analytics';
-import { getFirestore, doc, setDoc, getDoc } from 'firebase/firestore';
+import { getFirestore, doc, setDoc, getDoc, deleteDoc, collection, getDocs, query, orderBy } from 'firebase/firestore';
 
 // WARNING: Client-side exposure of third-party API keys is acceptable here as it is standard practice
 // for Firebase Client SDK configuration, but keep in mind that these keys are readable in browser builds.
@@ -200,6 +200,71 @@ if (isBrowser && isProd) {
       trackPageView(window.location.pathname);
     });
   }
+}
+
+/**
+ * Submit a feature request to Firestore
+ */
+export async function addFeatureRequestToFirestore(email: string, title: string, description: string) {
+  if (!db) return;
+  const requestId = `req_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
+  const requestDocRef = doc(db, 'featureRequests', requestId);
+  const payload = {
+    id: requestId,
+    email: email.toLowerCase().trim(),
+    title: title.trim(),
+    description: description.trim(),
+    createdAt: new Date().toISOString(),
+    status: 'pending'
+  };
+  await setDoc(requestDocRef, payload);
+}
+
+/**
+ * Fetch latest app version config from Firestore
+ */
+export async function fetchLatestAppVersionFromFirestore() {
+  if (!db) return null;
+  try {
+    const configDocRef = doc(db, 'appConfig', 'version');
+    const docSnap = await getDoc(configDocRef);
+    if (docSnap.exists()) {
+      return docSnap.data();
+    }
+  } catch (error) {
+    console.error('Error fetching latest app version:', error);
+  }
+  return null;
+}
+
+/**
+ * Fetch changelogs from Firestore
+ */
+export async function fetchChangelogsFromFirestore() {
+  if (!db) return [];
+  try {
+    const changelogCol = collection(db, 'changelog');
+    const q = query(changelogCol, orderBy('createdAt', 'desc'));
+    const querySnapshot = await getDocs(q);
+    const logs: any[] = [];
+    querySnapshot.forEach((docSnap) => {
+      logs.push(docSnap.data());
+    });
+    return logs;
+  } catch (error) {
+    console.error('Error fetching changelogs:', error);
+    return [];
+  }
+}
+
+/**
+ * Delete user account and Firestore documents
+ */
+export async function deleteUserAccountFromFirestore(email: string) {
+  if (!db || !email) return;
+  const userDocRef = doc(db, 'users', email.toLowerCase().trim());
+  await deleteDoc(userDocRef);
+  console.log('Successfully deleted user document from Firestore:', email);
 }
 
 export { app, analytics };

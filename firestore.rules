@@ -1,0 +1,40 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Global catch-all default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper: Validates ID structure
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    // Users Collection rules
+    // Documents are keyed by lowercase email.
+    match /users/{email} {
+      allow read, write: if true; // Lightweight sync based on email address
+    }
+
+    // Feature Requests rules
+    match /featureRequests/{requestId} {
+      allow create: if isValidId(requestId) &&
+                    request.resource.data.keys().hasAll(['id', 'email', 'title', 'description', 'createdAt', 'status']) &&
+                    request.resource.data.keys().size() == 6;
+      allow read: if true;
+    }
+
+    // App Version configuration rules
+    match /appConfig/version {
+      allow read: if true;
+      allow write: if false; // Only admin/backend should update, clients only read
+    }
+
+    // Changelog rules
+    match /changelog/{changelogId} {
+      allow read: if true;
+      allow write: if false; // Clients only read changelogs
+    }
+  }
+}

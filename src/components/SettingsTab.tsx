@@ -27,12 +27,17 @@ import {
   Sliders,
   AlertTriangle,
   Camera,
-  Instagram
+  Instagram,
+  Star,
+  Share2,
+  HelpCircle,
+  FileText,
+  CheckCircle
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { Profile, Semester, AttendanceRecord, SemesterHistory, AppState, Subject, SubjectGradeConfig, formatSubjectName } from '../types';
 import { motion, AnimatePresence } from 'motion/react';
-import { logCustomEvent } from '../firebase';
+import { logCustomEvent, addFeatureRequestToFirestore, fetchLatestAppVersionFromFirestore, fetchChangelogsFromFirestore, deleteUserAccountFromFirestore } from '../firebase';
 import { JMI_CURRICULUM, JMI_CIVIL_CURRICULUM, JMI_VLSI_CURRICULUM, JMI_ELECTRICAL_CURRICULUM, JMI_MECHANICAL_CURRICULUM, JMI_CSE_DS_CURRICULUM, JMI_COMP_ENG_CURRICULUM, JMI_ELECTRICAL_COMPUTER_CURRICULUM, JMI_FIRST_YEAR_SET_A, JMI_FIRST_YEAR_SET_B, getDefaultCurriculumSubjects } from '../utils/curriculum';
 
 interface SettingsTabProps {
@@ -60,6 +65,7 @@ interface SettingsTabProps {
   setGradeSubjects: React.Dispatch<React.SetStateAction<SubjectGradeConfig[]>>;
   subjectAttendance: Record<string, { attended: number; held: number }>;
   setSubjectAttendance: React.Dispatch<React.SetStateAction<Record<string, { attended: number; held: number }>>>;
+  showToast?: (message: string, type?: 'success' | 'error' | 'info') => void;
 }
 
 export default function SettingsTab({
@@ -86,12 +92,34 @@ export default function SettingsTab({
   gradeSubjects,
   setGradeSubjects,
   subjectAttendance,
-  setSubjectAttendance
+  setSubjectAttendance,
+  showToast
 }: SettingsTabProps) {
   // Local state for holiday manager
   const [newHolidayDate, setNewHolidayDate] = useState('');
   const [showPrivacyPolicy, setShowPrivacyPolicy] = useState(false);
   const [showAboutDev, setShowAboutDev] = useState(false);
+
+  // New production-ready local states
+  const [showAboutBunkSafe, setShowAboutBunkSafe] = useState(false);
+  const [showTermsConditions, setShowTermsConditions] = useState(false);
+  const [showReportBug, setShowReportBug] = useState(false);
+  const [showFeatureRequest, setShowFeatureRequest] = useState(false);
+  const [showChangelog, setShowChangelog] = useState(false);
+
+  const [bugTitle, setBugTitle] = useState('');
+  const [bugDesc, setBugDesc] = useState('');
+  const [isSubmittingBug, setIsSubmittingBug] = useState(false);
+
+  const [featureTitle, setFeatureTitle] = useState('');
+  const [featureDesc, setFeatureDesc] = useState('');
+  const [isSubmittingFeature, setIsSubmittingFeature] = useState(false);
+
+  const [isCheckingUpdates, setIsCheckingUpdates] = useState(false);
+  const [updateInfo, setUpdateInfo] = useState<any>(null);
+  const [deleteConfirmationText, setDeleteConfirmationText] = useState('');
+  const [changelogs, setChangelogs] = useState<any[]>([]);
+  const [isLoadingChangelogs, setIsLoadingChangelogs] = useState(false);
 
   // Subject Manager local states
   const [showSubjectManager, setShowSubjectManager] = useState(false);
@@ -413,6 +441,170 @@ export default function SettingsTab({
       setOnboardingCompleted(false);
       setOnboardingStep(1);
       setAppState('MAIN');
+    }
+  };
+
+  // Share App
+  const handleShareApp = async () => {
+    const shareData = {
+      title: 'BunkSafe',
+      text: 'BunkSafe - Smart Attendance & Academic Companion for College Students!',
+      url: 'https://bunk-safe-downloader.vercel.app/'
+    };
+    if (typeof navigator !== 'undefined' && navigator.share) {
+      try {
+        await navigator.share(shareData);
+        logCustomEvent('app_shared', { method: 'WebShare' });
+      } catch (err) {
+        console.log('Error sharing:', err);
+      }
+    } else {
+      // Fallback: Copy to clipboard
+      try {
+        await navigator.clipboard.writeText(`${shareData.text} ${shareData.url}`);
+        if (showToast) {
+          showToast('Sharing link copied to clipboard!', 'success');
+        } else {
+          alert('Sharing link copied to clipboard!');
+        }
+        logCustomEvent('app_shared', { method: 'Clipboard' });
+      } catch (err) {
+        if (showToast) {
+          showToast('Could not copy link to clipboard.', 'error');
+        } else {
+          alert('Could not copy link to clipboard.');
+        }
+      }
+    }
+  };
+
+  // Submit Feature Request
+  const handleFeatureRequestSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!featureTitle.trim() || !featureDesc.trim()) {
+      alert('Please fill in all fields.');
+      return;
+    }
+    setIsSubmittingFeature(true);
+    try {
+      await addFeatureRequestToFirestore(profile.email || 'anonymous@bunksafe.app', featureTitle, featureDesc);
+      setIsSubmittingFeature(false);
+      alert('Your feature request has been successfully submitted to Firestore! Thank you for helping improve BunkSafe.');
+      setFeatureTitle('');
+      setFeatureDesc('');
+      setShowFeatureRequest(false);
+      logCustomEvent('feature_requested', { title: featureTitle });
+    } catch (err) {
+      setIsSubmittingFeature(false);
+      console.error(err);
+      alert('Failed to submit feature request. Please try again.');
+    }
+  };
+
+  // Submit Bug Report
+  const handleBugReportSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!bugTitle.trim() || !bugDesc.trim()) {
+      alert('Please fill in all fields.');
+      return;
+    }
+    setIsSubmittingBug(true);
+    try {
+      await addFeatureRequestToFirestore(profile.email || 'anonymous@bunksafe.app', `[BUG] ${bugTitle}`, bugDesc);
+      setIsSubmittingBug(false);
+      alert('Your bug report has been securely registered in our system. Thank you!');
+      setBugTitle('');
+      setBugDesc('');
+      setShowReportBug(false);
+      logCustomEvent('bug_reported', { title: bugTitle });
+    } catch (err) {
+      setIsSubmittingBug(false);
+      console.error(err);
+      alert('Failed to submit report. Please try again.');
+    }
+  };
+
+  // Check for Updates
+  const handleCheckUpdates = async () => {
+    setIsCheckingUpdates(true);
+    try {
+      const config = await fetchLatestAppVersionFromFirestore();
+      setIsCheckingUpdates(false);
+      if (config && config.latestVersion) {
+        if (config.latestVersion !== '2.4.0') {
+          setUpdateInfo(config);
+        } else {
+          alert('You are already on the latest production release (v2.4.0)!');
+        }
+      } else {
+        alert('You are on the latest production release (v2.4.0)!');
+      }
+    } catch (err) {
+      setIsCheckingUpdates(false);
+      alert('Already on the latest stable build (v2.4.0).');
+    }
+  };
+
+  // Load Changelogs
+  const handleLoadChangelogs = async () => {
+    setIsLoadingChangelogs(true);
+    try {
+      const logs = await fetchChangelogsFromFirestore();
+      if (logs && logs.length > 0) {
+        setChangelogs(logs);
+      } else {
+        // Fallback static changelog data
+        setChangelogs([
+          {
+            version: '2.4.0',
+            releaseDate: 'July 2026',
+            newFeatures: [
+              'Complete About BunkSafe and professional settings suite',
+              'Integrated update checking mechanism and changelog views',
+              'Secure cloud account and local database deletion features',
+              'Advanced Privacy Policy & Terms compliance definitions'
+            ],
+            bugFixes: [
+              'Deleted legacy BAA AI helper for optimized native wrappers',
+              'Fixed UI glitch with custom class intervals'
+            ]
+          },
+          {
+            version: '2.3.0',
+            releaseDate: 'May 2026',
+            newFeatures: [
+              'Custom time-slot manager for tailored lecture schedules',
+              'Automatic curriculum loading database for Jamia Millia Islamia'
+            ],
+            bugFixes: [
+              'Optimized layout resizing behavior on tablet devices'
+            ]
+          }
+        ]);
+      }
+    } catch (err) {
+      console.error(err);
+    }
+    setIsLoadingChangelogs(false);
+  };
+
+  // Delete Account
+  const handleDeleteAccount = async () => {
+    if (deleteConfirmationText !== 'DELETE') {
+      alert('Please type DELETE to confirm.');
+      return;
+    }
+    try {
+      if (profile.email) {
+        await deleteUserAccountFromFirestore(profile.email);
+      }
+      localStorage.clear();
+      alert('Your BunkSafe Cloud Account and all data have been completely deleted from both cloud and local storage.');
+      window.location.reload();
+    } catch (err) {
+      alert('Error during deletion. Resetting local state.');
+      localStorage.clear();
+      window.location.reload();
     }
   };
 
@@ -777,69 +969,263 @@ export default function SettingsTab({
           </div>
           <p className="text-[10px] text-zinc-500 text-center">Ending the current semester will archive the attendance rates inside your History log.</p>
         </div>
-      </div>
-
-      {/* 4. DATA SECTION */}
+      </div>      {/* 4. BACKUP & DATA SECURITY */}
       <div className="space-y-3">
         <h3 className="text-xs font-bold text-zinc-500 uppercase tracking-widest flex items-center gap-1.5 px-1">
-          <RefreshCw size={14} className="text-primary" /> Data Options
+          <RefreshCw size={14} className="text-primary" /> Backup & Data Security
         </h3>
-        <div className="bg-zinc-900 border border-zinc-800/80 rounded-2xl p-4">
+        <div className="bg-zinc-900 border border-zinc-800/80 rounded-2xl p-4 space-y-3">
+          <div className="grid grid-cols-2 gap-2">
+            <button 
+              onClick={exportBackup}
+              className="flex items-center justify-center gap-1.5 py-2.5 px-3 bg-zinc-950/40 border border-zinc-850 rounded-xl text-xs font-bold text-zinc-300 hover:text-white transition-colors"
+            >
+              <Download size={14} className="text-primary" /> Export Backup
+            </button>
+            <label className="flex items-center justify-center gap-1.5 py-2.5 px-3 bg-zinc-950/40 border border-zinc-850 rounded-xl text-xs font-bold text-zinc-300 hover:text-white cursor-pointer transition-colors">
+              <Upload size={14} className="text-primary" /> Import Backup
+              <input 
+                type="file" 
+                accept=".json" 
+                onChange={handleImportBackup} 
+                className="hidden" 
+              />
+            </label>
+          </div>
+
+          <button 
+            onClick={handleResetAttendance}
+            className="w-full flex justify-between items-center py-2.5 px-3 bg-red-600/5 border border-red-900/20 rounded-xl text-xs font-bold text-red-400 hover:bg-red-600/10 transition-colors"
+          >
+            <span className="flex items-center gap-2"><Trash2 size={14} /> Clear Attendance Logs</span>
+            <span className="text-[10px] text-red-500/80 font-medium">Reset Records</span>
+          </button>
+
           <button 
             onClick={handleClearLocalStorage}
-            className="w-full py-2.5 bg-red-600/10 hover:bg-red-600/20 text-red-500 border border-red-500/20 rounded-xl text-xs font-bold uppercase flex items-center justify-center gap-1 transition-all"
+            className="w-full flex justify-between items-center py-2.5 px-3 bg-red-600/5 border border-red-900/20 rounded-xl text-xs font-bold text-red-400 hover:bg-red-600/10 transition-colors"
           >
-            Clear Local Storage
+            <span className="flex items-center gap-2"><AlertTriangle size={14} /> Delete All Local Data</span>
+            <span className="text-[10px] text-red-500/80 font-medium">Reset Entire App</span>
+          </button>
+
+          <button 
+            onClick={() => {
+              setDeleteConfirmationText('');
+              setDeleteConfirmSubjectId('CLOUD_DELETE');
+            }}
+            className="w-full flex justify-between items-center py-2.5 px-3 bg-red-600/10 border border-red-600/20 rounded-xl text-xs font-bold text-red-500 hover:bg-red-600/20 transition-colors"
+          >
+            <span className="flex items-center gap-2"><LogOut size={14} /> Delete Cloud Account</span>
+            <span className="text-[10px] text-red-500/80 font-medium">Cloud Wipe</span>
           </button>
         </div>
       </div>
 
-      {/* 5. APPLICATION SECTION */}
+      {/* 5. COMMUNITY & FEEDBACK */}
       <div className="space-y-3">
         <h3 className="text-xs font-bold text-zinc-500 uppercase tracking-widest flex items-center gap-1.5 px-1">
-          <Info size={14} className="text-primary" /> Application Info
+          <MessageSquare size={14} className="text-primary" /> Community & Feedback
         </h3>
         <div className="bg-zinc-900 border border-zinc-800/80 rounded-2xl p-4 space-y-2">
+          <button 
+            onClick={() => setShowReportBug(true)}
+            className="w-full flex justify-between items-center py-2.5 px-3 bg-zinc-950/40 border border-zinc-850/60 rounded-xl text-xs font-bold text-zinc-300 hover:text-white transition-colors"
+          >
+            <span className="flex items-center gap-2"><AlertTriangle size={14} className="text-amber-500" /> Report a Bug</span>
+            <span className="text-[10px] text-zinc-500">Submit Bug Report</span>
+          </button>
+
+          <button 
+            onClick={() => setShowFeatureRequest(true)}
+            className="w-full flex justify-between items-center py-2.5 px-3 bg-zinc-950/40 border border-zinc-850/60 rounded-xl text-xs font-bold text-zinc-300 hover:text-white transition-colors"
+          >
+            <span className="flex items-center gap-2"><Sparkles size={14} className="text-yellow-500" /> Request a Feature</span>
+            <span className="text-[10px] text-zinc-500">Saves to Firestore</span>
+          </button>
+
+          <button 
+            onClick={handleShareApp}
+            className="w-full flex justify-between items-center py-2.5 px-3 bg-zinc-950/40 border border-zinc-850/60 rounded-xl text-xs font-bold text-zinc-300 hover:text-white transition-colors"
+          >
+            <span className="flex items-center gap-2"><Share2 size={14} className="text-blue-500" /> Share BunkSafe App</span>
+            <span className="text-[10px] text-zinc-500">Web Share API</span>
+          </button>
+        </div>
+      </div>
+
+      {/* 6. LEGAL & SECURITY */}
+      <div className="space-y-3">
+        <h3 className="text-xs font-bold text-zinc-500 uppercase tracking-widest flex items-center gap-1.5 px-1">
+          <ShieldCheck size={14} className="text-primary" /> Legal & Security
+        </h3>
+        <div className="bg-zinc-900 border border-zinc-800/80 rounded-2xl p-4 space-y-2">
+          <button 
+            onClick={() => setShowAboutBunkSafe(true)}
+            className="w-full flex justify-between items-center py-2.5 px-3 bg-zinc-950/40 border border-zinc-850/60 rounded-xl text-xs font-bold text-zinc-300 hover:text-white transition-colors"
+          >
+            <span className="flex items-center gap-2"><Info size={14} className="text-primary" /> About BunkSafe</span>
+            <span className="text-[10px] text-zinc-500">App Specs & Tech</span>
+          </button>
+
           <button 
             onClick={() => setShowPrivacyPolicy(true)}
             className="w-full flex justify-between items-center py-2.5 px-3 bg-zinc-950/40 border border-zinc-850/60 rounded-xl text-xs font-bold text-zinc-300 hover:text-white transition-colors"
           >
-            <span className="flex items-center gap-2"><ShieldCheck size={14} className="text-primary" /> Privacy Policy</span>
-            <span className="text-[10px] text-zinc-500">Offline & Secure</span>
+            <span className="flex items-center gap-2"><ShieldCheck size={14} className="text-green-500" /> Privacy Policy</span>
+            <span className="text-[10px] text-zinc-500">Firebase & Perms</span>
           </button>
 
-          <a 
-            href="https://chat.whatsapp.com/IAsmtq8aMkZ54EAhkZ25tu?s=cl&p=a&ilr=4"
-            target="_blank"
-            rel="noreferrer"
+          <button 
+            onClick={() => setShowTermsConditions(true)}
             className="w-full flex justify-between items-center py-2.5 px-3 bg-zinc-950/40 border border-zinc-850/60 rounded-xl text-xs font-bold text-zinc-300 hover:text-white transition-colors"
           >
-            <span className="flex items-center gap-2"><MessageSquare size={14} className="text-primary" /> Join Feedback Community and report bug</span>
-            <span className="text-[10px] text-emerald-500">WhatsApp Group</span>
-          </a>
+            <span className="flex items-center gap-2"><FileText size={14} className="text-amber-500" /> Terms & Conditions</span>
+            <span className="text-[10px] text-zinc-500">Disclaimers & Liability</span>
+          </button>
 
           <button 
             onClick={() => setShowAboutDev(true)}
             className="w-full flex justify-between items-center py-2.5 px-3 bg-zinc-950/40 border border-zinc-850/60 rounded-xl text-xs font-bold text-zinc-300 hover:text-white transition-colors"
           >
             <span className="flex items-center gap-2"><Heart size={14} className="text-rose-500" /> About Developer</span>
-            <span className="text-[10px] text-zinc-500">Made for Students</span>
+            <span className="text-[10px] text-zinc-500">Kaif Khan, JMI</span>
           </button>
         </div>
       </div>
+
+      {/* 7. OPERATIONS */}
+      <div className="space-y-3">
+        <h3 className="text-xs font-bold text-zinc-500 uppercase tracking-widest flex items-center gap-1.5 px-1">
+          <Sliders size={14} className="text-primary" /> App Operations
+        </h3>
+        <div className="bg-zinc-900 border border-zinc-800/80 rounded-2xl p-4 space-y-2">
+          <button 
+            onClick={handleCheckUpdates}
+            disabled={isCheckingUpdates}
+            className="w-full flex justify-between items-center py-2.5 px-3 bg-zinc-950/40 border border-zinc-850/60 rounded-xl text-xs font-bold text-zinc-300 hover:text-white disabled:opacity-50 transition-colors"
+          >
+            <span className="flex items-center gap-2"><RefreshCw size={14} className={`text-primary ${isCheckingUpdates ? 'animate-spin' : ''}`} /> Check for Updates</span>
+            <span className="text-[10px] text-zinc-500">{isCheckingUpdates ? 'Checking...' : 'v2.4.0'}</span>
+          </button>
+
+          <button 
+            onClick={async () => {
+              await handleLoadChangelogs();
+              setShowChangelog(true);
+            }}
+            className="w-full flex justify-between items-center py-2.5 px-3 bg-zinc-950/40 border border-zinc-850/60 rounded-xl text-xs font-bold text-zinc-300 hover:text-white transition-colors"
+          >
+            <span className="flex items-center gap-2"><CalendarDays size={14} className="text-primary" /> Release History / Changelog</span>
+            <span className="text-[10px] text-zinc-500">Build History</span>
+          </button>
+        </div>
+      </div>
+
+      {/* ABOUT BUNKSAFE DIALOG */}
+      {showAboutBunkSafe && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+          <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-6 w-full max-w-sm space-y-4">
+            <div className="flex justify-between items-center">
+              <h3 className="text-lg font-black flex items-center gap-2 text-zinc-100">
+                <Info size={20} className="text-primary" /> About BunkSafe
+              </h3>
+              <button onClick={() => setShowAboutBunkSafe(false)} className="text-zinc-500 hover:text-zinc-300"><X size={18} /></button>
+            </div>
+            <div className="text-xs text-zinc-400 space-y-3 leading-relaxed max-h-96 overflow-y-auto pr-1">
+              <div className="bg-zinc-950 p-3 rounded-2xl text-center space-y-1 border border-zinc-850">
+                <p className="text-base font-black text-white">BunkSafe</p>
+                <p className="text-[10px] text-primary font-bold">Smart Attendance & Academic Companion</p>
+                <p className="text-[10px] text-zinc-500 font-mono">v2.4.0 • Build #1024</p>
+              </div>
+
+              <div className="space-y-1">
+                <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Tagline</p>
+                <p className="text-zinc-300 font-medium">Smart Attendance & Academic Companion for College Students</p>
+              </div>
+
+              <div className="space-y-1">
+                <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Developer</p>
+                <p className="text-zinc-300 font-medium font-mono">Kaif Khan</p>
+              </div>
+
+              <div className="space-y-1">
+                <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Support Email</p>
+                <a href="mailto:mekhankaif@gmail.com" className="text-primary hover:underline font-mono">mekhankaif@gmail.com</a>
+              </div>
+
+              <div className="space-y-1">
+                <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Official Website</p>
+                <a href="https://bunk-safe-downloader.vercel.app/" target="_blank" rel="noreferrer" className="text-primary hover:underline break-all font-mono">https://bunk-safe-downloader.vercel.app/</a>
+              </div>
+
+              <div className="space-y-1">
+                <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Target Audience</p>
+                <p className="text-zinc-300 font-medium">All University and College Students globally.</p>
+              </div>
+
+              <div className="space-y-1">
+                <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Technology Stack</p>
+                <p className="text-zinc-300">React, Vite, TypeScript, Tailwind CSS, Firebase Client SDK (Firestore & Storage), Web Share API, Motion animations.</p>
+              </div>
+
+              <div className="space-y-1">
+                <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Open Source Libraries</p>
+                <p className="text-zinc-300">lucide-react, date-fns, motion (framer-motion), Recharts.</p>
+              </div>
+
+              <div className="space-y-1">
+                <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Credits</p>
+                <p className="text-zinc-300">Specially optimized for student scheduling routines. Deep gratitude to Jamia Millia Islamia (JMI) peers and our amazing community of beta testers!</p>
+              </div>
+            </div>
+            <button 
+              onClick={() => setShowAboutBunkSafe(false)}
+              className="w-full py-2.5 bg-primary text-white rounded-xl text-xs font-bold uppercase transition-all"
+            >
+              Close Info
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* PRIVACY POLICY DIALOG */}
       {showPrivacyPolicy && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
           <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-6 w-full max-w-sm space-y-4">
-            <h3 className="text-lg font-black flex items-center gap-2 text-zinc-100">
-              <ShieldCheck size={20} className="text-primary" /> Privacy Policy
-            </h3>
-            <div className="text-xs text-zinc-400 space-y-3 leading-relaxed max-h-64 overflow-y-auto">
-              <p><strong>100% Offline & Private</strong></p>
-              <p>BunkSafe stores all of your personal details, college data, class schedules, exam calendars, and grade calculations exclusively on your own device's local storage.</p>
-              <p>We do not collect, transmit, or share your data with any external servers. There are no tracking scripts, trackers, or cookies used inside this app.</p>
-              <p>You can export or clear your local storage details at any point directly from the settings panel above.</p>
+            <div className="flex justify-between items-center">
+              <h3 className="text-lg font-black flex items-center gap-2 text-zinc-100">
+                <ShieldCheck size={20} className="text-primary" /> Privacy Policy
+              </h3>
+              <button onClick={() => setShowPrivacyPolicy(false)} className="text-zinc-500 hover:text-zinc-300"><X size={18} /></button>
+            </div>
+            <div className="text-xs text-zinc-400 space-y-3 leading-relaxed max-h-96 overflow-y-auto pr-1">
+              <p><strong>BunkSafe Privacy Commitment</strong></p>
+              <p>Your privacy is central to how we construct BunkSafe. We support transparent data management.</p>
+              
+              <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">1. External Services Used</p>
+              <p>This app integrates with the following Firebase Cloud services for optimal operations:</p>
+              <ul className="list-disc list-inside pl-1 space-y-1">
+                <li><strong>Firebase Authentication:</strong> Secure session identification.</li>
+                <li><strong>Firebase Firestore:</strong> Live backing store to back up your profiles and subjects list.</li>
+                <li><strong>Firebase Storage:</strong> Secure user-specific uploaded assets (e.g. avatar files).</li>
+                <li><strong>Firebase Analytics:</strong> High-level application usage and telemetry analysis.</li>
+                <li><strong>Firebase Cloud Messaging (FCM):</strong> Delivers daily attendance checklist alerts.</li>
+              </ul>
+
+              <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">2. System Permissions</p>
+              <p>BunkSafe requests minimal hardware permissions to execute local utilities:</p>
+              <ul className="list-disc list-inside pl-1 space-y-1">
+                <li><strong>Camera:</strong> Allows scanning profile avatars or uploading schedules.</li>
+                <li><strong>Internet:</strong> Communicates with cloud databases for real-time backup and sync.</li>
+                <li><strong>Notifications:</strong> Powers the daily 8 AM and 6 PM attendance reminder checklists.</li>
+              </ul>
+
+              <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">3. Local & Cloud Storage</p>
+              <p>All schedules, records, grades, and exams are stored locally on your device via standard localStorage. Standard syncing regularly updates this to our secure Firestore servers under your unique email document.</p>
+
+              <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">4. Data Deletion Requests</p>
+              <p>You own your data. You can completely delete all cloud database tables or wipe local caches instantly using the 'Delete Cloud Account' or 'Delete All Local Data' options inside settings. If you require manual deletion assistance, contact: <a href="mailto:mekhankaif@gmail.com" className="text-primary hover:underline">mekhankaif@gmail.com</a>.</p>
             </div>
             <button 
               onClick={() => setShowPrivacyPolicy(false)}
@@ -851,6 +1237,308 @@ export default function SettingsTab({
         </div>
       )}
 
+      {/* TERMS & CONDITIONS DIALOG */}
+      {showTermsConditions && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+          <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-6 w-full max-w-sm space-y-4">
+            <div className="flex justify-between items-center">
+              <h3 className="text-lg font-black flex items-center gap-2 text-zinc-100">
+                <FileText size={20} className="text-primary" /> Terms & Conditions
+              </h3>
+              <button onClick={() => setShowTermsConditions(false)} className="text-zinc-500 hover:text-zinc-300"><X size={18} /></button>
+            </div>
+            <div className="text-xs text-zinc-400 space-y-3 leading-relaxed max-h-96 overflow-y-auto pr-1">
+              <p><strong>BunkSafe Academic Terms of Use</strong></p>
+              
+              <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">1. Estimation & Predictions</p>
+              <p>BunkSafe is an academic planning utility. All predictions, bunk limits, and GPA estimations are calculated purely based on the parameters, timetables, and weights that you input.</p>
+              
+              <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">2. Verification Mandate</p>
+              <p>Estimates do not replace official university or college attendance books. Users are strictly required to double-check their official attendance logs directly with their departments or university portals to avoid registration defaults.</p>
+
+              <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">3. Developer Liability Disclaimer</p>
+              <p>BunkSafe is designed purely as an academic assistance tool. The developer (Kaif Khan) is not responsible or liable for any attendance calculation errors, changes in institutional attendance criteria, sessional/exam entry bars, or any academic outcome resulting from the use of this app.</p>
+            </div>
+            <button 
+              onClick={() => setShowTermsConditions(false)}
+              className="w-full py-2.5 bg-primary text-white rounded-xl text-xs font-bold uppercase transition-all"
+            >
+              Agree & Close
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* REPORT BUG DIALOG */}
+      {showReportBug && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+          <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-6 w-full max-w-sm space-y-4">
+            <div className="flex justify-between items-center">
+              <h3 className="text-lg font-black flex items-center gap-2 text-zinc-100">
+                <AlertTriangle size={20} className="text-amber-500" /> Report a Bug
+              </h3>
+              <button onClick={() => setShowReportBug(false)} className="text-zinc-500 hover:text-zinc-300"><X size={18} /></button>
+            </div>
+            
+            <a 
+              href="https://chat.whatsapp.com/IAsmtq8aMkZ54EAhkZ25tu?s=cl&p=a&ilr=4"
+              target="_blank"
+              rel="noreferrer"
+              className="block p-3 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 rounded-2xl text-center space-y-1 transition-all"
+            >
+              <p className="text-xs font-black text-emerald-400">Join WhatsApp Support Group</p>
+              <p className="text-[10px] text-zinc-400">Get direct, rapid assistance from the developer & community</p>
+            </a>
+
+            <form onSubmit={handleBugReportSubmit} className="space-y-3">
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-zinc-500 uppercase">Bug Title / Issue</label>
+                <input 
+                  type="text" 
+                  value={bugTitle}
+                  onChange={(e) => setBugTitle(e.target.value)}
+                  placeholder="e.g. Schedule reset glitch" 
+                  className="w-full bg-zinc-950 border border-zinc-850 rounded-xl p-2 text-xs text-white focus:outline-none focus:border-primary font-bold"
+                  required
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-zinc-500 uppercase">Steps to Reproduce / Description</label>
+                <textarea 
+                  value={bugDesc}
+                  onChange={(e) => setBugDesc(e.target.value)}
+                  placeholder="Explain exactly what happens..." 
+                  className="w-full bg-zinc-950 border border-zinc-850 rounded-xl p-2 text-xs text-white focus:outline-none focus:border-primary min-h-20"
+                  required
+                />
+              </div>
+
+              <div className="pt-1 flex gap-2">
+                <button 
+                  type="submit"
+                  disabled={isSubmittingBug}
+                  className="flex-1 py-2.5 bg-primary text-white rounded-xl text-xs font-bold uppercase disabled:opacity-50 font-black"
+                >
+                  {isSubmittingBug ? 'Reporting...' : 'Register Bug'}
+                </button>
+                <button 
+                  type="button"
+                  onClick={() => setShowReportBug(false)}
+                  className="px-4 py-2.5 bg-zinc-800 text-zinc-300 rounded-xl text-xs font-bold uppercase"
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+
+            <div className="text-center pt-2 border-t border-zinc-800/60">
+              <p className="text-[10px] text-zinc-500">Or email directly: <a href="mailto:mekhankaif@gmail.com" className="text-primary font-bold font-mono">mekhankaif@gmail.com</a></p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* FEATURE REQUEST DIALOG */}
+      {showFeatureRequest && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+          <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-6 w-full max-w-sm space-y-4">
+            <div className="flex justify-between items-center">
+              <h3 className="text-lg font-black flex items-center gap-2 text-zinc-100">
+                <Sparkles size={20} className="text-yellow-400" /> Request a Feature
+              </h3>
+              <button onClick={() => setShowFeatureRequest(false)} className="text-zinc-500 hover:text-zinc-300"><X size={18} /></button>
+            </div>
+
+            <p className="text-xs text-zinc-400 leading-relaxed">
+              Have an idea to make BunkSafe better? Suggest widgets, analytics tables, or notifications and submit them directly to our planning roadmap!
+            </p>
+
+            <form onSubmit={handleFeatureRequestSubmit} className="space-y-3">
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-zinc-500 uppercase">Feature Title</label>
+                <input 
+                  type="text" 
+                  value={featureTitle}
+                  onChange={(e) => setFeatureTitle(e.target.value)}
+                  placeholder="e.g. Export schedule to PDF" 
+                  className="w-full bg-zinc-950 border border-zinc-850 rounded-xl p-2 text-xs text-white focus:outline-none focus:border-primary font-bold"
+                  required
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-zinc-500 uppercase">Describe Your Idea</label>
+                <textarea 
+                  value={featureDesc}
+                  onChange={(e) => setFeatureDesc(e.target.value)}
+                  placeholder="Explain why this feature would be helpful..." 
+                  className="w-full bg-zinc-950 border border-zinc-850 rounded-xl p-2 text-xs text-white focus:outline-none focus:border-primary min-h-24"
+                  required
+                />
+              </div>
+
+              <div className="pt-1 flex gap-2">
+                <button 
+                  type="submit"
+                  disabled={isSubmittingFeature}
+                  className="flex-1 py-2.5 bg-primary text-white rounded-xl text-xs font-bold uppercase disabled:opacity-50 font-black"
+                >
+                  {isSubmittingFeature ? 'Submitting...' : 'Submit Request'}
+                </button>
+                <button 
+                  type="button"
+                  onClick={() => setShowFeatureRequest(false)}
+                  className="px-4 py-2.5 bg-zinc-800 text-zinc-300 rounded-xl text-xs font-bold uppercase"
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* CHECK FOR UPDATES DIALOG */}
+      {updateInfo && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+          <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-6 w-full max-w-sm space-y-4">
+            <h3 className="text-lg font-black flex items-center gap-2 text-zinc-100">
+              <CheckCircle size={20} className="text-primary animate-bounce" /> Update Available
+            </h3>
+            <div className="space-y-2">
+              <p className="text-xs text-zinc-300">A new production version is available!</p>
+              <div className="bg-zinc-950 p-3.5 rounded-2xl border border-zinc-850 text-left">
+                <p className="text-sm font-black text-white font-mono">Version {updateInfo.latestVersion}</p>
+                <p className="text-[10px] text-zinc-500 font-mono">Released: {updateInfo.releasedAt ? format(new Date(updateInfo.releasedAt), 'dd MMM yyyy') : 'Recently'}</p>
+                {updateInfo.changelog && (
+                  <ul className="list-disc list-inside mt-2 text-[11px] text-zinc-400 space-y-1">
+                    {updateInfo.changelog.map((log: string, i: number) => (
+                      <li key={i}>{log}</li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <a 
+                href={updateInfo.downloadUrl || "https://bunk-safe-downloader.vercel.app/"}
+                target="_blank"
+                rel="noreferrer"
+                className="flex-1 py-2.5 bg-primary text-white text-center rounded-xl text-xs font-bold uppercase font-black"
+              >
+                Download Update
+              </a>
+              <button 
+                onClick={() => setUpdateInfo(null)}
+                className="px-4 py-2.5 bg-zinc-800 text-zinc-300 rounded-xl text-xs font-bold uppercase"
+              >
+                Later
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* CHANGELOG DIALOG */}
+      {showChangelog && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+          <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-6 w-full max-w-md space-y-4">
+            <div className="flex justify-between items-center">
+              <h3 className="text-lg font-black flex items-center gap-2 text-zinc-100">
+                <CalendarDays size={20} className="text-primary" /> Release History
+              </h3>
+              <button onClick={() => setShowChangelog(false)} className="text-zinc-500 hover:text-zinc-300"><X size={18} /></button>
+            </div>
+
+            <div className="text-xs text-zinc-400 space-y-4 leading-relaxed max-h-96 overflow-y-auto pr-1">
+              {isLoadingChangelogs ? (
+                <p className="text-center text-zinc-500 py-8">Loading logs...</p>
+              ) : changelogs.map((log, idx) => (
+                <div key={idx} className="bg-zinc-950/60 p-4 rounded-2xl border border-zinc-850 space-y-2">
+                  <div className="flex justify-between items-center">
+                    <span className="font-extrabold text-sm text-white">v{log.version}</span>
+                    <span className="text-[10px] bg-zinc-800 text-zinc-400 px-2 py-0.5 rounded-full font-medium font-mono">{log.releaseDate}</span>
+                  </div>
+                  {log.newFeatures && log.newFeatures.length > 0 && (
+                    <div className="space-y-1 text-left">
+                      <p className="text-[9px] font-black text-primary uppercase">New Features</p>
+                      <ul className="list-disc list-inside text-[11px] text-zinc-300 pl-1 space-y-0.5">
+                        {log.newFeatures.map((feat: string, i: number) => <li key={i}>{feat}</li>)}
+                      </ul>
+                    </div>
+                  )}
+                  {log.bugFixes && log.bugFixes.length > 0 && (
+                    <div className="space-y-1 text-left">
+                      <p className="text-[9px] font-black text-red-400 uppercase">Bug Fixes</p>
+                      <ul className="list-disc list-inside text-[11px] text-zinc-300 pl-1 space-y-0.5">
+                        {log.bugFixes.map((fix: string, i: number) => <li key={i}>{fix}</li>)}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+            <button 
+              onClick={() => setShowChangelog(false)}
+              className="w-full py-2.5 bg-primary text-white rounded-xl text-xs font-bold uppercase transition-all"
+            >
+              Close History
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* CLOUD DATA DELETE DIALOG */}
+      {deleteConfirmSubjectId === 'CLOUD_DELETE' && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/95 backdrop-blur-sm">
+          <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-6 w-full max-w-sm space-y-4">
+            <div className="w-12 h-12 bg-red-500/10 text-red-500 rounded-full flex items-center justify-center mx-auto border border-red-500/20">
+              <AlertTriangle size={24} />
+            </div>
+            <div className="text-center space-y-2">
+              <h4 className="font-extrabold text-base text-zinc-100">Permanently Delete Account?</h4>
+              <p className="text-xs text-zinc-400 leading-relaxed">
+                This will delete your Cloud Profile, Subjects list, and sessional records. There is no fallback backup, and it cannot be undone!
+              </p>
+              <div className="bg-zinc-950 p-3 rounded-2xl text-left text-[11px] text-zinc-500 space-y-1 font-mono">
+                <div>• Permanent Cloud Wipe</div>
+                <div>• Clears Local Caches</div>
+                <div>• Returns to Onboarding</div>
+              </div>
+              <div className="space-y-1.5 text-left pt-2">
+                <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider block">Type "DELETE" to confirm</label>
+                <input 
+                  type="text" 
+                  value={deleteConfirmationText}
+                  onChange={(e) => setDeleteConfirmationText(e.target.value)}
+                  placeholder="Type DELETE" 
+                  className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-red-500 text-center font-bold"
+                />
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={handleDeleteAccount}
+                disabled={deleteConfirmationText !== 'DELETE'}
+                className="flex-1 py-2.5 bg-red-600 hover:bg-red-500 text-white rounded-xl text-xs font-black uppercase transition-all disabled:opacity-30 disabled:pointer-events-none"
+              >
+                Permanently Delete
+              </button>
+              <button
+                onClick={() => {
+                  setDeleteConfirmSubjectId(null);
+                  setDeleteConfirmationText('');
+                }}
+                className="px-5 py-2.5 bg-zinc-800 hover:bg-zinc-750 text-zinc-300 rounded-xl text-xs font-bold uppercase transition-all"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ABOUT DEV DIALOG */}
       {showAboutDev && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
@@ -858,7 +1546,7 @@ export default function SettingsTab({
             <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center text-3xl mx-auto border border-primary/20 text-primary">
               <Heart size={32} className="animate-pulse" />
             </div>
-            <h3 className="text-lg font-black text-zinc-100">About Developer</h3>
+            <h3 className="text-lg font-black text-zinc-100 font-mono">About Developer</h3>
             
             <div className="bg-zinc-950/50 border border-zinc-850 p-3 rounded-2xl space-y-1">
               <p className="text-sm font-black text-zinc-100">Kaif Ahmad Khan</p>

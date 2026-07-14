@@ -42,35 +42,93 @@
       },
       "required": ["name", "email", "college", "department", "semester"]
     },
-    "BaaChatSession": {
-      "title": "BaaChatSession",
-      "description": "A single BAA study assistant conversation session.",
+    "FeatureRequest": {
+      "title": "FeatureRequest",
+      "description": "Feature request submitted by users.",
       "type": "object",
       "properties": {
         "id": {
           "type": "string",
-          "description": "Unique session identifier."
+          "description": "Unique request ID."
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "description": "Submitting user's email."
         },
         "title": {
           "type": "string",
-          "description": "Auto-generated or user-defined title of the conversation."
+          "description": "Brief title of the feature request."
+        },
+        "description": {
+          "type": "string",
+          "description": "Detailed description of the feature request."
         },
         "createdAt": {
           "type": "string",
           "format": "date-time",
-          "description": "Session creation timestamp."
+          "description": "Submission timestamp."
         },
-        "updatedAt": {
+        "status": {
           "type": "string",
-          "format": "date-time",
-          "description": "Session last-updated timestamp."
-        },
-        "messages": {
-          "type": "array",
-          "description": "List of messages exchanged in this session."
+          "description": "Current status of request (e.g., pending, planned, completed)."
         }
       },
-      "required": ["id", "title", "createdAt", "updatedAt", "messages"]
+      "required": ["id", "email", "title", "description", "createdAt", "status"]
+    },
+    "AppConfig": {
+      "title": "AppConfig",
+      "description": "Central app configuration such as latest version details.",
+      "type": "object",
+      "properties": {
+        "latestVersion": {
+          "type": "string",
+          "description": "The latest published app version (e.g. 2.5.0)."
+        },
+        "downloadUrl": {
+          "type": "string",
+          "description": "URL to download the update."
+        },
+        "releasedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Release timestamp of the latest version."
+        },
+        "changelog": {
+          "type": "array",
+          "description": "Short release description array."
+        }
+      },
+      "required": ["latestVersion", "downloadUrl", "releasedAt"]
+    },
+    "ChangelogItem": {
+      "title": "ChangelogItem",
+      "description": "Release history and changelog record.",
+      "type": "object",
+      "properties": {
+        "version": {
+          "type": "string",
+          "description": "Version identifier (e.g. 2.4.0)."
+        },
+        "releaseDate": {
+          "type": "string",
+          "description": "Formatted date of the release."
+        },
+        "newFeatures": {
+          "type": "array",
+          "description": "List of new features added in this release."
+        },
+        "bugFixes": {
+          "type": "array",
+          "description": "List of bug fixes in this release."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp when this changelog item was posted."
+        }
+      },
+      "required": ["version", "releaseDate", "newFeatures", "bugFixes", "createdAt"]
     }
   },
   "firestore": {
@@ -78,9 +136,17 @@
       "schema": "UserProfile",
       "description": "Core student profiles and settings indexed by lowercase email."
     },
-    "/users/{email}/baaChats/{chatId}": {
-      "schema": "BaaChatSession",
-      "description": "BAA AI study chat history sessions for a specific user."
+    "/featureRequests/{requestId}": {
+      "schema": "FeatureRequest",
+      "description": "User-submitted feature requests stored globally in Firestore."
+    },
+    "/appConfig/version": {
+      "schema": "AppConfig",
+      "description": "Central versioning and updates information."
+    },
+    "/changelog/{changelogId}": {
+      "schema": "ChangelogItem",
+      "description": "Global list of changelogs and version release histories."
     }
   }
 }
