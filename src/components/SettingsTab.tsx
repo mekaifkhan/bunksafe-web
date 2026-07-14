@@ -28,6 +28,7 @@ import {
   Sliders,
   AlertTriangle,
   Camera,
+  Image as ImageIcon,
   Instagram,
   Star,
   Share2,
@@ -144,7 +145,8 @@ export default function SettingsTab({
   // Profile Photo Management states
   const [showPhotoModal, setShowPhotoModal] = useState(false);
   const [showPhotoOptions, setShowPhotoOptions] = useState(false);
-  const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const cameraInputRef = React.useRef<HTMLInputElement>(null);
+  const galleryInputRef = React.useRef<HTMLInputElement>(null);
 
   const handlePhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -676,8 +678,8 @@ export default function SettingsTab({
             onClick={() => {
               if (profilePhoto) {
                 setShowPhotoModal(true);
-              } else if (fileInputRef.current) {
-                fileInputRef.current.click();
+              } else if (galleryInputRef.current) {
+                galleryInputRef.current.click();
               }
             }}
             className="w-20 h-20 bg-primary rounded-full flex items-center justify-center text-3xl font-black text-white shadow-xl shadow-primary/20 overflow-hidden border-4 border-zinc-900 focus:outline-none focus:ring-2 focus:ring-primary/50 relative"
@@ -699,23 +701,36 @@ export default function SettingsTab({
         </div>
 
         {/* Profile Photo Controls */}
-        <div className="flex items-center justify-center gap-2 mt-1">
-          <button
-            onClick={() => {
-              if (fileInputRef.current) fileInputRef.current.click();
-            }}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-zinc-800 hover:bg-zinc-750 text-zinc-200 rounded-xl text-xs font-bold transition-all border border-zinc-700/50"
-          >
-            <Camera size={14} />
-            Change Photo
-          </button>
+        <div className="flex flex-col items-center gap-2 mt-1 w-full max-w-[280px]">
+          <div className="flex items-center justify-center gap-2 w-full">
+            <button
+              onClick={() => {
+                if (cameraInputRef.current) cameraInputRef.current.click();
+              }}
+              className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-zinc-800 hover:bg-zinc-750 text-zinc-200 rounded-xl text-xs font-bold transition-all border border-zinc-700/50"
+              title="Take a live photo using your camera"
+            >
+              <Camera size={14} />
+              Take Photo
+            </button>
+            <button
+              onClick={() => {
+                if (galleryInputRef.current) galleryInputRef.current.click();
+              }}
+              className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-zinc-800 hover:bg-zinc-750 text-zinc-200 rounded-xl text-xs font-bold transition-all border border-zinc-700/50"
+              title="Choose an image from your device gallery"
+            >
+              <ImageIcon size={14} />
+              Gallery
+            </button>
+          </div>
           {profilePhoto && (
-            <>
+            <div className="flex items-center justify-center gap-2 w-full mt-1">
               <button
                 onClick={() => setShowPhotoModal(true)}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-zinc-800 hover:bg-zinc-750 text-zinc-200 rounded-xl text-xs font-bold transition-all border border-zinc-700/50"
+                className="flex-1 flex items-center justify-center gap-1 px-3 py-1.5 bg-zinc-900 hover:bg-zinc-850 text-zinc-400 hover:text-zinc-300 rounded-xl text-[11px] font-semibold transition-all border border-zinc-800/60"
               >
-                <Eye size={14} />
+                <Eye size={12} />
                 View Photo
               </button>
               <button
@@ -729,21 +744,28 @@ export default function SettingsTab({
                     }
                   }
                 }}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-red-950/40 hover:bg-red-950/60 text-red-400 rounded-xl text-xs font-bold transition-all border border-red-900/30"
+                className="flex-1 flex items-center justify-center gap-1 px-3 py-1.5 bg-red-950/20 hover:bg-red-950/40 text-red-400 rounded-xl text-[11px] font-semibold transition-all border border-red-900/20"
               >
-                <Trash2 size={14} />
+                <Trash2 size={12} />
                 Remove
               </button>
-            </>
+            </div>
           )}
         </div>
 
-        {/* Hidden input element as requested */}
+        {/* Hidden inputs as requested */}
         <input
-          ref={fileInputRef}
+          ref={cameraInputRef}
           type="file"
           accept="image/*"
           capture="environment"
+          onChange={handlePhotoSelect}
+          className="hidden"
+        />
+        <input
+          ref={galleryInputRef}
+          type="file"
+          accept="image/*"
           onChange={handlePhotoSelect}
           className="hidden"
         />
@@ -780,12 +802,22 @@ export default function SettingsTab({
                 <button
                   onClick={() => {
                     setShowPhotoModal(false);
-                    if (fileInputRef.current) fileInputRef.current.click();
+                    if (cameraInputRef.current) cameraInputRef.current.click();
+                  }}
+                  className="flex-1 py-2.5 bg-zinc-850 hover:bg-zinc-800 text-zinc-200 rounded-xl text-xs font-bold transition-all active:scale-95 flex items-center justify-center gap-1.5"
+                >
+                  <Camera size={14} />
+                  Camera
+                </button>
+                <button
+                  onClick={() => {
+                    setShowPhotoModal(false);
+                    if (galleryInputRef.current) galleryInputRef.current.click();
                   }}
                   className="flex-1 py-2.5 bg-primary hover:bg-primary/95 text-zinc-950 rounded-xl text-xs font-black uppercase tracking-wider transition-all active:scale-95 flex items-center justify-center gap-1.5"
                 >
-                  <Camera size={14} />
-                  Change
+                  <ImageIcon size={14} />
+                  Gallery
                 </button>
                 <button
                   onClick={() => {
