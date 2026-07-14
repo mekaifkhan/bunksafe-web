@@ -137,8 +137,9 @@ export default function SettingsTab({
   const [editingSubject, setEditingSubject] = useState<Subject | null>(null);
   
   const [subjNameInput, setSubjNameInput] = useState('');
-  const [subjTypeInput, setSubjTypeInput] = useState<'Theory' | 'Lab'>('Theory');
+  const [subjTypeInput, setSubjTypeInput] = useState<'Theory' | 'Lab' | 'SWAYAM'>('Theory');
   const [subjCreditsInput, setSubjCreditsInput] = useState<number | ''>('');
+  const [subjRoomInput, setSubjRoomInput] = useState('');
   
   const [deleteConfirmSubjectId, setDeleteConfirmSubjectId] = useState<string | null>(null);
   
@@ -326,7 +327,7 @@ export default function SettingsTab({
     if (editingSubject) {
       const updatedSubjects = subjects.map(s => 
         s.id === editingSubject.id 
-          ? { ...s, name: formattedName, type: subjTypeInput, credits: creditsNum }
+          ? { ...s, name: formattedName, type: subjTypeInput, credits: creditsNum, room: subjRoomInput.trim() || undefined }
           : s
       );
       setSubjects(updatedSubjects);
@@ -346,7 +347,8 @@ export default function SettingsTab({
         id: newId,
         name: formattedName,
         type: subjTypeInput,
-        credits: creditsNum
+        credits: creditsNum,
+        room: subjRoomInput.trim() || undefined
       };
       setSubjects([...subjects, newSub]);
 
@@ -357,6 +359,7 @@ export default function SettingsTab({
     setSubjNameInput('');
     setSubjTypeInput('Theory');
     setSubjCreditsInput('');
+    setSubjRoomInput('');
   };
 
   // Delete subject with cascade cleanup
@@ -1909,9 +1912,20 @@ export default function SettingsTab({
                       <div className="space-y-1 min-w-0 flex-1">
                         <div className="flex items-center gap-2 flex-wrap">
                           <span className="font-extrabold text-sm text-zinc-100 break-words leading-snug">{sub.name}</span>
-                          <span className={`text-[9px] font-black uppercase px-1.5 py-0.5 rounded ${sub.type === 'Lab' ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20' : 'bg-primary/10 text-primary border border-primary/20'}`}>
-                            {sub.type}
+                          <span className={`text-[9px] font-black uppercase px-1.5 py-0.5 rounded ${
+                            sub.type === 'Lab' 
+                              ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20' 
+                              : sub.type === 'SWAYAM'
+                              ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                              : 'bg-primary/10 text-primary border border-primary/20'
+                          }`}>
+                            {sub.type === 'SWAYAM' ? 'SWAYAM / NPTEL' : sub.type}
                           </span>
+                          {sub.room && (
+                            <span className="text-[9px] font-black uppercase px-1.5 py-0.5 rounded bg-zinc-900 text-zinc-400 border border-zinc-800">
+                              📍 {sub.room}
+                            </span>
+                          )}
                           
                           {sub.type === 'Theory' && (
                             <button
@@ -1968,6 +1982,7 @@ export default function SettingsTab({
                             setSubjNameInput(sub.name);
                             setSubjTypeInput(sub.type);
                             setSubjCreditsInput(sub.credits);
+                            setSubjRoomInput(sub.room || '');
                             setShowAddEditSubjectModal(true);
                           }}
                           className="p-1.5 text-primary hover:bg-primary/10 rounded-lg transition-colors"
@@ -2075,22 +2090,41 @@ export default function SettingsTab({
                 {/* Subject Type */}
                 <div className="space-y-1.5">
                   <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider block">Subject Type</label>
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className="grid grid-cols-3 gap-1.5">
                     <button
                       type="button"
                       onClick={() => setSubjTypeInput('Theory')}
-                      className={`py-2.5 rounded-xl border text-center font-bold uppercase text-[10px] transition-all ${subjTypeInput === 'Theory' ? 'bg-primary/10 border-primary text-primary' : 'bg-zinc-950 border-zinc-850 text-zinc-400'}`}
+                      className={`py-2 rounded-xl border text-center font-black uppercase text-[8px] sm:text-[9px] tracking-tight transition-all ${subjTypeInput === 'Theory' ? 'bg-primary/10 border-primary text-primary' : 'bg-zinc-950 border-zinc-850 text-zinc-400'}`}
                     >
-                      Theory Course
+                      Theory
                     </button>
                     <button
                       type="button"
                       onClick={() => setSubjTypeInput('Lab')}
-                      className={`py-2.5 rounded-xl border text-center font-bold uppercase text-[10px] transition-all ${subjTypeInput === 'Lab' ? 'bg-amber-500/10 border-amber-500/60 text-amber-400' : 'bg-zinc-950 border-zinc-850 text-zinc-400'}`}
+                      className={`py-2 rounded-xl border text-center font-black uppercase text-[8px] sm:text-[9px] tracking-tight transition-all ${subjTypeInput === 'Lab' ? 'bg-amber-500/10 border-amber-500/60 text-amber-400' : 'bg-zinc-950 border-zinc-850 text-zinc-400'}`}
                     >
-                      Lab / Practical
+                      Lab
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setSubjTypeInput('SWAYAM')}
+                      className={`py-2 rounded-xl border text-center font-black uppercase text-[8px] sm:text-[9px] tracking-tight transition-all ${subjTypeInput === 'SWAYAM' ? 'bg-emerald-500/10 border-emerald-500/60 text-emerald-400' : 'bg-zinc-950 border-zinc-850 text-zinc-400'}`}
+                    >
+                      SWAYAM
                     </button>
                   </div>
+                </div>
+
+                {/* Subject Room */}
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider block">Room / Location (Optional)</label>
+                  <input 
+                    type="text" 
+                    value={subjRoomInput} 
+                    onChange={(e) => setSubjRoomInput(e.target.value)} 
+                    placeholder="e.g. Room 402, Lab 3"
+                    className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-3 py-2.5 text-zinc-100 focus:outline-none focus:border-primary font-bold"
+                  />
                 </div>
 
                 {/* Subject Credits */}

@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { logCustomEvent, saveUserSubjectsToFirestore, loadUserSubjectsFromFirestore, saveUserProfileToFirestore, loadUserProfileFromFirestore } from './firebase';
+import { logCustomEvent, saveUserSubjectsToFirestore, loadUserSubjectsFromFirestore, saveUserProfileToFirestore, loadUserProfileFromFirestore, syncNotificationDeviceToFirestore } from './firebase';
 import { getDefaultCurriculumSubjects } from './utils/curriculum';
 import { 
   LayoutDashboard, 
@@ -84,6 +84,23 @@ import {
   parseTimeRange,
   getJamiaHoliday
 } from './utils/dateUtils';
+
+function getOrCreateDeviceId(): string {
+  let id = localStorage.getItem('bs_device_id');
+  if (!id) {
+    if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+      id = crypto.randomUUID();
+    } else {
+      id = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+        const r = (Math.random() * 16) | 0;
+        const v = c === 'x' ? r : (r & 0x3) | 0x8;
+        return v.toString(16);
+      });
+    }
+    localStorage.setItem('bs_device_id', id);
+  }
+  return id;
+}
 
 // --- Components ---
 
@@ -413,6 +430,121 @@ export default function App() {
   const [notificationPermission, setNotificationPermission] = useState<NotificationPermission>(
     typeof Notification !== 'undefined' ? Notification.permission : 'default'
   );
+
+  // FCM Token State and Listener
+  const [fcmToken, setFcmToken] = useState<string>(() => localStorage.getItem('bs_fcm_token') || '');
+
+  useEffect(() => {
+    const handleToken = (token: string) => {
+      if (!token) return;
+      const cleanToken = token.trim();
+      localStorage.setItem('bs_fcm_token', cleanToken);
+      setFcmToken(cleanToken);
+    };
+    (window as any).setFCMToken = handleToken;
+    (window as any).updateFCMToken = handleToken;
+    (window as any).onFCMTokenReceived = handleToken;
+    return () => {
+      delete (window as any).setFCMToken;
+      delete (window as any).updateFCMToken;
+      delete (window as any).onFCMTokenReceived;
+    };
+  }, []);
+
+  // Sync state helper dependencies
+  const todayStrForSync = getTodayStr();
+  const todayRecordForSync = records[todayStrForSync];
+  const todayAttendanceValue = !!(todayRecordForSync && (todayRecordForSync.held > 0 || todayRecordForSync.isHoliday));
+
+  const parsedStartDateForSync = semester.startDate ? parseISO(semester.startDate) : null;
+  const parsedEndDateForSync = semester.endDate ? parseISO(semester.endDate) : null;
+  const todayDateForSync = startOfDay(new Date());
+  const isNotStartedForSync = parsedStartDateForSync && !isNaN(parsedStartDateForSync.getTime()) && isBefore(todayDateForSync, startOfDay(parsedStartDateForSync));
+  const isEndedForSync = parsedEndDateForSync && !isNaN(parsedEndDateForSync.getTime()) && isAfter(todayDateForSync, startOfDay(parsedEndDateForSync));
+  const semesterActiveValue = !!(semester.isInitialized && !isNotStartedForSync && !isEndedForSync);
+
+  const todayHolidayInfoForSync = getJamiaHoliday(new Date());
+  const holidayTodayValue = !!(todayRecordForSync
+    ? (todayRecordForSync.isHoliday || (todayHolidayInfoForSync.isHoliday && todayRecordForSync.held === 0 && todayRecordForSync.isHoliday !== false))
+    : todayHolidayInfoForSync.isHoliday);
+
+  const notificationEnabledValue = notificationPermission === 'granted';
+
+  // Synchronize Device Registration to Firestore (New Cost-Efficient Single Write Pattern)
+  useEffect(() => {
+    // Get current time and date in Asia/Kolkata timezone
+    const getKolkataTime = () => {
+      const now = new Date();
+      const dateStr = new Intl.DateTimeFormat('fr-CA', {
+        timeZone: 'Asia/Kolkata',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit'
+      }).format(now); // Returns "YYYY-MM-DD"
+      
+      const timeStr = now.toLocaleTimeString('en-US', {
+        timeZone: 'Asia/Kolkata',
+        hour12: false,
+        hour: 'numeric',
+        minute: 'numeric'
+      }); // Returns "HH:MM"
+      
+      const [hours, minutes] = timeStr.split(':').map(Number);
+      return {
+        dateStr,
+        hours,
+        minutes,
+        timeValue: hours * 60 + minutes
+      };
+    };
+
+    const kolkata = getKolkataTime();
+
+    // Start monitoring only from 12:55 PM (Asia/Kolkata).
+    // Before 12:55 PM, do absolutely nothing (no Firestore writes, no timestamp updates).
+    // 12:55 PM in minutes is 12 * 60 + 55 = 775.
+    if (kolkata.timeValue < 775) {
+      return;
+    }
+
+    // Check if we already did the single allowed write for today
+    const storedLastOpenedDate = localStorage.getItem('bs_last_opened_date');
+    if (storedLastOpenedDate === kolkata.dateStr) {
+      return;
+    }
+
+    const performSync = async () => {
+      try {
+        const deviceId = getOrCreateDeviceId();
+        const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+        
+        await syncNotificationDeviceToFirestore({
+          deviceId,
+          fcmToken,
+          notificationEnabled: notificationEnabledValue,
+          todayAttendance: todayAttendanceValue,
+          semesterActive: semesterActiveValue,
+          holidayToday: holidayTodayValue,
+          timezone: tz,
+          lastSync: new Date().toISOString(),
+          lastReminderBypassDate: kolkata.dateStr
+        });
+        
+        localStorage.setItem('bs_last_opened_date', kolkata.dateStr);
+        console.log("Successfully saved today's app open event to Firestore after 12:55 PM:", kolkata.dateStr);
+      } catch (err) {
+        console.error('Failed to sync notification device state:', err);
+      }
+    };
+
+    performSync();
+  }, [
+    fcmToken,
+    notificationEnabledValue,
+    todayAttendanceValue,
+    semesterActiveValue,
+    holidayTodayValue
+  ]);
   const [onlineCount, setOnlineCount] = useState(450);
   const [extraHolidayInput, setExtraHolidayInput] = useState('');
   const [gapDays, setGapDays] = useState<string[]>([]);
@@ -507,29 +639,9 @@ export default function App() {
     }
   }, [subjects, swayamSubjectId]);
 
+  // Keep SWAYAM subjects on the weekly schedule - bypassed automatic deletion
   useEffect(() => {
-    if (swayamSubjectId) {
-      let changed = false;
-      const updatedSchedule = { ...classSchedule };
-      Object.keys(updatedSchedule).forEach(day => {
-        const daySlots = { ...updatedSchedule[day] };
-        let dayChanged = false;
-        Object.keys(daySlots).forEach(slotId => {
-          const numericId = Number(slotId);
-          if (daySlots[numericId] === swayamSubjectId) {
-            delete daySlots[numericId];
-            dayChanged = true;
-            changed = true;
-          }
-        });
-        if (dayChanged) {
-          updatedSchedule[day] = daySlots;
-        }
-      });
-      if (changed) {
-        setClassSchedule(updatedSchedule);
-      }
-    }
+    // Left empty to support SWAYAM subjects on the timetable schedule
   }, [swayamSubjectId, classSchedule]);
 
   useEffect(() => {
@@ -781,24 +893,30 @@ export default function App() {
     
     const daySchedule = classSchedule[currentDayName] || {};
     
-    let live: { subject: string; time: string; isLunch?: boolean } | null = null;
-    let next: { subject: string; time: string; isLunch?: boolean } | null = null;
+    let live: { subject: string; time: string; isLunch?: boolean; isSwayam?: boolean; room?: string } | null = null;
+    let next: { subject: string; time: string; isLunch?: boolean; isSwayam?: boolean; room?: string } | null = null;
     
     const activeSlots = CLASS_SLOTS.map(slot => {
       const timeRange = parseTimeRange(slot.time);
       let subject = '';
+      let isSwayam = false;
+      let room = '';
       if (slot.isLunch) {
         subject = 'Lunch Break';
       } else {
         const subId = (daySchedule[slot.id] || '').trim();
         const foundSub = subjects.find(s => s.id === subId);
         subject = foundSub ? foundSub.name : subId;
+        isSwayam = foundSub ? foundSub.type === 'SWAYAM' : false;
+        room = foundSub ? foundSub.room || '' : '';
       }
       return {
         id: slot.id,
         isLunch: slot.isLunch,
         time: slot.time,
         subject,
+        isSwayam,
+        room,
         range: timeRange
       };
     }).filter(s => s.range);
@@ -809,7 +927,9 @@ export default function App() {
       live = {
         subject: liveSlot.subject,
         time: liveSlot.time,
-        isLunch: liveSlot.isLunch
+        isLunch: liveSlot.isLunch,
+        isSwayam: liveSlot.isSwayam,
+        room: liveSlot.room
       };
     }
     
@@ -822,7 +942,9 @@ export default function App() {
       next = {
         subject: upcomingSlots[0].subject,
         time: upcomingSlots[0].time,
-        isLunch: upcomingSlots[0].isLunch
+        isLunch: upcomingSlots[0].isLunch,
+        isSwayam: upcomingSlots[0].isSwayam,
+        room: upcomingSlots[0].room
       };
     }
     
@@ -3152,10 +3274,26 @@ export default function App() {
                           <h4 className="font-extrabold text-white text-xs truncate max-w-[130px] md:max-w-[200px]" title={liveClassInfo.live.subject}>
                             {liveClassInfo.live.subject}
                           </h4>
-                          <p className="text-zinc-400 text-[10px] font-medium flex items-center gap-1">
-                            <Clock size={10} className="text-primary" />
-                            {liveClassInfo.live.time}
-                          </p>
+                          {liveClassInfo.live.isSwayam ? (
+                            <div className="space-y-1 mt-1">
+                              <span className="inline-flex items-center gap-1 bg-emerald-500/15 text-emerald-400 text-[9px] font-black uppercase px-2 py-0.5 rounded border border-emerald-500/20">
+                                🎓 SWAYAM
+                              </span>
+                              <p className="text-zinc-400 text-[9px] font-medium">No Attendance Required</p>
+                            </div>
+                          ) : (
+                            <p className="text-zinc-400 text-[10px] font-medium flex flex-wrap items-center gap-x-1.5 gap-y-0.5">
+                              <span className="flex items-center gap-1">
+                                <Clock size={10} className="text-primary" />
+                                {liveClassInfo.live.time}
+                              </span>
+                              {liveClassInfo.live.room && (
+                                <span className="text-zinc-500 text-[9px] font-bold uppercase">
+                                  📍 {liveClassInfo.live.room}
+                                </span>
+                              )}
+                            </p>
+                          )}
                         </div>
                       ) : (
                         <div className="space-y-0.5">
@@ -3181,10 +3319,26 @@ export default function App() {
                           <h4 className="font-extrabold text-zinc-200 text-xs truncate max-w-[130px] md:max-w-[200px]" title={liveClassInfo.next.subject}>
                             {liveClassInfo.next.subject}
                           </h4>
-                          <p className="text-zinc-400 text-[10px] font-medium flex items-center gap-1">
-                            <Clock size={10} className="text-primary" />
-                            {liveClassInfo.next.time}
-                          </p>
+                          {liveClassInfo.next.isSwayam ? (
+                            <div className="space-y-1 mt-1">
+                              <span className="inline-flex items-center gap-1 bg-emerald-500/15 text-emerald-400 text-[9px] font-black uppercase px-2 py-0.5 rounded border border-emerald-500/20">
+                                🎓 SWAYAM
+                              </span>
+                              <p className="text-zinc-400 text-[9px] font-medium">No Attendance Required</p>
+                            </div>
+                          ) : (
+                            <p className="text-zinc-400 text-[10px] font-medium flex flex-wrap items-center gap-x-1.5 gap-y-0.5">
+                              <span className="flex items-center gap-1">
+                                <Clock size={10} className="text-primary" />
+                                {liveClassInfo.next.time}
+                              </span>
+                              {liveClassInfo.next.room && (
+                                <span className="text-zinc-500 text-[9px] font-bold uppercase">
+                                  📍 {liveClassInfo.next.room}
+                                </span>
+                              )}
+                            </p>
+                          )}
                         </div>
                       ) : (
                         <div className="space-y-0.5">
@@ -3439,12 +3593,30 @@ export default function App() {
                         return (
                           <div key={slot.id} className="bg-zinc-900/30 border border-zinc-800/50 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                             <div className="space-y-1">
-                              <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider block">{slot.time}</span>
-                              <h4 className="font-extrabold text-white text-sm">{subjectName}</h4>
+                              <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider block">
+                                {slot.time}
+                                {foundSub?.room && (
+                                  <span className="text-zinc-500 font-bold uppercase ml-1.5">• 📍 {foundSub.room}</span>
+                                )}
+                              </span>
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <h4 className="font-extrabold text-white text-sm">{subjectName}</h4>
+                                {foundSub?.type === 'SWAYAM' && (
+                                  <span className="bg-emerald-500/15 text-emerald-400 text-[9px] font-black uppercase px-2 py-0.5 rounded border border-emerald-500/20">
+                                    🎓 SWAYAM
+                                  </span>
+                                )}
+                              </div>
                             </div>
-                            <span className="text-[10px] font-black uppercase tracking-widest text-primary/80 bg-primary/5 px-2.5 py-1 rounded-lg border border-primary/10 self-start sm:self-auto">
-                              Active
-                            </span>
+                            {foundSub?.type === 'SWAYAM' ? (
+                              <span className="text-[10px] font-black uppercase tracking-widest text-emerald-400 bg-emerald-500/5 px-2.5 py-1 rounded-lg border border-emerald-500/10 self-start sm:self-auto">
+                                No Attendance
+                              </span>
+                            ) : (
+                              <span className="text-[10px] font-black uppercase tracking-widest text-primary/80 bg-primary/5 px-2.5 py-1 rounded-lg border border-primary/10 self-start sm:self-auto">
+                                Active
+                              </span>
+                            )}
                           </div>
                         );
                       });
@@ -3688,7 +3860,14 @@ export default function App() {
                           )}
                         </div>
                         <div className="space-y-1.5">
-                          <span className="text-[10px] text-zinc-500 font-bold uppercase block mb-1">Select Master Subject</span>
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-[10px] text-zinc-500 font-bold uppercase block">Select Master Subject</span>
+                            {foundSub?.type === 'SWAYAM' && (
+                              <span className="bg-emerald-500/15 text-emerald-400 text-[9px] font-black uppercase px-2 py-0.5 rounded border border-emerald-500/20 flex items-center gap-1 shrink-0">
+                                🎓 SWAYAM
+                              </span>
+                            )}
+                          </div>
                           {subjects.length === 0 ? (
                             <div className="bg-zinc-950 border border-zinc-800 border-dashed rounded-xl px-3 py-2.5 flex items-center justify-between gap-3 text-[11px] text-zinc-400">
                               <span>No subjects defined yet. Configure them first in Settings.</span>
@@ -3701,27 +3880,34 @@ export default function App() {
                               </button>
                             </div>
                           ) : (
-                            <select
-                              value={classSchedule[selectedScheduleDay]?.[slot.id] || ''}
-                              onChange={(e) => {
-                                const val = e.target.value;
-                                setClassSchedule(prev => ({
-                                  ...prev,
-                                  [selectedScheduleDay]: {
-                                    ...prev[selectedScheduleDay],
-                                    [slot.id]: val
-                                  }
-                                }));
-                              }}
-                              className="w-full bg-zinc-900 border border-zinc-800 focus:border-primary focus:outline-none rounded-xl px-3 py-2.5 text-xs text-white font-bold tracking-wide transition-colors cursor-pointer"
-                            >
-                              <option value="">-- Choose Subject --</option>
-                              {subjects.filter(s => s.id !== swayamSubjectId).map(s => (
-                                <option key={s.id} value={s.id}>
-                                  {s.name} ({s.type})
-                                </option>
-                              ))}
-                            </select>
+                            <>
+                              <select
+                                value={classSchedule[selectedScheduleDay]?.[slot.id] || ''}
+                                onChange={(e) => {
+                                  const val = e.target.value;
+                                  setClassSchedule(prev => ({
+                                    ...prev,
+                                    [selectedScheduleDay]: {
+                                      ...prev[selectedScheduleDay],
+                                      [slot.id]: val
+                                    }
+                                  }));
+                                }}
+                                className="w-full bg-zinc-900 border border-zinc-800 focus:border-primary focus:outline-none rounded-xl px-3 py-2.5 text-xs text-white font-bold tracking-wide transition-colors cursor-pointer"
+                              >
+                                <option value="">-- Choose Subject --</option>
+                                {subjects.map(s => (
+                                  <option key={s.id} value={s.id}>
+                                    {s.name} ({s.type === 'SWAYAM' ? '🎓 SWAYAM' : s.type})
+                                  </option>
+                                ))}
+                              </select>
+                              {foundSub?.room && (
+                                <p className="text-[10px] text-zinc-400 font-medium flex items-center gap-1 mt-1.5 px-1">
+                                  <span>📍 Room: {foundSub.room}</span>
+                                </p>
+                              )}
+                            </>
                           )}
                         </div>
                       </div>

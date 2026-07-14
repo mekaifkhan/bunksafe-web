@@ -8,6 +8,7 @@ import nodemailer from "nodemailer";
 import dotenv from "dotenv";
 import cors from "cors";
 import { GoogleGenAI } from "@google/genai";
+import admin from "firebase-admin";
 
 dotenv.config();
 
@@ -29,6 +30,229 @@ function getGeminiClient() {
     });
   }
   return aiClient;
+}
+
+// ----------------------------------------------------
+// Cost-Efficient Notification System (8 PM Asia/Kolkata)
+// ----------------------------------------------------
+const holidays2026: Record<string, string> = {
+  '2026-01-26': 'Republic Day',
+  '2026-02-15': 'Maha Shivratri',
+  '2026-03-03': 'Holi',
+  '2026-03-04': 'Holi',
+  '2026-03-20': 'Jumatul Wida*',
+  '2026-03-21': 'Eidul Fitr*',
+  '2026-03-22': 'Eidul Fitr*',
+  '2026-03-26': 'Ram Navmi',
+  '2026-03-31': 'Mahavir Jayanti',
+  '2026-04-03': 'Good Friday',
+  '2026-05-01': 'Buddha Purnima',
+  '2026-05-27': 'Eidul-Azha*',
+  '2026-05-28': 'Eidul-Azha*',
+  '2026-06-25': 'Muharram*',
+  '2026-06-26': 'Muharram*',
+  '2026-08-05': 'Chehellum*',
+  '2026-08-15': 'Independence day',
+  '2026-08-26': 'Eid- Milad-Un-Nabi*',
+  '2026-09-04': 'Janamashtami',
+  '2026-10-02': 'Gandhi Jayanti',
+  '2026-10-19': 'Dussehra',
+  '2026-10-20': 'Dussehra',
+  '2026-11-07': 'Diwali (Deepavali)',
+  '2026-11-08': 'Diwali (Deepavali)',
+  '2026-11-24': 'Guru Nanak Jayanti',
+  '2026-12-25': 'Christmas Day',
+};
+
+function getKolkataTime() {
+  const now = new Date();
+  
+  const dateStr = new Intl.DateTimeFormat('fr-CA', {
+    timeZone: 'Asia/Kolkata',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  }).format(now); // "YYYY-MM-DD"
+  
+  const timeStr = now.toLocaleTimeString('en-US', {
+    timeZone: 'Asia/Kolkata',
+    hour12: false,
+    hour: 'numeric',
+    minute: 'numeric'
+  }); // "HH:MM"
+  
+  const [hours, minutes] = timeStr.split(':').map(Number);
+  
+  const dayOfWeekStr = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'Asia/Kolkata',
+    weekday: 'long'
+  }).format(now); // "Monday", "Tuesday", etc.
+  
+  return {
+    dateStr,
+    hours,
+    minutes,
+    dayOfWeekStr
+  };
+}
+
+let adminApp: any = null;
+let adminDb: any = null;
+let adminMessaging: any = null;
+
+function getFirebaseAdmin() {
+  if (!adminApp) {
+    const serviceAccountVar = process.env.FIREBASE_SERVICE_ACCOUNT;
+    if (!serviceAccountVar) {
+      return null;
+    }
+    try {
+      let serviceAccount;
+      if (serviceAccountVar.trim().startsWith('{')) {
+        serviceAccount = JSON.parse(serviceAccountVar);
+      } else {
+        serviceAccount = serviceAccountVar;
+      }
+      adminApp = (admin as any).initializeApp({
+        credential: (admin as any).credential.cert(serviceAccount)
+      });
+      adminDb = adminApp.firestore();
+      adminMessaging = adminApp.messaging();
+      console.log("Successfully initialized Firebase Admin SDK");
+    } catch (e: any) {
+      console.error("Error initializing Firebase Admin SDK:", e.message);
+      return null;
+    }
+  }
+  return { db: adminDb!, messaging: adminMessaging! };
+}
+
+let lastNotificationRunDate = "";
+
+async function checkAndSend8PMNotifications(force: boolean = false): Promise<any> {
+  const adminSdk = getFirebaseAdmin();
+  if (!adminSdk) {
+    return { success: false, error: "Firebase Admin SDK not initialized. Set FIREBASE_SERVICE_ACCOUNT." };
+  }
+
+  const { db, messaging } = adminSdk;
+  const kolkata = getKolkataTime();
+  
+  console.log(`[Notification Scheduler] Starting checks for date: ${kolkata.dateStr}, Day: ${kolkata.dayOfWeekStr}, Force: ${force}`);
+  
+  // Prevent duplicate execution on the same day unless forced
+  if (!force && lastNotificationRunDate === kolkata.dateStr) {
+    const msg = `Skipping: Already executed today (${kolkata.dateStr})`;
+    console.log(`[Notification Scheduler] ${msg}`);
+    return { success: true, skipped: true, reason: msg };
+  }
+  
+  // Skip notification if Saturday or Sunday unless forced
+  if (!force && (kolkata.dayOfWeekStr === "Saturday" || kolkata.dayOfWeekStr === "Sunday")) {
+    const msg = `Skipping notifications (Weekend: ${kolkata.dayOfWeekStr})`;
+    console.log(`[Notification Scheduler] ${msg}`);
+    return { success: true, skipped: true, reason: msg };
+  }
+  
+  // Skip notification if JMI Holiday unless forced
+  const isJmiHoliday = holidays2026[kolkata.dateStr];
+  if (!force && isJmiHoliday) {
+    const msg = `Skipping notifications (JMI Holiday: ${isJmiHoliday})`;
+    console.log(`[Notification Scheduler] ${msg}`);
+    return { success: true, skipped: true, reason: msg };
+  }
+  
+  lastNotificationRunDate = kolkata.dateStr;
+  
+  try {
+    const devicesSnapshot = await db.collection('notificationDevices').get();
+    
+    if (devicesSnapshot.empty) {
+      console.log('[Notification Scheduler] No devices found.');
+      return { success: true, sentCount: 0, skippedCount: 0, message: "No devices found" };
+    }
+    
+    const sendPromises: Promise<any>[] = [];
+    let sentCount = 0;
+    let skippedCount = 0;
+    
+    devicesSnapshot.forEach(doc => {
+      const device = doc.data();
+      
+      const isEnabled = device.notificationEnabled === true;
+      const bypassDate = device.lastReminderBypassDate;
+      const openedToday = bypassDate === kolkata.dateStr;
+      
+      // Send notification if enabled AND bypassDate is not today's date
+      if (isEnabled && !openedToday) {
+        if (!device.fcmToken) {
+          console.log(`[Notification Scheduler] Device ${doc.id} matches criteria but has no FCM token. Skipping.`);
+          skippedCount++;
+          return;
+        }
+        
+        console.log(`[Notification Scheduler] Sending reminder to device ${doc.id}`);
+        
+        const message = {
+          token: device.fcmToken,
+          notification: {
+            title: '📚 Attendance Reminder',
+            body: "You haven't opened BunkSafe this afternoon.\nOpen the app and mark today's attendance before the day ends."
+          },
+          data: {
+            click_action: 'FLUTTER_NOTIFICATION_CLICK',
+            type: 'attendance_reminder'
+          },
+          android: {
+            priority: 'high',
+            notification: {
+              sound: 'default',
+              clickAction: 'FLUTTER_NOTIFICATION_CLICK'
+            }
+          }
+        };
+        
+        const p = messaging.send(message)
+          .then((response: any) => {
+            console.log(`[Notification Scheduler] Successfully sent reminder to device ${doc.id}:`, response);
+          })
+          .catch(async (error: any) => {
+            console.error(`[Notification Scheduler] Error sending message to device ${doc.id}:`, error.message);
+            if (
+              error.code === 'messaging/invalid-registration-token' ||
+              error.code === 'messaging/registration-token-not-registered'
+            ) {
+              console.log(`[Notification Scheduler] Cleaning up expired token for device ${doc.id}...`);
+              try {
+                await doc.ref.update({ notificationEnabled: false });
+              } catch (updateErr: any) {
+                console.error(`[Notification Scheduler] Failed to clean up token for device ${doc.id}:`, updateErr.message);
+              }
+            }
+          });
+          
+        sendPromises.push(p);
+        sentCount++;
+      } else {
+        skippedCount++;
+      }
+    });
+    
+    if (sendPromises.length > 0) {
+      await Promise.all(sendPromises);
+    }
+    console.log(`[Notification Scheduler] Completed sending reminders for ${kolkata.dateStr}. Sent: ${sentCount}, Skipped: ${skippedCount}`);
+    return {
+      success: true,
+      sentCount,
+      skippedCount,
+      date: kolkata.dateStr,
+      day: kolkata.dayOfWeekStr
+    };
+  } catch (error: any) {
+    console.error('[Notification Scheduler] Fatal error during checks:', error);
+    return { success: false, error: error.message };
+  }
 }
 
 const __filename = fileURLToPath(import.meta.url);
@@ -147,6 +371,30 @@ async function startServer() {
 
   app.post("/api/send-email", handleSendEmail);
   app.post("/api/v1/send-report", handleSendEmail);
+
+  // Scheduled Cron Route for 8 PM Notifications
+  app.all("/api/cron/send-reminders", async (req, res) => {
+    console.log("[Cron Endpoint] Received request to send reminders");
+    
+    // Auth Check
+    const authHeader = req.headers.authorization;
+    const querySecret = req.query.secret;
+    const cronSecret = process.env.CRON_SECRET;
+    
+    if (cronSecret) {
+      const expectedBearer = `Bearer ${cronSecret}`;
+      if (authHeader !== expectedBearer && querySecret !== cronSecret) {
+        console.warn("[Cron Endpoint] Unauthorized attempt to trigger notifications");
+        return res.status(401).json({ success: false, error: "Unauthorized" });
+      }
+    } else {
+      console.warn("[Cron Endpoint] Warning: CRON_SECRET is not set in environment variables. Running without authorization check.");
+    }
+    
+    const force = req.query.force === "true" || (req.body && req.body.force === true);
+    const result = await checkAndSend8PMNotifications(force);
+    return res.json(result);
+  });
 
 
 

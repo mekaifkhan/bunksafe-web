@@ -78,8 +78,9 @@ export interface SubjectGradeConfig {
 export interface Subject {
   id: string;
   name: string;
-  type: 'Theory' | 'Lab';
+  type: 'Theory' | 'Lab' | 'SWAYAM';
   credits: number;
+  room?: string;
 }
 
 export function formatSubjectName(name: string): string {

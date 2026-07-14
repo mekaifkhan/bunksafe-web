@@ -36,5 +36,24 @@ service cloud.firestore {
       allow read: if true;
       allow write: if false; // Clients only read changelogs
     }
+
+    // Notification Devices rules
+    match /notificationDevices/{deviceId} {
+      allow get: if isValidId(deviceId);
+      allow create, update: if isValidId(deviceId) &&
+                            request.resource.data.keys().hasAll(['deviceId', 'fcmToken', 'notificationEnabled', 'todayAttendance', 'semesterActive', 'holidayToday', 'timezone', 'lastSync', 'lastReminderBypassDate']) &&
+                            request.resource.data.keys().size() == 9 &&
+                            request.resource.data.deviceId == deviceId &&
+                            request.resource.data.deviceId is string &&
+                            request.resource.data.fcmToken is string &&
+                            request.resource.data.notificationEnabled is bool &&
+                            request.resource.data.todayAttendance is bool &&
+                            request.resource.data.semesterActive is bool &&
+                            request.resource.data.holidayToday is bool &&
+                            request.resource.data.timezone is string &&
+                            request.resource.data.lastSync is string &&
+                            request.resource.data.lastReminderBypassDate is string;
+      allow delete: if false;
+    }
   }
 }

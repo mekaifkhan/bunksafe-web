@@ -267,4 +267,63 @@ export async function deleteUserAccountFromFirestore(email: string) {
   console.log('Successfully deleted user document from Firestore:', email);
 }
 
+// Zero-trust Security Error Handling enum
+export enum OperationType {
+  CREATE = 'create',
+  UPDATE = 'update',
+  DELETE = 'delete',
+  LIST = 'list',
+  GET = 'get',
+  WRITE = 'write',
+}
+
+// Compliance-aligned error wrapper for permission failures
+export function handleFirestoreError(error: any, operationType: OperationType, path: string | null) {
+  const message = error instanceof Error ? error.message : String(error);
+  if (message.toLowerCase().includes('permission') || message.toLowerCase().includes('insufficient')) {
+    const errInfo = {
+      error: message,
+      operationType,
+      path,
+      authInfo: {
+        userId: null,
+        email: null,
+        emailVerified: null,
+        isAnonymous: null,
+        tenantId: null,
+        providerInfo: []
+      }
+    };
+    throw new Error(JSON.stringify(errInfo));
+  }
+  throw error;
+}
+
+export interface NotificationDeviceData {
+  deviceId: string;
+  fcmToken: string;
+  notificationEnabled: boolean;
+  todayAttendance: boolean;
+  semesterActive: boolean;
+  holidayToday: boolean;
+  timezone: string;
+  lastSync: string;
+  lastReminderBypassDate: string;
+}
+
+/**
+ * Synchronize device registration state to Firestore (minimal writes pattern)
+ */
+export async function syncNotificationDeviceToFirestore(data: NotificationDeviceData) {
+  if (!db) return;
+  const path = `notificationDevices/${data.deviceId}`;
+  try {
+    const deviceDocRef = doc(db, 'notificationDevices', data.deviceId);
+    await setDoc(deviceDocRef, data, { merge: true });
+    console.log('Successfully synced notification device to Firestore:', data.deviceId);
+  } catch (error: any) {
+    handleFirestoreError(error, OperationType.WRITE, path);
+  }
+}
+
 export { app, analytics };

@@ -129,6 +129,61 @@
         }
       },
       "required": ["version", "releaseDate", "newFeatures", "bugFixes", "createdAt"]
+    },
+    "NotificationDevice": {
+      "title": "NotificationDevice",
+      "description": "Token and preference state for FCM push notifications.",
+      "type": "object",
+      "properties": {
+        "deviceId": {
+          "type": "string",
+          "description": "Locally stored unique device UUID identifier."
+        },
+        "fcmToken": {
+          "type": "string",
+          "description": "Firebase Cloud Messaging token for push notifications."
+        },
+        "notificationEnabled": {
+          "type": "boolean",
+          "description": "Whether the user enabled push notifications."
+        },
+        "todayAttendance": {
+          "type": "boolean",
+          "description": "Whether the user's attendance for today is fully updated."
+        },
+        "semesterActive": {
+          "type": "boolean",
+          "description": "Whether the user has an active semester."
+        },
+        "holidayToday": {
+          "type": "boolean",
+          "description": "Whether today is a holiday for this user."
+        },
+        "timezone": {
+          "type": "string",
+          "description": "IANA timezone of the device."
+        },
+        "lastSync": {
+          "type": "string",
+          "format": "date-time",
+          "description": "ISO timestamp of the last state synchronization."
+        },
+        "lastReminderBypassDate": {
+          "type": "string",
+          "description": "The date (YYYY-MM-DD) when the user bypassed the reminder by opening the app after 12:55 PM."
+        }
+      },
+      "required": [
+        "deviceId",
+        "fcmToken",
+        "notificationEnabled",
+        "todayAttendance",
+        "semesterActive",
+        "holidayToday",
+        "timezone",
+        "lastSync",
+        "lastReminderBypassDate"
+      ]
     }
   },
   "firestore": {
@@ -147,6 +202,10 @@
     "/changelog/{changelogId}": {
       "schema": "ChangelogItem",
       "description": "Global list of changelogs and version release histories."
+    },
+    "/notificationDevices/{deviceId}": {
+      "schema": "NotificationDevice",
+      "description": "Registration of device FCM token and notification settings."
     }
   }
 }
