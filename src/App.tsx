@@ -1381,7 +1381,14 @@ export default function App() {
       const pdfBase64 = doc.output('datauristring');
 
       // Send to Server
-      const response = await fetch('/api/send-email', {
+      const isLocalOrCloudRun = window.location.hostname === 'localhost' || 
+                                window.location.hostname === '127.0.0.1' || 
+                                window.location.hostname.endsWith('run.app');
+      const apiUrl = isLocalOrCloudRun 
+        ? '/api/send-email' 
+        : 'https://ais-pre-lcvtzroand56ayfvwkbrrt-628033860104.asia-southeast1.run.app/api/send-email';
+
+      const response = await fetch(apiUrl, {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',

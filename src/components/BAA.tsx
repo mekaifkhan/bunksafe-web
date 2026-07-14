@@ -216,7 +216,14 @@ export default function BAA({ profile, onClose }: BAAProps) {
     // Call API Route
     abortControllerRef.current = new AbortController();
     try {
-      const response = await fetch('/api/baa/chat', {
+      const isLocalOrCloudRun = window.location.hostname === 'localhost' || 
+                                window.location.hostname === '127.0.0.1' || 
+                                window.location.hostname.endsWith('run.app');
+      const apiUrl = isLocalOrCloudRun 
+        ? '/api/baa/chat' 
+        : 'https://ais-pre-lcvtzroand56ayfvwkbrrt-628033860104.asia-southeast1.run.app/api/baa/chat';
+
+      const response = await fetch(apiUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
