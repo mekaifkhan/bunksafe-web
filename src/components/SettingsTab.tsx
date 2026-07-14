@@ -22,6 +22,7 @@ import {
   CalendarDays,
   GraduationCap,
   X,
+  Eye,
   ArrowUp,
   ArrowDown,
   Sliders,
@@ -66,6 +67,8 @@ interface SettingsTabProps {
   subjectAttendance: Record<string, { attended: number; held: number }>;
   setSubjectAttendance: React.Dispatch<React.SetStateAction<Record<string, { attended: number; held: number }>>>;
   showToast?: (message: string, type?: 'success' | 'error' | 'info') => void;
+  profilePhoto?: string | null;
+  updateProfilePhoto?: (base64: string | null) => void;
 }
 
 export default function SettingsTab({
@@ -93,7 +96,9 @@ export default function SettingsTab({
   setGradeSubjects,
   subjectAttendance,
   setSubjectAttendance,
-  showToast
+  showToast,
+  profilePhoto,
+  updateProfilePhoto
 }: SettingsTabProps) {
   // Local state for holiday manager
   const [newHolidayDate, setNewHolidayDate] = useState('');
@@ -135,6 +140,51 @@ export default function SettingsTab({
   // Track initial branch/semester to detect changes
   const [initialBranch] = useState(profile.department);
   const [initialSem] = useState(profile.semester);
+
+  // Profile Photo Management states
+  const [showPhotoModal, setShowPhotoModal] = useState(false);
+  const [showPhotoOptions, setShowPhotoOptions] = useState(false);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
+
+  const handlePhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let width = img.width;
+        let height = img.height;
+
+        // Maximum width: 256px
+        if (width > 256) {
+          height = Math.round((height * 256) / width);
+          width = 256;
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.drawImage(img, 0, 0, width, height);
+          // JPEG quality: 0.7
+          const compressedBase64 = canvas.toDataURL('image/jpeg', 0.7);
+          
+          if (updateProfilePhoto) {
+            updateProfilePhoto(compressedBase64);
+          }
+          if (showToast) {
+            showToast('Profile photo updated!', 'success');
+          }
+        }
+      };
+      img.src = event.target?.result as string;
+    };
+    reader.readAsDataURL(file);
+  };
 
   // Curriculum Database helpers
   const isFirstYear = profile.semester === 'Semester 1' || profile.semester === 'Semester 2';
@@ -621,14 +671,144 @@ export default function SettingsTab({
 
       {/* Initials Display & Banner */}
       <div className="flex flex-col items-center gap-3 py-4 bg-zinc-900/40 border border-zinc-850 rounded-2xl p-4">
-        <div className="w-20 h-20 bg-primary rounded-full flex items-center justify-center text-3xl font-black text-white shadow-xl shadow-primary/20 overflow-hidden border-4 border-zinc-900">
-          {(profile.name || 'U').charAt(0).toUpperCase()}
+        <div className="relative group select-none">
+          <button
+            onClick={() => {
+              if (profilePhoto) {
+                setShowPhotoModal(true);
+              } else if (fileInputRef.current) {
+                fileInputRef.current.click();
+              }
+            }}
+            className="w-20 h-20 bg-primary rounded-full flex items-center justify-center text-3xl font-black text-white shadow-xl shadow-primary/20 overflow-hidden border-4 border-zinc-900 focus:outline-none focus:ring-2 focus:ring-primary/50 relative"
+            title={profilePhoto ? "View profile photo" : "Upload profile photo"}
+          >
+            {profilePhoto ? (
+              <img src={profilePhoto} alt={profile.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+            ) : (
+              (profile.name || 'U').charAt(0).toUpperCase()
+            )}
+            <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+              <Camera size={20} className="text-white" />
+            </div>
+          </button>
         </div>
         <div className="text-center">
           <h2 className="text-lg font-black text-zinc-100">{profile.name}</h2>
           <p className="text-xs text-zinc-500 font-medium">{profile.college} — {profile.department}</p>
         </div>
+
+        {/* Profile Photo Controls */}
+        <div className="flex items-center justify-center gap-2 mt-1">
+          <button
+            onClick={() => {
+              if (fileInputRef.current) fileInputRef.current.click();
+            }}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-zinc-800 hover:bg-zinc-750 text-zinc-200 rounded-xl text-xs font-bold transition-all border border-zinc-700/50"
+          >
+            <Camera size={14} />
+            Change Photo
+          </button>
+          {profilePhoto && (
+            <>
+              <button
+                onClick={() => setShowPhotoModal(true)}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-zinc-800 hover:bg-zinc-750 text-zinc-200 rounded-xl text-xs font-bold transition-all border border-zinc-700/50"
+              >
+                <Eye size={14} />
+                View Photo
+              </button>
+              <button
+                onClick={() => {
+                  if (confirm('Are you sure you want to remove your profile photo?')) {
+                    if (updateProfilePhoto) {
+                      updateProfilePhoto(null);
+                    }
+                    if (showToast) {
+                      showToast('Profile photo removed.', 'info');
+                    }
+                  }
+                }}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-red-950/40 hover:bg-red-950/60 text-red-400 rounded-xl text-xs font-bold transition-all border border-red-900/30"
+              >
+                <Trash2 size={14} />
+                Remove
+              </button>
+            </>
+          )}
+        </div>
+
+        {/* Hidden input element as requested */}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          capture="environment"
+          onChange={handlePhotoSelect}
+          className="hidden"
+        />
       </div>
+
+      {/* Profile Photo Viewer Modal */}
+      <AnimatePresence>
+        {showPhotoModal && profilePhoto && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="relative max-w-sm w-full bg-zinc-900 border border-zinc-800 rounded-3xl overflow-hidden p-6 shadow-2xl"
+            >
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-sm font-black uppercase tracking-wider text-zinc-450">Profile Photo</h3>
+                <button
+                  onClick={() => setShowPhotoModal(false)}
+                  className="p-1 rounded-full bg-zinc-850 hover:bg-zinc-800 text-zinc-300 hover:text-white transition-colors"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+              <div className="aspect-square w-full rounded-2xl overflow-hidden bg-zinc-950 border border-zinc-850 flex items-center justify-center relative mb-4">
+                <img
+                  src={profilePhoto}
+                  alt={profile.name}
+                  className="max-w-full max-h-full object-contain"
+                  referrerPolicy="no-referrer"
+                />
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => {
+                    setShowPhotoModal(false);
+                    if (fileInputRef.current) fileInputRef.current.click();
+                  }}
+                  className="flex-1 py-2.5 bg-primary hover:bg-primary/95 text-zinc-950 rounded-xl text-xs font-black uppercase tracking-wider transition-all active:scale-95 flex items-center justify-center gap-1.5"
+                >
+                  <Camera size={14} />
+                  Change
+                </button>
+                <button
+                  onClick={() => {
+                    setShowPhotoModal(false);
+                    if (confirm('Are you sure you want to remove your profile photo?')) {
+                      if (updateProfilePhoto) {
+                        updateProfilePhoto(null);
+                      }
+                      if (showToast) {
+                        showToast('Profile photo removed.', 'info');
+                      }
+                    }
+                  }}
+                  className="px-4 py-2.5 bg-red-950/40 hover:bg-red-950/60 border border-red-900/30 text-red-400 rounded-xl text-xs font-bold transition-all flex items-center justify-center"
+                  title="Remove Photo"
+                >
+                  <Trash2 size={16} />
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       {/* SUBJECTS QUICK ACTION PANEL */}
       <div className="bg-gradient-to-r from-zinc-900 via-primary/5 to-zinc-900 border border-primary/25 p-4 rounded-2xl flex items-center justify-between gap-4">

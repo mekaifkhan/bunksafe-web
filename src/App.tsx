@@ -295,6 +295,20 @@ export default function App() {
     return profileMerged;
   });
 
+  const [profilePhoto, setProfilePhoto] = useState<string | null>(() => {
+    return localStorage.getItem('bs_profile_photo');
+  });
+
+  const updateProfilePhoto = (base64Data: string | null) => {
+    if (base64Data) {
+      localStorage.setItem('bs_profile_photo', base64Data);
+      setProfilePhoto(base64Data);
+    } else {
+      localStorage.removeItem('bs_profile_photo');
+      setProfilePhoto(null);
+    }
+  };
+
   const [semester, setSemester] = useState<Semester>(() => {
     const saved = localStorage.getItem('bs_semester');
     const defaultSemester = {
@@ -2908,9 +2922,13 @@ export default function App() {
         <header className="flex justify-between items-center">
           <div className="flex items-center gap-3">
             <div 
-              className="w-12 h-12 bg-primary rounded-full flex items-center justify-center font-black text-lg border border-zinc-800 shadow-md shadow-primary/10 select-none text-zinc-950"
+              className="w-12 h-12 bg-primary rounded-full flex items-center justify-center font-black text-lg border border-zinc-800 shadow-md shadow-primary/10 select-none text-zinc-950 overflow-hidden"
             >
-              {profile.name.charAt(0).toUpperCase()}
+              {profilePhoto ? (
+                <img src={profilePhoto} alt={profile.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+              ) : (
+                profile.name.charAt(0).toUpperCase()
+              )}
             </div>
             <div>
               <p className="text-zinc-500 text-xs font-semibold uppercase tracking-wider">
@@ -4253,6 +4271,8 @@ export default function App() {
         subjectAttendance={subjectAttendance}
         setSubjectAttendance={setSubjectAttendance}
         showToast={showToast}
+        profilePhoto={profilePhoto}
+        updateProfilePhoto={updateProfilePhoto}
       />
     );
   };
