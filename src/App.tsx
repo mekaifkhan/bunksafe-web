@@ -830,7 +830,9 @@ export default function App() {
       const dateStr = formatDate(day);
       const record = records[dateStr];
       const jmiHoliday = getJamiaHoliday(day);
-      const isHoliday = (record && record.isHoliday) || jmiHoliday.isHoliday;
+      const isHoliday = record 
+        ? (record.isHoliday || (jmiHoliday.isHoliday && record.held === 0 && record.isHoliday !== false))
+        : jmiHoliday.isHoliday;
       const holidayName = jmiHoliday.name || (record && record.holidayName) || 'Holiday';
       return [
         format(day, 'dd/MM/yyyy (EEE)'),
@@ -986,7 +988,8 @@ export default function App() {
           return startOfDay(d) >= startOfDay(estart) && startOfDay(d) <= startOfDay(eend);
         });
         const jmiHoliday = getJamiaHoliday(date);
-        if (!r.isHoliday && !jmiHoliday.isHoliday && !isExam) {
+        const isSelHoliday = r.isHoliday || (jmiHoliday.isHoliday && r.held === 0 && r.isHoliday !== false);
+        if (!isSelHoliday && !isExam) {
           held += r.held;
           attended += r.attended;
         }
@@ -1084,7 +1087,8 @@ export default function App() {
     let attended = 0;
     monthRecords.forEach(([date, r]) => {
       const jmiHoliday = getJamiaHoliday(date);
-      if (!r.isHoliday && !jmiHoliday.isHoliday) {
+      const isSelHoliday = r.isHoliday || (jmiHoliday.isHoliday && r.held === 0 && r.isHoliday !== false);
+      if (!isSelHoliday) {
         held += r.held;
         attended += r.attended;
       }
@@ -2893,7 +2897,10 @@ export default function App() {
     const isNotStarted = parsedStartDate && !isNaN(parsedStartDate.getTime()) && isBefore(startOfDay(new Date()), startOfDay(parsedStartDate));
 
     const todayHolidayInfo = getJamiaHoliday(new Date());
-    const isTodayHoliday = todayRecord.isHoliday || todayHolidayInfo.isHoliday;
+    const hasTodayRecord = !!records[today];
+    const isTodayHoliday = hasTodayRecord 
+      ? (todayRecord.isHoliday || (todayHolidayInfo.isHoliday && todayRecord.held === 0 && todayRecord.isHoliday !== false))
+      : todayHolidayInfo.isHoliday;
     const todayHolidayName = todayHolidayInfo.name || todayRecord.holidayName || 'Holiday';
 
     return (
@@ -3144,6 +3151,28 @@ export default function App() {
                       <p className="text-xs text-zinc-500 max-w-[280px] mx-auto leading-relaxed">
                         No attendance marking is required today as per JMI academic calendar rules. Enjoy your day off!
                       </p>
+                    </div>
+                    <div className="pt-2 max-w-[240px] mx-auto flex flex-col gap-2">
+                      <button
+                        onClick={() => {
+                          updateAttendance(today, 1, 1, false);
+                          showToast('Extra class mode activated!', 'success');
+                        }}
+                        className="w-full py-2.5 px-4 bg-primary/10 border border-primary/25 hover:bg-primary/20 text-primary rounded-2xl text-xs font-black uppercase tracking-wider transition-all active:scale-95 flex items-center justify-center gap-1.5"
+                      >
+                        <Sparkles size={14} />
+                        Conducted Extra Class?
+                      </button>
+                      <button
+                        onClick={() => {
+                          updateAttendance(today, 0, 0, false);
+                          showToast('Holiday overridden! You can now mark regular classes.', 'info');
+                        }}
+                        className="w-full py-2 px-4 bg-zinc-800/50 border border-zinc-700/50 hover:bg-zinc-800 text-zinc-300 hover:text-white rounded-2xl text-xs font-bold transition-all active:scale-95 flex items-center justify-center gap-1.5"
+                      >
+                        <X size={14} />
+                        Not a Holiday / Regular Class
+                      </button>
                     </div>
                   </div>
                 ) : (
@@ -3670,7 +3699,9 @@ export default function App() {
                   const exam = getExamForDate(day);
                   
                   const jmiHoliday = getJamiaHoliday(day);
-                  const isHoliday = (record && record.isHoliday) || jmiHoliday.isHoliday;
+                  const isHoliday = record 
+                    ? (record.isHoliday || (jmiHoliday.isHoliday && record.held === 0 && record.isHoliday !== false))
+                    : jmiHoliday.isHoliday;
 
                   let bgColor = 'bg-zinc-900';
                   let borderColor = 'border-zinc-800';
@@ -3744,8 +3775,11 @@ export default function App() {
                     <Card className="border-t-4 border-t-primary">
                       {(() => {
                         const selJmiHoliday = getJamiaHoliday(selectedDate);
-                        const isSelHoliday = (records[selectedDate] && records[selectedDate].isHoliday) || selJmiHoliday.isHoliday;
-                        const selHolidayName = selJmiHoliday.name || (records[selectedDate] && records[selectedDate].holidayName) || 'Holiday';
+                        const selRecord = records[selectedDate];
+                        const isSelHoliday = selRecord 
+                          ? (selRecord.isHoliday || (selJmiHoliday.isHoliday && selRecord.held === 0 && selRecord.isHoliday !== false))
+                          : selJmiHoliday.isHoliday;
+                        const selHolidayName = selJmiHoliday.name || (selRecord && selRecord.holidayName) || 'Holiday';
                         return (
                           <>
                             <div className="flex justify-between items-start mb-4">
@@ -3813,10 +3847,38 @@ export default function App() {
                                 </div>
                               </div>
                             ) : isSelHoliday ? (
-                              <div className="bg-zinc-800/50 border border-zinc-700 p-6 rounded-2xl text-center">
-                                <Info className="mx-auto mb-2 text-primary" size={32} />
-                                <p className="text-zinc-200 font-extrabold text-sm uppercase tracking-wide">Holiday: {selHolidayName}</p>
-                                <p className="text-zinc-500 text-xs mt-1">No attendance marking is required. Enjoy your day off!</p>
+                              <div className="bg-zinc-800/50 border border-zinc-700 p-6 rounded-2xl text-center space-y-4">
+                                <div className="space-y-1">
+                                  <Info className="mx-auto mb-2 text-primary" size={32} />
+                                  <p className="text-zinc-200 font-extrabold text-sm uppercase tracking-wide">Holiday: {selHolidayName}</p>
+                                  <p className="text-zinc-500 text-xs">No attendance marking is required. Enjoy your day off!</p>
+                                </div>
+                                <div className="pt-2 max-w-[200px] mx-auto flex flex-col gap-2">
+                                  <button
+                                    onClick={() => {
+                                      const held = prompt("Total classes held on this Extra Class day?", "1");
+                                      const attended = prompt("Classes attended?", "1");
+                                      if (held !== null && attended !== null) {
+                                        updateAttendance(selectedDate, parseInt(held), parseInt(attended), false);
+                                        showToast('Extra class recorded!', 'success');
+                                      }
+                                    }}
+                                    className="w-full py-2 bg-primary/10 border border-primary/25 hover:bg-primary/20 text-primary rounded-xl text-xs font-black uppercase tracking-wider transition-all active:scale-95 flex items-center justify-center gap-1.5"
+                                  >
+                                    <Sparkles size={12} />
+                                    Extra Class?
+                                  </button>
+                                  <button
+                                    onClick={() => {
+                                      updateAttendance(selectedDate, 0, 0, false);
+                                      showToast('Holiday overridden! You can now mark classes for this date.', 'info');
+                                    }}
+                                    className="w-full py-1.5 px-4 bg-zinc-850 border border-zinc-700/50 hover:bg-zinc-800 text-zinc-300 hover:text-white rounded-xl text-xs font-bold transition-all active:scale-95 flex items-center justify-center gap-1.5"
+                                  >
+                                    <X size={12} />
+                                    Not a Holiday / Regular Class
+                                  </button>
+                                </div>
                               </div>
                             ) : (
                               <div className="bg-zinc-800/50 p-8 rounded-2xl text-center border border-zinc-800 border-dashed">
