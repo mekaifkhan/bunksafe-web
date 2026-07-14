@@ -12,6 +12,8 @@ import admin from "firebase-admin";
 
 dotenv.config();
 
+const serverStartTime = Date.now();
+
 let aiClient: GoogleGenAI | null = null;
 
 function getGeminiClient() {
@@ -372,6 +374,94 @@ async function startServer() {
   app.post("/api/send-email", handleSendEmail);
   app.post("/api/v1/send-report", handleSendEmail);
 
+  // Helper to trigger test notifications
+  async function triggerTestNotification(): Promise<any> {
+    const adminSdk = getFirebaseAdmin();
+    if (!adminSdk) {
+      console.error("[Test Mode] Failed to initialize Firebase Admin SDK. Check FIREBASE_SERVICE_ACCOUNT.");
+      return { success: false, error: "Firebase Admin SDK not initialized." };
+    }
+
+    const { db, messaging } = adminSdk;
+
+    try {
+      // Check persistent test state in Firestore to ensure it runs only once
+      const testModeRef = db.collection('systemConfig').doc('testMode');
+      const testModeDoc = await testModeRef.get();
+      
+      if (testModeDoc.exists && testModeDoc.data()?.testNotificationSent === true) {
+        console.log("[Test Mode] Test notification already sent previously. Bypassing test mode.");
+        return { success: true, message: "Test mode already completed.", testNotificationSent: true };
+      }
+
+      console.log("[Cron Endpoint] Cron triggered for testing purposes");
+
+      // Fetch active notification devices
+      const devicesSnapshot = await db.collection('notificationDevices').get();
+      if (devicesSnapshot.empty) {
+        console.log("[Test Mode] No devices found in notificationDevices collection.");
+        return { success: true, sentCount: 0, message: "No devices found" };
+      }
+
+      const sendPromises: Promise<any>[] = [];
+      let sentCount = 0;
+
+      devicesSnapshot.forEach(doc => {
+        const device = doc.data();
+        if (device.notificationEnabled === true && device.fcmToken) {
+          console.log(`[Test Mode] FCM token found for device ${doc.id}: ${device.fcmToken}`);
+          
+          const message = {
+            token: device.fcmToken,
+            notification: {
+              title: '🧪 BunkSafe Test Notification',
+              body: 'Congratulations! Your BunkSafe notification system is working successfully. 🎉'
+            },
+            data: {
+              click_action: 'FLUTTER_NOTIFICATION_CLICK',
+              type: 'test_notification'
+            },
+            android: {
+              priority: 'high',
+              notification: {
+                sound: 'default',
+                clickAction: 'FLUTTER_NOTIFICATION_CLICK'
+              }
+            }
+          };
+
+          const p = messaging.send(message)
+            .then((response: any) => {
+              console.log(`[Test Mode] Notification sent successfully to device ${doc.id}`);
+            })
+            .catch((error: any) => {
+              console.error(`[Test Mode] Error sending notification to device ${doc.id}: ${error.message}`);
+            });
+
+          sendPromises.push(p);
+          sentCount++;
+        }
+      });
+
+      if (sendPromises.length > 0) {
+        await Promise.all(sendPromises);
+      }
+
+      // Mark test as completed in Firestore to disable test mode automatically
+      await testModeRef.set({ testNotificationSent: true }, { merge: true });
+      console.log("[Test Mode] Test notification sent successfully, test mode automatically disabled.");
+
+      return {
+        success: true,
+        sentCount,
+        message: "Test notifications sent successfully and test mode is now disabled."
+      };
+    } catch (err: any) {
+      console.error("[Test Mode] Exception during test execution:", err.message);
+      return { success: false, error: err.message };
+    }
+  }
+
   // Scheduled Cron Route for 8 PM Notifications
   app.all("/api/cron/send-reminders", async (req, res) => {
     console.log("[Cron Endpoint] Received request to send reminders");
@@ -391,6 +481,35 @@ async function startServer() {
       console.warn("[Cron Endpoint] Warning: CRON_SECRET is not set in environment variables. Running without authorization check.");
     }
     
+    // Determine if we should trigger the test notification
+    const isExplicitTest = req.query.test === "true" || (req.body && req.body.test === true);
+    const isWithinFiveMinutes = (Date.now() - serverStartTime) < 5 * 60 * 1000;
+    
+    let isTestActive = isExplicitTest;
+    
+    if (!isTestActive && isWithinFiveMinutes) {
+      // Check Firestore to see if test mode has already run once
+      const adminSdk = getFirebaseAdmin();
+      if (adminSdk) {
+        try {
+          const testModeDoc = await adminSdk.db.collection('systemConfig').doc('testMode').get();
+          const testNotificationSent = testModeDoc.exists && testModeDoc.data()?.testNotificationSent === true;
+          if (!testNotificationSent) {
+            console.log("[Cron Endpoint] Active 5-minute post-deployment window detected and test has not been sent yet. Running test mode...");
+            isTestActive = true;
+          }
+        } catch (dbErr: any) {
+          console.warn("[Cron Endpoint] Error checking test mode status from Firestore, skipping auto-test:", dbErr.message);
+        }
+      }
+    }
+    
+    if (isTestActive) {
+      const result = await triggerTestNotification();
+      return res.json(result);
+    }
+    
+    // Standard Production Route
     const force = req.query.force === "true" || (req.body && req.body.force === true);
     const result = await checkAndSend8PMNotifications(force);
     return res.json(result);
