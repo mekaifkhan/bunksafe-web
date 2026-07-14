@@ -153,6 +153,34 @@ export default function ExamsTab({
     }
 
     const isLab = selectedSub.type === 'Lab';
+    const isSwayam = swayamSubjectId === targetSubId;
+
+    if (isSwayam) {
+      const config: SubjectGradeConfig = {
+        id: targetSubId,
+        name: selectedSub.name,
+        maxMid1: 0,
+        maxMid2: 0,
+        hasAssignment: false,
+        maxEndSem: 45, // SWAYAM external max is 45
+        targetGrade: editingSubject?.targetGrade || 'A',
+        swayamAssignments: editingSubject?.swayamAssignments || Array(12).fill(0),
+        obtainedEndSem: editingSubject?.obtainedEndSem ?? 0
+      };
+
+      if (editingSubject) {
+        setGradeSubjects(prev => prev.map(s => s.id === editingSubject.id ? { ...config, swayamAssignments: s.swayamAssignments || config.swayamAssignments } : s));
+      } else {
+        setGradeSubjects(prev => [...prev, config]);
+        setExpandedSubjectId(config.id);
+      }
+      
+      logPredictorUsed();
+      setShowSubjectModal(false);
+      setEditingSubject(null);
+      resetSubjectForm();
+      return;
+    }
 
     if (isLab) {
       const defaultIntMax = selectedSub.credits * 15;
@@ -1481,6 +1509,7 @@ export default function ExamsTab({
         const targetId = editingSubject?.id || selectedSubjectId;
         const currentSelectedSub = subjects.find(s => s.id === targetId);
         const isLabSelected = currentSelectedSub?.type === 'Lab';
+        const isSwayamSelected = swayamSubjectId === targetId;
 
         return (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
@@ -1551,7 +1580,22 @@ export default function ExamsTab({
                   </div>
                 )}
 
-                {!isLabSelected && (
+                {isSwayamSelected && (
+                  <div className="p-4 bg-primary/5 border border-primary/10 rounded-2xl space-y-2.5 text-zinc-300">
+                    <div className="flex items-center gap-1.5 text-primary font-black uppercase text-[10px] tracking-wide">
+                      <Sparkles size={14} /> SWAYAM / NPTEL Course Mode
+                    </div>
+                    <p className="text-[11px] leading-relaxed text-zinc-400">
+                      This subject is registered as a <strong>SWAYAM Online Course</strong>. Its marks structure is automatically configured:
+                    </p>
+                    <ul className="text-[10px] space-y-1 text-zinc-400 font-bold list-disc list-inside bg-zinc-950 p-2.5 rounded-xl border border-zinc-900">
+                      <li>12 Weekly Assignments (Best 8 are calculated out of 30)</li>
+                      <li>End Semester proctored exam (Max 45 Marks)</li>
+                    </ul>
+                  </div>
+                )}
+
+                {!isLabSelected && !isSwayamSelected && (
                   <>
                     {/* Mid Sem 1 Maximum */}
                     <div className="space-y-1.5">

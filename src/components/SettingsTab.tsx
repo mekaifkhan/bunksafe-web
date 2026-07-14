@@ -139,6 +139,7 @@ export default function SettingsTab({
   const [subjNameInput, setSubjNameInput] = useState('');
   const [subjTypeInput, setSubjTypeInput] = useState<'Theory' | 'Lab'>('Theory');
   const [subjCreditsInput, setSubjCreditsInput] = useState<number | ''>('');
+  const [isSwayamInput, setIsSwayamInput] = useState(false);
   
   const [deleteConfirmSubjectId, setDeleteConfirmSubjectId] = useState<string | null>(null);
   
@@ -338,16 +339,34 @@ export default function SettingsTab({
           : item
       ));
 
+      if (isSwayamInput) {
+        if (setSwayamSubjectId) {
+          setSwayamSubjectId(editingSubject.id);
+        }
+      } else if (swayamSubjectId === editingSubject.id) {
+        if (setSwayamSubjectId) {
+          setSwayamSubjectId(null);
+        }
+      }
+
       setEditingSubject(null);
       logCustomEvent('subject_customized', { action: 'edit_subject', name: formattedName });
     } else {
+      const newId = `sub_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
       const newSub: Subject = {
-        id: `sub_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
+        id: newId,
         name: formattedName,
         type: subjTypeInput,
         credits: creditsNum
       };
       setSubjects([...subjects, newSub]);
+
+      if (isSwayamInput) {
+        if (setSwayamSubjectId) {
+          setSwayamSubjectId(newId);
+        }
+      }
+
       logCustomEvent('subject_customized', { action: 'add_subject', name: formattedName, type: subjTypeInput });
     }
 
@@ -1946,6 +1965,7 @@ export default function SettingsTab({
                             setSubjNameInput(sub.name);
                             setSubjTypeInput(sub.type);
                             setSubjCreditsInput(sub.credits);
+                            setIsSwayamInput(swayamSubjectId === sub.id);
                             setShowAddEditSubjectModal(true);
                           }}
                           className="p-1.5 text-primary hover:bg-primary/10 rounded-lg transition-colors"
@@ -1992,6 +2012,7 @@ export default function SettingsTab({
                       setSubjNameInput('');
                       setSubjTypeInput('Theory');
                       setSubjCreditsInput('');
+                      setIsSwayamInput(false);
                       setShowAddEditSubjectModal(true);
                     }}
                     className="flex-1 py-3 bg-primary hover:bg-primary/95 text-white rounded-xl text-xs font-black uppercase flex items-center justify-center gap-1.5 transition-all shadow-lg shadow-primary/20"
@@ -2070,6 +2091,36 @@ export default function SettingsTab({
                     </button>
                   </div>
                 </div>
+
+                {/* SWAYAM Course Toggle */}
+                {subjTypeInput === 'Theory' && (
+                  <div className="space-y-2 p-3 bg-zinc-950 rounded-xl border border-zinc-850 animate-fade-in">
+                    <div className="flex justify-between items-center gap-3">
+                      <div className="min-w-0 flex-1">
+                        <span className="font-bold text-zinc-300 block text-[11px]">Is SWAYAM / NPTEL Course?</span>
+                        <span className="text-[9px] text-zinc-500 block mt-0.5 leading-normal">
+                          This replaces standard mid-semester exams with 12 weekly assignments.
+                        </span>
+                      </div>
+                      <div className="flex bg-zinc-900 border border-zinc-800 p-0.5 rounded-lg shrink-0 h-fit self-center">
+                        <button
+                          type="button"
+                          onClick={() => setIsSwayamInput(true)}
+                          className={`px-2 py-1 rounded text-[10px] font-bold uppercase transition-all ${isSwayamInput ? 'bg-primary text-white' : 'text-zinc-500 hover:text-zinc-400'}`}
+                        >
+                          Yes
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setIsSwayamInput(false)}
+                          className={`px-2 py-1 rounded text-[10px] font-bold uppercase transition-all ${!isSwayamInput ? 'bg-primary text-white' : 'text-zinc-500 hover:text-zinc-400'}`}
+                        >
+                          No
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 {/* Subject Credits */}
                 <div className="space-y-1.5">
