@@ -72,6 +72,7 @@ export interface SubjectGradeConfig {
   maxInternalLab?: number;
   obtainedExternalLab?: number;
   maxExternalLab?: number;
+  swayamAssignments?: number[]; // 12 assignments for SWAYAM course mode
 }
 
 export interface Subject {

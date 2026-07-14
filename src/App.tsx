@@ -309,6 +309,18 @@ export default function App() {
     }
   };
 
+  const [swayamSubjectId, setSwayamSubjectId] = useState<string | null>(() => {
+    return localStorage.getItem('bs_swayam_subject_id');
+  });
+
+  useEffect(() => {
+    if (swayamSubjectId) {
+      localStorage.setItem('bs_swayam_subject_id', swayamSubjectId);
+    } else {
+      localStorage.removeItem('bs_swayam_subject_id');
+    }
+  }, [swayamSubjectId]);
+
   const [semester, setSemester] = useState<Semester>(() => {
     const saved = localStorage.getItem('bs_semester');
     const defaultSemester = {
@@ -484,6 +496,41 @@ export default function App() {
       saveUserSubjectsToFirestore(profile.email, subjects);
     }
   }, [subjects, profile.email]);
+
+  // SWAYAM Auto-cleanup effects
+  useEffect(() => {
+    if (swayamSubjectId && subjects.length > 0) {
+      const isSwayamInCurrentSubjects = subjects.some(s => s.id === swayamSubjectId);
+      if (!isSwayamInCurrentSubjects) {
+        setSwayamSubjectId(null);
+      }
+    }
+  }, [subjects, swayamSubjectId]);
+
+  useEffect(() => {
+    if (swayamSubjectId) {
+      let changed = false;
+      const updatedSchedule = { ...classSchedule };
+      Object.keys(updatedSchedule).forEach(day => {
+        const daySlots = { ...updatedSchedule[day] };
+        let dayChanged = false;
+        Object.keys(daySlots).forEach(slotId => {
+          const numericId = Number(slotId);
+          if (daySlots[numericId] === swayamSubjectId) {
+            delete daySlots[numericId];
+            dayChanged = true;
+            changed = true;
+          }
+        });
+        if (dayChanged) {
+          updatedSchedule[day] = daySlots;
+        }
+      });
+      if (changed) {
+        setClassSchedule(updatedSchedule);
+      }
+    }
+  }, [swayamSubjectId, classSchedule]);
 
   useEffect(() => {
     const fetchCloudSubjects = async () => {
@@ -3669,7 +3716,7 @@ export default function App() {
                               className="w-full bg-zinc-900 border border-zinc-800 focus:border-primary focus:outline-none rounded-xl px-3 py-2.5 text-xs text-white font-bold tracking-wide transition-colors cursor-pointer"
                             >
                               <option value="">-- Choose Subject --</option>
-                              {subjects.map(s => (
+                              {subjects.filter(s => s.id !== swayamSubjectId).map(s => (
                                 <option key={s.id} value={s.id}>
                                   {s.name} ({s.type})
                                 </option>
@@ -4239,6 +4286,7 @@ export default function App() {
         setGradeSubjects={setGradeSubjects}
         subjects={subjects}
         profile={profile}
+        swayamSubjectId={swayamSubjectId}
       />
     );
   };
@@ -4273,6 +4321,8 @@ export default function App() {
         showToast={showToast}
         profilePhoto={profilePhoto}
         updateProfilePhoto={updateProfilePhoto}
+        swayamSubjectId={swayamSubjectId}
+        setSwayamSubjectId={setSwayamSubjectId}
       />
     );
   };

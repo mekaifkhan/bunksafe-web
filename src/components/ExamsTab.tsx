@@ -35,6 +35,7 @@ interface ExamsTabProps {
   setGradeSubjects: React.Dispatch<React.SetStateAction<SubjectGradeConfig[]>>;
   subjects: Subject[];
   profile?: Profile;
+  swayamSubjectId?: string | null;
 }
 
 export default function ExamsTab({
@@ -48,7 +49,8 @@ export default function ExamsTab({
   gradeSubjects,
   setGradeSubjects,
   subjects,
-  profile
+  profile,
+  swayamSubjectId
 }: ExamsTabProps) {
   // Navigation active sub-section or scrolling is fine. But let's show them nicely with clear headings or toggles!
   const [activeSection, setActiveSection] = useState<'schedule' | 'grade_planner'>('schedule');
@@ -356,15 +358,33 @@ export default function ExamsTab({
     const mSub = subjects.find(s => s.id === subj.id);
     const credits = mSub?.credits ?? 3;
     const isLab = mSub?.type === 'Lab';
+    const isSwayam = swayamSubjectId === subj.id;
     
-    const totalMarks = credits * 25;
+    let totalMarks = credits * 25;
     
     let internalMax = 0;
     let externalMax = 0;
     let internalScore = 0;
     let externalScore = 0;
     
-    if (isLab) {
+    if (isSwayam) {
+      // SWAYAM Course Mode: Fixed 30 marks internal and 45 marks external (Total 75)
+      internalMax = 30;
+      externalMax = 45;
+      totalMarks = 75;
+      
+      const assignments = subj.swayamAssignments || Array(12).fill(0);
+      const sorted = [...assignments].sort((a, b) => b - a);
+      const best8 = sorted.slice(0, 8);
+      const sumBest8 = best8.reduce((s, v) => s + v, 0);
+      const best8Average = best8.length > 0 ? sumBest8 / best8.length : 0;
+      
+      internalScore = (best8Average / 100) * 30;
+      
+      const optEnd = subj.obtainedEndSem ?? 0;
+      const maxEnd = subj.maxEndSem ?? externalMax;
+      externalScore = maxEnd > 0 ? (optEnd / maxEnd) * externalMax : 0;
+    } else if (isLab) {
       // Lab Ratio 3:2
       internalMax = totalMarks * 0.6; // Credits * 15
       externalMax = totalMarks * 0.4; // Credits * 10
@@ -712,7 +732,7 @@ export default function ExamsTab({
                                 {subjects.find(s => s.id === subj.id)?.name || subj.name}
                               </h4>
                               <span className="text-[9px] font-black uppercase px-1.5 py-0.5 rounded bg-zinc-850 text-zinc-400 border border-zinc-800">
-                                {stats.isLab ? 'Lab' : 'Theory'}
+                                {swayamSubjectId === subj.id ? 'SWAYAM' : (stats.isLab ? 'Lab' : 'Theory')}
                               </span>
                               <span className="text-[9px] font-black uppercase px-1.5 py-0.5 rounded bg-primary/10 text-primary border border-primary/20">
                                 {stats.credits} Credits
@@ -762,7 +782,118 @@ export default function ExamsTab({
                           >
                             <div className="p-4 space-y-5">
                               {/* LAB WORKFLOW vs THEORY WORKFLOW MARK SLIDERS */}
-                              {stats.isLab ? (
+                              {swayamSubjectId === subj.id ? (
+                                // SWAYAM WORKFLOW
+                                <div className="space-y-4">
+                                  {/* SWAYAM stats banner */}
+                                  <div className="grid grid-cols-2 gap-3 bg-primary/5 p-3 rounded-2xl border border-primary/20">
+                                    <div className="text-center">
+                                      <span className="text-[9px] font-bold text-zinc-500 uppercase tracking-wider block">Best 8 Average</span>
+                                      <span className="text-sm font-black text-primary">
+                                        {(() => {
+                                          const assignments = subj.swayamAssignments || Array(12).fill(0);
+                                          const sorted = [...assignments].sort((a, b) => b - a);
+                                          const best8 = sorted.slice(0, 8);
+                                          const sumBest8 = best8.reduce((s, v) => s + v, 0);
+                                          return (best8.length > 0 ? sumBest8 / best8.length : 0).toFixed(2);
+                                        })()}%
+                                      </span>
+                                    </div>
+                                    <div className="text-center border-l border-zinc-800/85">
+                                      <span className="text-[9px] font-bold text-zinc-500 uppercase tracking-wider block">Internal (Out of 30)</span>
+                                      <span className="text-sm font-black text-zinc-200">
+                                        {stats.internalScore.toFixed(2)} <span className="text-[10px] text-zinc-500">/ 30</span>
+                                      </span>
+                                    </div>
+                                  </div>
+
+                                  {/* Assignments 12 Weeks Grid */}
+                                  <div className="space-y-3 bg-zinc-950/60 p-3.5 rounded-2xl border border-zinc-850">
+                                    <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest block">
+                                      12 Weekly Assignments (0-100)
+                                    </span>
+                                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+                                      {Array.from({ length: 12 }).map((_, i) => {
+                                        const assignments = subj.swayamAssignments || Array(12).fill(0);
+                                        const currentVal = assignments[i] ?? 0;
+                                        return (
+                                          <div key={i} className="bg-zinc-950 p-2 rounded-xl border border-zinc-850 flex flex-col justify-between gap-1.5">
+                                            <div className="flex justify-between items-center">
+                                              <span className="text-[9px] font-bold text-zinc-500 uppercase">Week {i + 1}</span>
+                                              <input
+                                                type="number"
+                                                min="0"
+                                                max="100"
+                                                value={currentVal}
+                                                onChange={(e) => {
+                                                  let val = parseFloat(e.target.value);
+                                                  if (isNaN(val)) val = 0;
+                                                  if (val < 0) val = 0;
+                                                  if (val > 100) val = 100;
+                                                  
+                                                  const updatedAssignments = [...assignments];
+                                                  updatedAssignments[i] = val;
+                                                  
+                                                  setGradeSubjects(prev => prev.map(s => s.id === subj.id ? {
+                                                    ...s,
+                                                    swayamAssignments: updatedAssignments
+                                                  } : s));
+                                                  logPredictorUsed();
+                                                }}
+                                                className="w-11 bg-zinc-900 border border-zinc-800 rounded-lg px-1 py-0.5 text-center font-mono font-bold text-[10px] text-primary focus:outline-none focus:border-primary"
+                                              />
+                                            </div>
+                                            <input 
+                                              type="range"
+                                              min="0"
+                                              max="100"
+                                              value={currentVal}
+                                              onChange={(e) => {
+                                                const val = parseFloat(e.target.value);
+                                                const updatedAssignments = [...assignments];
+                                                updatedAssignments[i] = val;
+                                                
+                                                setGradeSubjects(prev => prev.map(s => s.id === subj.id ? {
+                                                  ...s,
+                                                  swayamAssignments: updatedAssignments
+                                                } : s));
+                                                logPredictorUsed();
+                                              }}
+                                              className="w-full h-1 bg-zinc-850 rounded appearance-none cursor-pointer accent-primary"
+                                            />
+                                          </div>
+                                        );
+                                      })}
+                                    </div>
+                                  </div>
+
+                                  {/* End Semester Obtained */}
+                                  <div className="space-y-4 bg-zinc-950/60 p-3.5 rounded-2xl border border-zinc-850">
+                                    <div className="space-y-1.5">
+                                      <div className="flex justify-between items-center text-xs">
+                                        <span className="font-bold text-zinc-400">End Semester Obtained (Optional)</span>
+                                        <span className="font-mono font-black text-zinc-200">
+                                          {subj.obtainedEndSem ?? 0}
+                                          <span className="text-zinc-600 font-normal ml-1.5">/ {subj.maxEndSem ?? stats.externalMax}</span>
+                                        </span>
+                                      </div>
+                                      <input 
+                                        type="range"
+                                        min="0"
+                                        max={subj.maxEndSem ?? stats.externalMax}
+                                        step="0.5"
+                                        value={subj.obtainedEndSem ?? 0}
+                                        onChange={(e) => {
+                                          const val = parseFloat(e.target.value);
+                                          setGradeSubjects(prev => prev.map(s => s.id === subj.id ? { ...s, obtainedEndSem: val } : s));
+                                          logPredictorUsed();
+                                        }}
+                                        className="w-full h-1.5 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-primary"
+                                      />
+                                    </div>
+                                  </div>
+                                </div>
+                              ) : stats.isLab ? (
                                 <div className="space-y-4 bg-zinc-950/60 p-4 rounded-2xl border border-zinc-850">
                                   <span className="text-[10px] font-black text-zinc-500 uppercase tracking-widest block">Adjust Lab Marks</span>
                                   

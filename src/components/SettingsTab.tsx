@@ -70,6 +70,8 @@ interface SettingsTabProps {
   showToast?: (message: string, type?: 'success' | 'error' | 'info') => void;
   profilePhoto?: string | null;
   updateProfilePhoto?: (base64: string | null) => void;
+  swayamSubjectId?: string | null;
+  setSwayamSubjectId?: (id: string | null) => void;
 }
 
 export default function SettingsTab({
@@ -99,7 +101,9 @@ export default function SettingsTab({
   setSubjectAttendance,
   showToast,
   profilePhoto,
-  updateProfilePhoto
+  updateProfilePhoto,
+  swayamSubjectId,
+  setSwayamSubjectId
 }: SettingsTabProps) {
   // Local state for holiday manager
   const [newHolidayDate, setNewHolidayDate] = useState('');
@@ -1168,6 +1172,33 @@ export default function SettingsTab({
                 className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-3 py-2.5 text-xs text-zinc-100 focus:outline-none"
               />
             </div>
+          </div>
+
+          {/* SWAYAM / NPTEL Course Selection */}
+          <div className="space-y-1.5 border-t border-zinc-800/80 pt-4">
+            <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider block">
+              SWAYAM / NPTEL Course
+            </label>
+            <select
+              value={swayamSubjectId || ''}
+              onChange={(e) => {
+                const val = e.target.value;
+                if (setSwayamSubjectId) {
+                  setSwayamSubjectId(val || null);
+                }
+              }}
+              className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-3 py-2.5 text-xs text-zinc-100 focus:outline-none focus:border-primary transition-colors font-bold cursor-pointer"
+            >
+              <option value="">No SWAYAM Course</option>
+              {subjects.map((sub) => (
+                <option key={sub.id} value={sub.id}>
+                  {sub.name} ({sub.type})
+                </option>
+              ))}
+            </select>
+            <p className="text-[9px] text-zinc-500 leading-normal">
+              Selecting a SWAYAM course will replace its standard internal marks structure with 12 weekly assignments (best 8 selected) and hide it from the weekly schedule.
+            </p>
           </div>
 
           <div className="border-t border-zinc-800/80 pt-4 flex gap-2">
