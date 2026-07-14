@@ -22,7 +22,8 @@ import {
   X,
   Menu,
   HelpCircle,
-  FileCheck
+  FileCheck,
+  Settings
 } from 'lucide-react';
 import { collection, doc, setDoc, deleteDoc, onSnapshot, query, orderBy } from 'firebase/firestore';
 import { db } from '../firebase';
@@ -62,6 +63,19 @@ export default function BAA({ profile, onClose }: BAAProps) {
   const [selectedPdf, setSelectedPdf] = useState<{ name: string; size: number; base64: string } | null>(null);
   const [questionType, setQuestionType] = useState<'solve' | 'explain' | 'extract'>('solve');
   const [isUploadingPdf, setIsUploadingPdf] = useState(false);
+
+  // Custom API configuration for Android / Vercel setups
+  const [customApiUrl, setCustomApiUrl] = useState(() => {
+    return localStorage.getItem('bunksafe_baa_api_url') || '';
+  });
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [settingsUrlInput, setSettingsUrlInput] = useState(customApiUrl);
+
+  useEffect(() => {
+    if (isSettingsOpen) {
+      setSettingsUrlInput(customApiUrl);
+    }
+  }, [isSettingsOpen, customApiUrl]);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -216,12 +230,19 @@ export default function BAA({ profile, onClose }: BAAProps) {
     // Call API Route
     abortControllerRef.current = new AbortController();
     try {
-      const isLocalOrCloudRun = window.location.hostname === 'localhost' || 
-                                window.location.hostname === '127.0.0.1' || 
-                                window.location.hostname.endsWith('run.app');
-      const apiUrl = isLocalOrCloudRun 
-        ? '/api/baa/chat' 
-        : 'https://ais-pre-lcvtzroand56ayfvwkbrrt-628033860104.asia-southeast1.run.app/api/baa/chat';
+      // Resolve custom API URL or dynamic URL
+      const savedBaseUrl = localStorage.getItem('bunksafe_baa_api_url') || '';
+      let apiUrl = '';
+      if (savedBaseUrl) {
+        apiUrl = `${savedBaseUrl}/api/baa/chat`;
+      } else {
+        const isLocalOrCloudRun = window.location.hostname === 'localhost' || 
+                                  window.location.hostname === '127.0.0.1' || 
+                                  window.location.hostname.endsWith('run.app');
+        apiUrl = isLocalOrCloudRun 
+          ? '/api/baa/chat' 
+          : 'https://ais-pre-lcvtzroand56ayfvwkbrrt-628033860104.asia-southeast1.run.app/api/baa/chat';
+      }
 
       const response = await fetch(apiUrl, {
         method: 'POST',
@@ -320,6 +341,19 @@ export default function BAA({ profile, onClose }: BAAProps) {
 
     // Re-send with that user message prompt
     handleSendMessage(userMsg.content);
+  };
+
+  const handleSaveSettings = () => {
+    let cleanUrl = settingsUrlInput.trim();
+    if (cleanUrl) {
+      if (!/^https?:\/\//i.test(cleanUrl)) {
+        cleanUrl = 'https://' + cleanUrl;
+      }
+      cleanUrl = cleanUrl.replace(/\/+$/, '');
+    }
+    setCustomApiUrl(cleanUrl);
+    localStorage.setItem('bunksafe_baa_api_url', cleanUrl);
+    setIsSettingsOpen(false);
   };
 
   // PDF File Upload Handler
@@ -497,13 +531,23 @@ export default function BAA({ profile, onClose }: BAAProps) {
             </div>
           </div>
 
-          <button
-            onClick={onClose}
-            className="flex items-center gap-1 bg-zinc-900 border border-zinc-850/80 hover:border-zinc-700/80 hover:bg-zinc-800 px-3.5 py-2 rounded-xl text-xs font-bold text-zinc-300 transition-all cursor-pointer"
-          >
-            <ArrowLeft size={14} />
-            Exit BAA
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setIsSettingsOpen(true)}
+              className="p-2.5 bg-zinc-900 border border-zinc-850/80 hover:border-zinc-700/80 hover:bg-zinc-800 rounded-xl text-zinc-400 hover:text-zinc-200 transition-all cursor-pointer"
+              title="BAA Settings"
+            >
+              <Settings size={15} />
+            </button>
+
+            <button
+              onClick={onClose}
+              className="flex items-center gap-1 bg-zinc-900 border border-zinc-850/80 hover:border-zinc-700/80 hover:bg-zinc-800 px-3.5 py-2 rounded-xl text-xs font-bold text-zinc-300 transition-all cursor-pointer"
+            >
+              <ArrowLeft size={14} />
+              Exit BAA
+            </button>
+          </div>
         </header>
 
         {/* Chat Thread / Messages */}
@@ -700,6 +744,106 @@ export default function BAA({ profile, onClose }: BAAProps) {
           </div>
         </footer>
       </div>
+
+      {/* BAA API Configuration Modal */}
+      <AnimatePresence>
+        {isSettingsOpen && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsSettingsOpen(false)}
+              className="absolute inset-0 bg-black/80 backdrop-blur-md"
+            />
+            
+            {/* Content Card */}
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0, y: 15 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.95, opacity: 0, y: 15 }}
+              transition={{ type: 'spring', damping: 25, stiffness: 220 }}
+              className="relative w-full max-w-md bg-zinc-900 border border-zinc-800 rounded-2xl shadow-2xl overflow-hidden z-10"
+            >
+              {/* Modal Header */}
+              <div className="px-5 py-4 border-b border-zinc-800 flex items-center justify-between bg-zinc-950/40">
+                <div className="flex items-center gap-2">
+                  <div className="p-1.5 bg-primary/15 rounded-lg border border-primary/20 text-primary">
+                    <Settings size={16} />
+                  </div>
+                  <div>
+                    <h3 className="font-extrabold text-sm text-zinc-100">BAA Connection Settings</h3>
+                    <p className="text-[10px] text-zinc-500 font-mono">Setup Multi-platform Backends</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setIsSettingsOpen(false)}
+                  className="p-1.5 hover:bg-zinc-850 rounded-lg text-zinc-400 hover:text-zinc-200 transition-all cursor-pointer"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+
+              {/* Modal Body */}
+              <div className="p-5 space-y-4">
+                <div className="space-y-1.5">
+                  <p className="text-xs text-zinc-400 leading-relaxed font-semibold">
+                    Are you running BunkSafe through an Android wrapper, Vercel, or custom domain?
+                  </p>
+                  <p className="text-[11px] text-zinc-500 leading-relaxed font-normal">
+                    By default, BAA uses secure relative API requests. However, mobile wrappers or external servers don't host the backend server. To make BAA work on external wrappers:
+                  </p>
+                  <ol className="list-decimal list-inside text-[10px] text-zinc-400 space-y-1 pl-1 font-medium">
+                    <li>Deploy your BunkSafe app to Cloud Run (click <strong className="text-primary font-black">Deploy</strong> in AI Studio).</li>
+                    <li>Copy your <strong className="text-zinc-200 font-bold">public deployed URL</strong> (e.g., <code className="text-primary">https://bunksafe-xyz.aistudio-apps.com</code>).</li>
+                    <li>Paste the deployed URL below and save!</li>
+                  </ol>
+                </div>
+
+                <div className="space-y-1.5 pt-2">
+                  <label className="text-[10px] uppercase font-black tracking-wider text-zinc-400 font-mono">
+                    Custom API Server Base URL
+                  </label>
+                  <input
+                    type="text"
+                    value={settingsUrlInput}
+                    onChange={(e) => setSettingsUrlInput(e.target.value)}
+                    placeholder="https://your-production-app.run.app"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-zinc-950 border border-zinc-800 text-xs text-zinc-200 placeholder-zinc-600 focus:outline-none focus:border-primary/50 font-mono"
+                  />
+                  <p className="text-[9px] text-zinc-500 font-mono">
+                    * Leave blank to restore the default dynamic sandbox endpoint.
+                  </p>
+                </div>
+              </div>
+
+              {/* Modal Footer */}
+              <div className="px-5 py-3.5 border-t border-zinc-800 bg-zinc-950/20 flex items-center justify-end gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSettingsUrlInput('');
+                    setCustomApiUrl('');
+                    localStorage.removeItem('bunksafe_baa_api_url');
+                    setIsSettingsOpen(false);
+                  }}
+                  className="px-3 py-1.5 rounded-lg border border-zinc-800 hover:bg-zinc-850 hover:border-zinc-700 text-[11px] font-bold text-zinc-400 hover:text-zinc-200 transition-all cursor-pointer font-mono"
+                >
+                  Clear & Reset
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSaveSettings}
+                  className="px-4 py-1.5 rounded-lg bg-primary hover:bg-primary/90 text-[11px] font-bold text-white shadow-md shadow-primary/10 transition-all cursor-pointer"
+                >
+                  Save Settings
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

@@ -1381,12 +1381,18 @@ export default function App() {
       const pdfBase64 = doc.output('datauristring');
 
       // Send to Server
-      const isLocalOrCloudRun = window.location.hostname === 'localhost' || 
-                                window.location.hostname === '127.0.0.1' || 
-                                window.location.hostname.endsWith('run.app');
-      const apiUrl = isLocalOrCloudRun 
-        ? '/api/send-email' 
-        : 'https://ais-pre-lcvtzroand56ayfvwkbrrt-628033860104.asia-southeast1.run.app/api/send-email';
+      const savedBaseUrl = localStorage.getItem('bunksafe_baa_api_url') || '';
+      let apiUrl = '';
+      if (savedBaseUrl) {
+        apiUrl = `${savedBaseUrl}/api/send-email`;
+      } else {
+        const isLocalOrCloudRun = window.location.hostname === 'localhost' || 
+                                  window.location.hostname === '127.0.0.1' || 
+                                  window.location.hostname.endsWith('run.app');
+        apiUrl = isLocalOrCloudRun 
+          ? '/api/send-email' 
+          : 'https://ais-pre-lcvtzroand56ayfvwkbrrt-628033860104.asia-southeast1.run.app/api/send-email';
+      }
 
       const response = await fetch(apiUrl, {
         method: 'POST',
