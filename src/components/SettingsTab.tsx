@@ -40,7 +40,7 @@ import { format } from 'date-fns';
 import { Profile, Semester, AttendanceRecord, SemesterHistory, AppState, Subject, SubjectGradeConfig, formatSubjectName } from '../types';
 import { motion, AnimatePresence } from 'motion/react';
 import { logCustomEvent, addFeatureRequestToFirestore, fetchLatestAppVersionFromFirestore, fetchChangelogsFromFirestore, deleteUserAccountFromFirestore } from '../firebase';
-import { JMI_CURRICULUM, JMI_CIVIL_CURRICULUM, JMI_VLSI_CURRICULUM, JMI_ELECTRICAL_CURRICULUM, JMI_MECHANICAL_CURRICULUM, JMI_CSE_DS_CURRICULUM, JMI_COMP_ENG_CURRICULUM, JMI_ELECTRICAL_COMPUTER_CURRICULUM, JMI_FIRST_YEAR_SET_A, JMI_FIRST_YEAR_SET_B, getDefaultCurriculumSubjects } from '../utils/curriculum';
+import { JMI_CURRICULUM, JMI_CIVIL_CURRICULUM, JMI_VLSI_CURRICULUM, JMI_ELECTRICAL_CURRICULUM, JMI_MECHANICAL_CURRICULUM, JMI_CSE_DS_CURRICULUM, JMI_COMP_ENG_CURRICULUM, JMI_ELECTRICAL_COMPUTER_CURRICULUM, JMI_FIRST_YEAR_SET_A, JMI_FIRST_YEAR_SET_B, getDefaultCurriculumSubjects, generateCivil5Schedule } from '../utils/curriculum';
 
 interface SettingsTabProps {
   profile: Profile;
@@ -1023,7 +1023,20 @@ export default function SettingsTab({
                     const { subjects: defaultSubs } = getDefaultCurriculumSubjects(profile.semester, profile.department, profile.firstYearPattern);
                     if (defaultSubs && defaultSubs.length > 0) {
                       setSubjects(defaultSubs);
-                      alert(`Profile updated. Successfully loaded default curriculum for ${profile.semester} ${profile.department || 'Applied Science'}!`);
+                      if (profile.department === 'Civil Engineering' && profile.semester === 'Semester 5') {
+                        const grp = profile.labGroup || 'G1';
+                        // Also make sure profile has the default group if not set
+                        if (!profile.labGroup) {
+                          setProfile({ ...profile, labGroup: 'G1', minorHonorsEnabled: false });
+                          localStorage.setItem('bs_profile', JSON.stringify({ ...profile, labGroup: 'G1', minorHonorsEnabled: false }));
+                        }
+                        const schedule = generateCivil5Schedule(grp, !!profile.minorHonorsEnabled);
+                        setClassSchedule(schedule);
+                        localStorage.setItem('bs_class_schedule', JSON.stringify(schedule));
+                        alert(`Profile updated. Successfully loaded default curriculum and timetable schedule (Group ${grp}) for Semester 5 Civil Engineering!`);
+                      } else {
+                        alert(`Profile updated. Successfully loaded default curriculum for ${profile.semester} ${profile.department || 'Applied Science'}!`);
+                      }
                     } else {
                       alert('Profile and Personal settings updated locally!');
                     }
@@ -1138,6 +1151,85 @@ export default function SettingsTab({
               </div>
             )}
           </div>
+        </div>
+      </div>
+
+      {/* WEEKLY SCHEDULE SETTINGS */}
+      <div className="space-y-3">
+        <h3 className="text-xs font-bold text-zinc-500 uppercase tracking-widest flex items-center gap-1.5 px-1">
+          <CalendarDays size={14} className="text-primary" /> Weekly Schedule
+        </h3>
+        <div className="bg-zinc-900 border border-zinc-800/80 rounded-2xl p-4 space-y-4">
+          {profile.department === 'Civil Engineering' && profile.semester === 'Semester 5' ? (
+            <>
+              {/* Lab Group */}
+              <div className="space-y-2">
+                <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider block">Change Lab Group</label>
+                <div className="grid grid-cols-2 gap-2">
+                  {(['G1', 'G2'] as const).map(g => (
+                    <button
+                      key={g}
+                      type="button"
+                      onClick={() => {
+                        const updatedProfile = { ...profile, labGroup: g };
+                        setProfile(updatedProfile);
+                        localStorage.setItem('bs_profile', JSON.stringify(updatedProfile));
+                        
+                        const schedule = generateCivil5Schedule(g, !!profile.minorHonorsEnabled);
+                        setClassSchedule(schedule);
+                        localStorage.setItem('bs_class_schedule', JSON.stringify(schedule));
+                        
+                        if (showToast) {
+                          showToast(`Lab Group changed to ${g} and schedule updated!`, 'success');
+                        }
+                      }}
+                      className={`py-2 rounded-xl text-xs font-bold border transition-all ${profile.labGroup === g ? 'bg-primary border-primary text-white font-black' : 'bg-zinc-950 border-zinc-800 text-zinc-500 hover:text-zinc-400'}`}
+                    >
+                      Group {g}
+                    </button>
+                  ))}
+                </div>
+                <p className="text-[10px] text-zinc-500 italic mt-1">This dynamically updates your Tuesday, Wednesday, Monday, and Thursday lab slots between G1 and G2.</p>
+              </div>
+
+              {/* Minor / Honors */}
+              <div className="border-t border-zinc-800/80 pt-4 space-y-3">
+                <div className="flex justify-between items-center">
+                  <div className="space-y-0.5">
+                    <p className="text-xs font-bold">Minor / Honors Course</p>
+                    <p className="text-[10px] text-zinc-500">Enable 12:00 PM – 1:00 PM slot</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const updatedVal = !profile.minorHonorsEnabled;
+                      const updatedProfile = { ...profile, minorHonorsEnabled: updatedVal };
+                      setProfile(updatedProfile);
+                      localStorage.setItem('bs_profile', JSON.stringify(updatedProfile));
+                      
+                      const schedule = generateCivil5Schedule(profile.labGroup || 'G1', updatedVal);
+                      setClassSchedule(schedule);
+                      localStorage.setItem('bs_class_schedule', JSON.stringify(schedule));
+                      
+                      if (showToast) {
+                        showToast(`Minor/Honors ${updatedVal ? 'enabled' : 'disabled'} and schedule updated!`, 'success');
+                      }
+                    }}
+                    className={`text-xs py-1.5 px-3 rounded-lg font-bold border ${profile.minorHonorsEnabled ? 'bg-primary border-primary text-white hover:bg-primary/95' : 'bg-zinc-950 border-zinc-800 text-zinc-500 hover:text-zinc-400'} transition-all`}
+                  >
+                    {profile.minorHonorsEnabled ? 'Enabled' : 'Disabled'}
+                  </button>
+                </div>
+                <p className="text-[10px] text-zinc-500 italic">If enabled, the 12:00 PM – 1:00 PM slot on Monday, Tuesday, and Wednesday will be populated with "Minor/Honors Course".</p>
+              </div>
+            </>
+          ) : (
+            <div className="text-center py-4 space-y-1">
+              <CalendarDays className="mx-auto text-zinc-700 opacity-40 mb-1" size={24} />
+              <p className="text-xs text-zinc-400 font-bold">Standard Weekly Schedule</p>
+              <p className="text-[10px] text-zinc-500">Configure weekly class slots under the Schedule tab.</p>
+            </div>
+          )}
         </div>
       </div>
 

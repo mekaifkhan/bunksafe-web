@@ -1463,3 +1463,54 @@ export function getDefaultCurriculumSubjects(
 
   return { subjects: subjectsList, electiveSelections };
 }
+
+export function generateCivil5Schedule(labGroup: 'G1' | 'G2', minorHonorsEnabled: boolean): Record<string, Record<number, string>> {
+  const minorSlot = minorHonorsEnabled ? 'Minor/Honors' : 'No Class';
+  return {
+    'Monday': {
+      0: 'sub_jmi_civil_Semester_5_CEC-503',
+      1: 'sub_jmi_civil_Semester_5_CEC-501',
+      2: 'sub_jmi_civil_Semester_5_CEC-505',
+      3: minorSlot,
+      4: 'sub_jmi_civil_Semester_5_CEC-502',
+      5: labGroup === 'G1' ? 'sub_jmi_civil_Semester_5_CEL-502' : 'sub_jmi_civil_Semester_5_CEL-503',
+      6: labGroup === 'G1' ? 'sub_jmi_civil_Semester_5_CEL-502' : 'sub_jmi_civil_Semester_5_CEL-503'
+    },
+    'Tuesday': {
+      0: 'sub_jmi_civil_Semester_5_CEC-503',
+      1: 'sub_jmi_civil_Semester_5_CEC-504',
+      2: 'sub_jmi_civil_Semester_5_elective_sem5_group1',
+      3: minorSlot,
+      4: labGroup === 'G1' ? 'sub_jmi_civil_Semester_5_CEL-501' : 'No Class',
+      5: labGroup === 'G1' ? 'sub_jmi_civil_Semester_5_CEL-501' : 'No Class',
+      6: 'No Class'
+    },
+    'Wednesday': {
+      0: 'sub_jmi_civil_Semester_5_elective_sem5_group1',
+      1: 'sub_jmi_civil_Semester_5_CEC-505',
+      2: 'sub_jmi_civil_Semester_5_CEC-501',
+      3: minorSlot,
+      4: labGroup === 'G2' ? 'sub_jmi_civil_Semester_5_CEL-501' : 'No Class',
+      5: labGroup === 'G2' ? 'sub_jmi_civil_Semester_5_CEL-501' : 'No Class',
+      6: 'No Class'
+    },
+    'Thursday': {
+      0: 'sub_jmi_civil_Semester_5_CEC-501',
+      1: 'sub_jmi_civil_Semester_5_CEC-503',
+      2: 'sub_jmi_civil_Semester_5_CEC-504',
+      3: 'sub_jmi_civil_Semester_5_elective_sem5_group1',
+      4: 'sub_jmi_civil_Semester_5_CEC-502',
+      5: labGroup === 'G1' ? 'sub_jmi_civil_Semester_5_CEL-503' : 'sub_jmi_civil_Semester_5_CEL-502',
+      6: labGroup === 'G1' ? 'sub_jmi_civil_Semester_5_CEL-503' : 'sub_jmi_civil_Semester_5_CEL-502'
+    },
+    'Friday': {
+      0: 'sub_jmi_civil_Semester_5_CEC-504',
+      1: 'sub_jmi_civil_Semester_5_CEC-502',
+      2: 'sub_jmi_civil_Semester_5_CEC-505',
+      3: 'No Class',
+      4: 'No Class',
+      5: 'No Class',
+      6: 'No Class'
+    }
+  };
+}

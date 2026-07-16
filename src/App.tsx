@@ -5,7 +5,7 @@
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { logCustomEvent, saveUserSubjectsToFirestore, loadUserSubjectsFromFirestore, saveUserProfileToFirestore, loadUserProfileFromFirestore, syncNotificationDeviceToFirestore } from './firebase';
-import { getDefaultCurriculumSubjects } from './utils/curriculum';
+import { getDefaultCurriculumSubjects, generateCivil5Schedule } from './utils/curriculum';
 import { 
   LayoutDashboard, 
   Calendar as CalendarIcon, 
@@ -86,7 +86,7 @@ import {
 } from './utils/dateUtils';
 
 function getOrCreateDeviceId(): string {
-  let id = localStorage.getItem('bs_device_id');
+  let id = (window as any).AndroidDeviceID || localStorage.getItem('bs_device_id');
   if (!id) {
     if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
       id = crypto.randomUUID();
@@ -97,6 +97,8 @@ function getOrCreateDeviceId(): string {
         return v.toString(16);
       });
     }
+    localStorage.setItem('bs_device_id', id);
+  } else {
     localStorage.setItem('bs_device_id', id);
   }
   return id;
@@ -411,6 +413,7 @@ export default function App() {
   const [onboardProgramme, setOnboardProgramme] = useState<'Regular' | 'Self-Financed' | ''>('');
   const [onboardDept, setOnboardDept] = useState('');
   const [onboardSem, setOnboardSem] = useState('Semester 3');
+  const [onboardLabGroup, setOnboardLabGroup] = useState<'G1' | 'G2' | ''>('');
 
   const [onboardStartDate, setOnboardStartDate] = useState('2026-07-17');
   const [onboardEndDate, setOnboardEndDate] = useState('2026-11-20');
@@ -441,13 +444,23 @@ export default function App() {
       localStorage.setItem('bs_fcm_token', cleanToken);
       setFcmToken(cleanToken);
     };
+    const handleDeviceId = (id: string) => {
+      if (!id) return;
+      const cleanId = id.trim();
+      localStorage.setItem('bs_device_id', cleanId);
+      (window as any).AndroidDeviceID = cleanId;
+    };
     (window as any).setFCMToken = handleToken;
     (window as any).updateFCMToken = handleToken;
     (window as any).onFCMTokenReceived = handleToken;
+    (window as any).setDeviceID = handleDeviceId;
+    (window as any).updateDeviceID = handleDeviceId;
     return () => {
       delete (window as any).setFCMToken;
       delete (window as any).updateFCMToken;
       delete (window as any).onFCMTokenReceived;
+      delete (window as any).setDeviceID;
+      delete (window as any).updateDeviceID;
     };
   }, []);
 
@@ -905,10 +918,14 @@ export default function App() {
         subject = 'Lunch Break';
       } else {
         const subId = (daySchedule[slot.id] || '').trim();
-        const foundSub = subjects.find(s => s.id === subId);
-        subject = foundSub ? foundSub.name : subId;
-        isSwayam = foundSub ? foundSub.type === 'SWAYAM' : false;
-        room = foundSub ? foundSub.room || '' : '';
+        if (subId === 'No Class') {
+          subject = '';
+        } else {
+          const foundSub = subjects.find(s => s.id === subId);
+          subject = foundSub ? foundSub.name : subId;
+          isSwayam = foundSub ? foundSub.type === 'SWAYAM' : false;
+          room = foundSub ? foundSub.room || '' : '';
+        }
       }
       return {
         id: slot.id,
@@ -2541,7 +2558,8 @@ export default function App() {
 
                 {onboardingStep === 2 && (() => {
                   const isSem1or2 = onboardSem === 'Semester 1' || onboardSem === 'Semester 2';
-                  const isFormValid = !!(onboardName.trim() && onboardSem && (isSem1or2 || (onboardProgramme && onboardDept)));
+                  const isCivil5 = onboardDept === 'Civil Engineering' && onboardSem === 'Semester 5';
+                  const isFormValid = !!(onboardName.trim() && onboardSem && (isSem1or2 || (onboardProgramme && onboardDept && (!isCivil5 || onboardLabGroup))));
 
                   return (
                     <motion.div
@@ -2678,6 +2696,31 @@ export default function App() {
                                   </select>
                                 </motion.div>
                               )}
+
+                              {onboardDept === 'Civil Engineering' && onboardSem === 'Semester 5' && (
+                                <motion.div
+                                  initial={{ opacity: 0, height: 0 }}
+                                  animate={{ opacity: 1, height: 'auto' }}
+                                  exit={{ opacity: 0, height: 0 }}
+                                  className="space-y-2 text-left mt-3 overflow-hidden"
+                                >
+                                  <label className="text-xs font-bold text-zinc-500 uppercase tracking-widest block">Select your Lab Group</label>
+                                  <div className="grid grid-cols-2 gap-2">
+                                    {(['G1', 'G2'] as const).map(g => (
+                                      <button
+                                        key={g}
+                                        type="button"
+                                        onClick={() => {
+                                          setOnboardLabGroup(g);
+                                        }}
+                                        className={`py-2.5 px-2 rounded-xl text-xs font-bold border transition-all ${onboardLabGroup === g ? 'bg-primary border-primary text-white font-black' : 'bg-zinc-950 border-zinc-800 text-zinc-500 hover:text-zinc-400'}`}
+                                      >
+                                        Group {g}
+                                      </button>
+                                    ))}
+                                  </div>
+                                </motion.div>
+                              )}
                             </motion.div>
                           )}
                         </AnimatePresence>
@@ -2808,6 +2851,7 @@ export default function App() {
                         Back
                       </Button>
                       <Button className="flex-1" onClick={() => {
+                        const isCivil5 = onboardDept === 'Civil Engineering' && onboardSem === 'Semester 5';
                         setProfile({
                           name: onboardName,
                           email: profile.email || 'student@jmi.ac.in',
@@ -2816,7 +2860,9 @@ export default function App() {
                           semester: onboardSem,
                           mobile: '',
                           avatar: '',
-                          programme: (onboardSem === 'Semester 1' || onboardSem === 'Semester 2') ? 'Regular' : onboardProgramme
+                          programme: (onboardSem === 'Semester 1' || onboardSem === 'Semester 2') ? 'Regular' : onboardProgramme,
+                          labGroup: isCivil5 ? (onboardLabGroup as 'G1' | 'G2') : undefined,
+                          minorHonorsEnabled: isCivil5 ? false : undefined
                         });
 
                         logCustomEvent('branch_selected', { branch: onboardDept });
@@ -2872,6 +2918,12 @@ export default function App() {
                           if (defaultSubs && defaultSubs.length > 0) {
                             setSubjects(defaultSubs);
                           }
+                        }
+
+                        if (isCivil5) {
+                          const schedule = generateCivil5Schedule(onboardLabGroup as 'G1' | 'G2', false);
+                          setClassSchedule(schedule);
+                          localStorage.setItem('bs_class_schedule', JSON.stringify(schedule));
                         }
 
                         localStorage.setItem('bs_onboarding_completed', 'true');
@@ -3587,6 +3639,35 @@ export default function App() {
                         if (!subId || !subId.trim()) {
                           return null; // Don't show empty slots on the dashboard for cleaner UI
                         }
+
+                        if (subId === 'No Class') {
+                          return (
+                            <div key={slot.id} className="bg-zinc-950/40 border border-zinc-900/40 rounded-xl px-4 py-3 flex items-center justify-between text-zinc-500 text-xs">
+                              <div className="flex items-center gap-2 font-bold uppercase tracking-wider">
+                                <Clock size={14} className="opacity-60" />
+                                <span>{slot.time}</span>
+                              </div>
+                              <span className="font-black text-[10px] tracking-widest text-zinc-500 bg-zinc-800/10 px-2 py-0.5 rounded-md">📭 NO CLASS</span>
+                            </div>
+                          );
+                        }
+
+                        if (subId === 'Minor/Honors') {
+                          return (
+                            <div key={slot.id} className="bg-purple-500/5 border border-purple-500/10 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                              <div className="space-y-1">
+                                <span className="text-[10px] font-bold text-purple-400 uppercase tracking-wider block">
+                                  {slot.time} • 🌟 SPECIAL
+                                </span>
+                                <h4 className="font-extrabold text-white text-sm">Minor / Honors Course</h4>
+                              </div>
+                              <span className="text-[10px] font-black uppercase tracking-widest text-purple-400 bg-purple-500/10 px-2.5 py-1 rounded-lg border border-purple-500/20 self-start sm:sm:self-auto">
+                                Optional
+                              </span>
+                            </div>
+                          );
+                        }
+
                         const foundSub = subjects.find(s => s.id === subId);
                         const subjectName = foundSub ? foundSub.name : subId;
 

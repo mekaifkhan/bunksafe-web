@@ -14,6 +14,8 @@ export interface Profile {
   semesterEndDate?: string;
   attendanceTarget?: number;
   registeredAt?: string;
+  labGroup?: 'G1' | 'G2';
+  minorHonorsEnabled?: boolean;
 }
 
 export interface Semester {
