@@ -1465,13 +1465,12 @@ export function getDefaultCurriculumSubjects(
 }
 
 export function generateCivil5Schedule(labGroup: 'G1' | 'G2', minorHonorsEnabled: boolean): Record<string, Record<number, string>> {
-  const minorSlot = minorHonorsEnabled ? 'Minor/Honors' : 'No Class';
   return {
     'Monday': {
       0: 'sub_jmi_civil_Semester_5_CEC-503',
       1: 'sub_jmi_civil_Semester_5_CEC-501',
       2: 'sub_jmi_civil_Semester_5_CEC-505',
-      3: minorSlot,
+      3: 'Minor/Honors',
       4: 'sub_jmi_civil_Semester_5_CEC-502',
       5: labGroup === 'G1' ? 'sub_jmi_civil_Semester_5_CEL-502' : 'sub_jmi_civil_Semester_5_CEL-503',
       6: labGroup === 'G1' ? 'sub_jmi_civil_Semester_5_CEL-502' : 'sub_jmi_civil_Semester_5_CEL-503'
@@ -1480,7 +1479,7 @@ export function generateCivil5Schedule(labGroup: 'G1' | 'G2', minorHonorsEnabled
       0: 'sub_jmi_civil_Semester_5_CEC-503',
       1: 'sub_jmi_civil_Semester_5_CEC-504',
       2: 'sub_jmi_civil_Semester_5_elective_sem5_group1',
-      3: minorSlot,
+      3: 'Minor/Honors',
       4: labGroup === 'G1' ? 'sub_jmi_civil_Semester_5_CEL-501' : 'No Class',
       5: labGroup === 'G1' ? 'sub_jmi_civil_Semester_5_CEL-501' : 'No Class',
       6: 'No Class'
@@ -1489,7 +1488,7 @@ export function generateCivil5Schedule(labGroup: 'G1' | 'G2', minorHonorsEnabled
       0: 'sub_jmi_civil_Semester_5_elective_sem5_group1',
       1: 'sub_jmi_civil_Semester_5_CEC-505',
       2: 'sub_jmi_civil_Semester_5_CEC-501',
-      3: minorSlot,
+      3: 'Minor/Honors',
       4: labGroup === 'G2' ? 'sub_jmi_civil_Semester_5_CEL-501' : 'No Class',
       5: labGroup === 'G2' ? 'sub_jmi_civil_Semester_5_CEL-501' : 'No Class',
       6: 'No Class'

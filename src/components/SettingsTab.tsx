@@ -144,8 +144,8 @@ export default function SettingsTab({
   const [deleteConfirmSubjectId, setDeleteConfirmSubjectId] = useState<string | null>(null);
   
   // Track initial branch/semester to detect changes
-  const [initialBranch] = useState(profile.department);
-  const [initialSem] = useState(profile.semester);
+  const [initialBranch, setInitialBranch] = useState(profile.department);
+  const [initialSem, setInitialSem] = useState(profile.semester);
 
   // Profile Photo Management states
   const [showPhotoModal, setShowPhotoModal] = useState(false);
@@ -1018,7 +1018,7 @@ export default function SettingsTab({
 
               if (isJmiCurriculum) {
                 if (branchChanged || subjects.length === 0) {
-                  const confirmLoad = subjects.length === 0 || confirm(`You changed your branch/semester to ${profile.semester} - ${profile.department || 'Applied Science'}. Would you like to automatically load the default JMI curriculum/subjects for this selection? This will update your attendance screen with the correct subjects.`);
+                  const confirmLoad = subjects.length === 0 || confirm(`You changed your branch/semester to ${profile.semester} - ${profile.department || 'Applied Science'}.\n\nWould you like to automatically load the default JMI curriculum/subjects and update your schedule for this selection? This will update your attendance screen with correct subjects and reset/set up your weekly schedule.`);
                   if (confirmLoad) {
                     const { subjects: defaultSubs } = getDefaultCurriculumSubjects(profile.semester, profile.department, profile.firstYearPattern);
                     if (defaultSubs && defaultSubs.length > 0) {
@@ -1026,22 +1026,36 @@ export default function SettingsTab({
                       if (profile.department === 'Civil Engineering' && profile.semester === 'Semester 5') {
                         const grp = profile.labGroup || 'G1';
                         // Also make sure profile has the default group if not set
-                        if (!profile.labGroup) {
-                          setProfile({ ...profile, labGroup: 'G1', minorHonorsEnabled: false });
-                          localStorage.setItem('bs_profile', JSON.stringify({ ...profile, labGroup: 'G1', minorHonorsEnabled: false }));
-                        }
+                        const updatedProfile = { ...profile, labGroup: grp, minorHonorsEnabled: !!profile.minorHonorsEnabled };
+                        setProfile(updatedProfile);
+                        localStorage.setItem('bs_profile', JSON.stringify(updatedProfile));
+                        
                         const schedule = generateCivil5Schedule(grp, !!profile.minorHonorsEnabled);
                         setClassSchedule(schedule);
                         localStorage.setItem('bs_class_schedule', JSON.stringify(schedule));
-                        alert(`Profile updated. Successfully loaded default curriculum and timetable schedule (Group ${grp}) for Semester 5 Civil Engineering!`);
+                        alert(`Profile updated. Successfully loaded default subjects and weekly timetable schedule (Group ${grp}) for Semester 5 Civil Engineering!`);
                       } else {
-                        alert(`Profile updated. Successfully loaded default curriculum for ${profile.semester} ${profile.department || 'Applied Science'}!`);
+                        // Clear the schedule for any non-Civil 5 course to prevent carrying over stale course slots
+                        const emptySchedule: Record<string, Record<number, string>> = {
+                          'Monday': {},
+                          'Tuesday': {},
+                          'Wednesday': {},
+                          'Thursday': {},
+                          'Friday': {}
+                        };
+                        const updatedProfile = { ...profile, labGroup: undefined, minorHonorsEnabled: undefined };
+                        setProfile(updatedProfile);
+                        localStorage.setItem('bs_profile', JSON.stringify(updatedProfile));
+
+                        setClassSchedule(emptySchedule);
+                        localStorage.setItem('bs_class_schedule', JSON.stringify(emptySchedule));
+                        alert(`Profile updated. Successfully loaded default subjects for ${profile.semester} ${profile.department || 'Applied Science'}! Your weekly timetable has been reset for the new selection.`);
                       }
                     } else {
                       alert('Profile and Personal settings updated locally!');
                     }
                   } else {
-                    alert('Profile and Personal settings updated locally! Existing subjects kept.');
+                    alert('Profile and Personal settings updated locally! Existing subjects and schedule kept.');
                   }
                 } else {
                   alert('Profile and Personal settings updated locally!');
@@ -1049,6 +1063,10 @@ export default function SettingsTab({
               } else {
                 alert('Profile and Personal settings updated locally!');
               }
+
+              // Update the initial tracking states to the new values
+              setInitialBranch(profile.department);
+              setInitialSem(profile.semester);
             }}
             className="w-full py-2 bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 rounded-xl text-xs font-bold uppercase transition-all"
           >

@@ -920,6 +920,8 @@ export default function App() {
         const subId = (daySchedule[slot.id] || '').trim();
         if (subId === 'No Class') {
           subject = '';
+        } else if (subId === 'Minor/Honors') {
+          subject = profile.minorHonorsEnabled ? 'Minor / Honors Course' : '';
         } else {
           const foundSub = subjects.find(s => s.id === subId);
           subject = foundSub ? foundSub.name : subId;
@@ -3518,7 +3520,7 @@ export default function App() {
                         )}
                       </div>
                       <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
-                        {[1, 2, 3, 4, 5, 6]
+                        {Array.from({ length: Math.max(12, todayRecord.held) }, (_, i) => i + 1)
                           .filter(num => (profile.semester === 'Semester 1' || profile.semester === 'Semester 2' || num !== 4))
                           .map(num => (
                             <button
@@ -3652,18 +3654,51 @@ export default function App() {
                           );
                         }
 
-                        if (subId === 'Minor/Honors') {
+                         if (subId === 'Minor/Honors') {
+                          const isAttending = !!profile.minorHonorsEnabled;
                           return (
-                            <div key={slot.id} className="bg-purple-500/5 border border-purple-500/10 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                            <div 
+                              key={slot.id} 
+                              className={`border rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 transition-all ${
+                                isAttending 
+                                  ? 'bg-purple-500/5 border-purple-500/25 shadow-sm shadow-purple-500/5' 
+                                  : 'bg-zinc-950/20 border-zinc-900/50 opacity-60 hover:opacity-100'
+                              }`}
+                            >
                               <div className="space-y-1">
                                 <span className="text-[10px] font-bold text-purple-400 uppercase tracking-wider block">
                                   {slot.time} • 🌟 SPECIAL
                                 </span>
-                                <h4 className="font-extrabold text-white text-sm">Minor / Honors Course</h4>
+                                <div className="flex items-center gap-2">
+                                  <h4 className="font-extrabold text-white text-sm">Minor / Honors Course</h4>
+                                  <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded border ${
+                                    isAttending 
+                                      ? 'bg-purple-500/15 text-purple-400 border-purple-500/20' 
+                                      : 'bg-zinc-800/50 text-zinc-500 border-zinc-800'
+                                  }`}>
+                                    {isAttending ? 'Attending' : 'Not Attending'}
+                                  </span>
+                                </div>
                               </div>
-                              <span className="text-[10px] font-black uppercase tracking-widest text-purple-400 bg-purple-500/10 px-2.5 py-1 rounded-lg border border-purple-500/20 self-start sm:sm:self-auto">
-                                Optional
-                              </span>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const newVal = !isAttending;
+                                  const updatedProfile = { ...profile, minorHonorsEnabled: newVal };
+                                  setProfile(updatedProfile);
+                                  localStorage.setItem('bs_profile', JSON.stringify(updatedProfile));
+                                  if (toast) {
+                                    toast(`Minor/Honors Course ${newVal ? 'Enabled' : 'Disabled'}!`, 'success');
+                                  }
+                                }}
+                                className={`text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-lg border transition-all self-start sm:self-auto ${
+                                  isAttending 
+                                    ? 'bg-purple-500/10 text-purple-400 border-purple-500/20 hover:bg-purple-500/20' 
+                                    : 'bg-zinc-900 text-zinc-400 border-zinc-800 hover:text-white hover:border-zinc-700'
+                                }`}
+                              >
+                                {isAttending ? 'Change to Skip' : 'Attend Course'}
+                              </button>
                             </div>
                           );
                         }
