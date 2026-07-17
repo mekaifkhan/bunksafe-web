@@ -408,6 +408,13 @@ export default function App() {
   const [manualEndDate, setManualEndDate] = useState<string>('2026-11-20');
   const [manualTargetAttendance, setManualTargetAttendance] = useState<number>(75);
   const [syllabusLoadStatus, setSyllabusLoadStatus] = useState<'none' | 'loaded' | 'not_found'>('none');
+  const [showCivil5GroupModal, setShowCivil5GroupModal] = useState<boolean>(() => {
+    const isCivil5 = profile.department === 'Civil Engineering' && profile.semester === 'Semester 5';
+    const isCompleted = localStorage.getItem('bs_onboarding_completed') === 'true' || localStorage.getItem('bs_semester') !== null;
+    const hasGroup = !!profile.labGroup;
+    const hasDismissed = localStorage.getItem('bs_civil5_group_dismissed') === 'true';
+    return !!(isCivil5 && isCompleted && !hasGroup && !hasDismissed);
+  });
 
   const [onboardName, setOnboardName] = useState('');
   const [onboardProgramme, setOnboardProgramme] = useState<'Regular' | 'Self-Financed' | ''>('');
@@ -3231,6 +3238,31 @@ export default function App() {
               </motion.div>
             )}
 
+            {profile.department === 'Civil Engineering' && profile.semester === 'Semester 5' && (
+              <motion.div 
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="bg-purple-500/10 border border-purple-500/20 p-4 rounded-2xl flex items-center justify-between gap-4 shadow-lg shadow-purple-500/5"
+              >
+                <div className="flex items-center gap-3 text-purple-400">
+                  <GraduationCap size={20} />
+                  <div>
+                    <h4 className="text-xs font-bold text-white leading-tight">Civil Engineering Semester 5</h4>
+                    <p className="text-[10px] text-zinc-400 mt-0.5">
+                      Weekly Schedule: <span className="text-purple-400 font-extrabold">{profile.labGroup ? `Group ${profile.labGroup}` : 'Not Selected'}</span>
+                    </p>
+                  </div>
+                </div>
+                <Button 
+                  variant="secondary" 
+                  className="text-xs py-1.5 px-3 border border-purple-500/30 hover:bg-purple-500/15 text-purple-400 hover:text-purple-300 transition-all font-bold bg-zinc-950/40" 
+                  onClick={() => setShowCivil5GroupModal(true)}
+                >
+                  {profile.labGroup ? 'Change Group' : 'Choose Group'}
+                </Button>
+              </motion.div>
+            )}
+
             <div className="grid grid-cols-1 gap-3">
               <Card className="relative overflow-hidden p-2.5">
                 <div className="relative z-10 space-y-1.5">
@@ -4776,6 +4808,109 @@ export default function App() {
     );
   };
 
+  const renderCivil5GroupModal = () => {
+    if (!showCivil5GroupModal) return null;
+
+    return (
+      <div id="civil5-group-modal" className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-fade-in">
+        <motion.div 
+          initial={{ scale: 0.9, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          className="bg-zinc-900 border border-zinc-800 rounded-3xl p-6 w-full max-w-sm space-y-5 shadow-2xl"
+        >
+          <div className="space-y-1.5 text-center">
+            <div className="mx-auto w-12 h-12 bg-purple-500/10 rounded-full flex items-center justify-center mb-2 border border-purple-500/20">
+              <GraduationCap size={24} className="text-purple-400" />
+            </div>
+            <h2 className="text-base font-extrabold text-zinc-100">Select Lab Group</h2>
+            <p className="text-[11px] text-zinc-400 leading-relaxed">
+              As a Civil Engineering Semester 5 student, please select your Lab Group to synchronize your weekly timetable schedule automatically.
+            </p>
+          </div>
+
+          <div className="space-y-2.5">
+            {/* Group G1 */}
+            <button
+              onClick={() => {
+                const updatedProfile = { ...profile, labGroup: 'G1' as const };
+                setProfile(updatedProfile);
+                localStorage.setItem('bs_profile', JSON.stringify(updatedProfile));
+                
+                const schedule = generateCivil5Schedule('G1', !!profile.minorHonorsEnabled);
+                setClassSchedule(schedule);
+                localStorage.setItem('bs_class_schedule', JSON.stringify(schedule));
+                
+                localStorage.setItem('bs_civil5_group_selected_popup', 'true');
+                setShowCivil5GroupModal(false);
+                showToast('Weekly schedule updated for Lab Group G1!', 'success');
+              }}
+              className={`w-full text-left p-3.5 rounded-2xl bg-zinc-800/20 border transition-all flex flex-col gap-1 group font-sans ${
+                profile.labGroup === 'G1' 
+                  ? 'border-purple-500 bg-purple-500/5' 
+                  : 'border-zinc-850 hover:border-zinc-700 hover:bg-zinc-800/40'
+              }`}
+            >
+              <div className="flex items-center justify-between w-full">
+                <span className="font-extrabold text-xs text-zinc-200 group-hover:text-purple-400 transition-colors">Group G1</span>
+                {profile.labGroup === 'G1' && (
+                  <span className="text-[9px] bg-purple-500/20 text-purple-400 font-bold px-2 py-0.5 rounded-md font-mono">Active</span>
+                )}
+              </div>
+              <p className="text-[10px] text-zinc-400 leading-relaxed mt-0.5">
+                Weekly schedule tailored for <strong className="text-zinc-300">Lab Group 1</strong>. (Includes CEL-502, CEL-501, and other specific lab batches).
+              </p>
+            </button>
+
+            {/* Group G2 */}
+            <button
+              onClick={() => {
+                const updatedProfile = { ...profile, labGroup: 'G2' as const };
+                setProfile(updatedProfile);
+                localStorage.setItem('bs_profile', JSON.stringify(updatedProfile));
+                
+                const schedule = generateCivil5Schedule('G2', !!profile.minorHonorsEnabled);
+                setClassSchedule(schedule);
+                localStorage.setItem('bs_class_schedule', JSON.stringify(schedule));
+                
+                localStorage.setItem('bs_civil5_group_selected_popup', 'true');
+                setShowCivil5GroupModal(false);
+                showToast('Weekly schedule updated for Lab Group G2!', 'success');
+              }}
+              className={`w-full text-left p-3.5 rounded-2xl bg-zinc-800/20 border transition-all flex flex-col gap-1 group font-sans ${
+                profile.labGroup === 'G2' 
+                  ? 'border-purple-500 bg-purple-500/5' 
+                  : 'border-zinc-850 hover:border-zinc-700 hover:bg-zinc-800/40'
+              }`}
+            >
+              <div className="flex items-center justify-between w-full">
+                <span className="font-extrabold text-xs text-zinc-200 group-hover:text-purple-400 transition-colors">Group G2</span>
+                {profile.labGroup === 'G2' && (
+                  <span className="text-[9px] bg-purple-500/20 text-purple-400 font-bold px-2 py-0.5 rounded-md font-mono">Active</span>
+                )}
+              </div>
+              <p className="text-[10px] text-zinc-400 leading-relaxed mt-0.5">
+                Weekly schedule tailored for <strong className="text-zinc-300">Lab Group 2</strong>. (Includes CEL-503, CEL-501, and other specific lab batches).
+              </p>
+            </button>
+          </div>
+
+          <div className="flex gap-2 pt-1">
+            <button
+              type="button"
+              onClick={() => {
+                localStorage.setItem('bs_civil5_group_dismissed', 'true');
+                setShowCivil5GroupModal(false);
+              }}
+              className="w-full py-2.5 bg-zinc-800 hover:bg-zinc-750 text-zinc-300 rounded-xl text-xs font-bold uppercase transition-all"
+            >
+              Dismiss / Remind Later
+            </button>
+          </div>
+        </motion.div>
+      </div>
+    );
+  };
+
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-100 font-sans selection:bg-primary/30">
       <AnimatePresence>
@@ -4834,6 +4969,7 @@ export default function App() {
       {showExamModal && <ExamModal />}
       {renderFirstYearPatternModal()}
       {renderAttendanceInfoModal()}
+      {renderCivil5GroupModal()}
     </div>
   );
 }
