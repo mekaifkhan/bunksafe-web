@@ -657,177 +657,126 @@ export const JMI_CSE_DS_CURRICULUM: Record<string, SemesterCurriculum> = {
 export const JMI_COMP_ENG_CURRICULUM: Record<string, SemesterCurriculum> = {
   'Semester 3': {
     subjects: [
-      { code: 'ASM-301', name: 'Universal Human Values', credits: 3, type: 'Theory' },
-      { code: 'ASB-301', name: 'Engineering Mathematics III', credits: 3, type: 'Theory' },
-      { code: 'DSC-301', name: 'Discrete Mathematics – PCC1', credits: 3, type: 'Theory' },
-      { code: 'DSC-302', name: 'Data Structure – PCC2', credits: 3, type: 'Theory' },
-      { code: 'DSC-303', name: 'Digital Logic Design – PCC3', credits: 3, type: 'Theory' },
-      { code: 'DSC-304', name: 'Database Management System – PCC4', credits: 3, type: 'Theory' },
-      { code: 'DSL-301', name: 'Data Structure Lab – PCL1', credits: 1, type: 'Lab' },
-      { code: 'DSL-302', name: 'Digital Logic Design Lab – PCL2', credits: 1, type: 'Lab' },
-      { code: 'DSL-303', name: 'C Programming Lab – PCL3', credits: 1, type: 'Lab' },
-      { code: 'DSL-304', name: 'Database Management System Lab – PCL4', credits: 1, type: 'Lab' }
+      { code: 'CEN-301', name: 'Mathematics III', credits: 3, type: 'Theory' },
+      { code: 'CEN-302', name: 'Discrete Mathematics', credits: 3, type: 'Theory' },
+      { code: 'CEN-303', name: 'Data Structure (CBCS)', credits: 3, type: 'Theory' },
+      { code: 'CEN-304', name: 'Digital Logic Theory', credits: 3, type: 'Theory' },
+      { code: 'CEN-305', name: 'Analog & Digital Communication', credits: 3, type: 'Theory' },
+      { code: 'CEN-391', name: 'Data Structure Lab', credits: 1, type: 'Lab' },
+      { code: 'CEN-392', name: 'C Programming Lab', credits: 1, type: 'Lab' },
+      { code: 'CEN-393', name: 'Digital Logic Design Lab', credits: 1, type: 'Lab' }
     ]
   },
   'Semester 4': {
     subjects: [
-      { code: 'ASM-401', name: 'Environmental Science', credits: 2, type: 'Theory' },
-      { code: 'DSC-401', name: 'Data Mining – PCC5', credits: 3, type: 'Theory' },
-      { code: 'DSC-402', name: 'Computer Organization & Architecture – PCC6', credits: 3, type: 'Theory' },
-      { code: 'DSC-403', name: 'Operating System – PCC7', credits: 3, type: 'Theory' },
-      { code: 'ASM-402', name: 'Essence of Indian Traditional Knowledge', credits: 0, type: 'Theory' },
-      { code: 'AST-401', name: 'Operations Research (OEC-I)', credits: 3, type: 'Theory' },
-      { code: 'AST-402', name: 'Economics (OEC-II)', credits: 3, type: 'Theory' },
-      { code: 'DSL-401', name: 'Data Mining Lab – PCL5', credits: 1, type: 'Lab' },
-      { code: 'DSL-402', name: 'Python Programming Lab – PCL6', credits: 1, type: 'Lab' },
-      { code: 'DSL-403', name: 'Operating System & Linux Lab – PCL7', credits: 1, type: 'Lab' },
-      { code: 'ASL-401', name: 'Numeric & Scientific Computing Lab', credits: 2, type: 'Lab' }
+      { code: 'CEN-401', name: 'Mathematics IV', credits: 3, type: 'Theory' },
+      { code: 'CEN-402', name: 'Computer Organization', credits: 3, type: 'Theory' },
+      { code: 'CEN-403', name: 'System Software', credits: 3, type: 'Theory' },
+      { code: 'CEN-404', name: 'Operating System', credits: 3, type: 'Theory' },
+      { code: 'CEN-405', name: 'Database Management System (CBCS)', credits: 3, type: 'Theory' },
+      { code: 'CEN-491', name: 'DBMS Lab', credits: 1, type: 'Lab' },
+      { code: 'CEN-492', name: 'Linux Lab', credits: 1, type: 'Lab' },
+      { code: 'CEN-493', name: 'Operating System Lab', credits: 1, type: 'Lab' }
     ]
   },
   'Semester 5': {
     subjects: [
-      { code: 'DSC-501', name: 'Automata Theory – PCC8', credits: 3, type: 'Theory' },
-      { code: 'DSC-502', name: 'Data Analytics – PCC9', credits: 3, type: 'Theory' },
-      { code: 'DSC-503', name: 'Computer Networks – PCC10', credits: 3, type: 'Theory' },
-      { code: 'DSC-504', name: 'Software Engineering – PCC11', credits: 3, type: 'Theory' },
-      { code: 'DSC-505', name: 'Object Oriented Programming – PCC12', credits: 3, type: 'Theory' },
-      { code: 'DSL-501', name: 'Object Oriented Programming Lab – PCL8', credits: 1, type: 'Lab' },
-      { code: 'DSL-502', name: 'Machine Learning Lab – PCL9', credits: 1, type: 'Lab' },
-      { code: 'DSL-503', name: 'Computer Network Lab – PCL10', credits: 1, type: 'Lab' },
-      { code: 'DSL-504', name: 'Data Analytics Lab – PCL11', credits: 1, type: 'Lab' }
-    ],
-    electives: [
-      {
-        id: 'sem5_comp_group1',
-        label: 'Professional Elective-I',
-        options: [
-          { code: 'CSE-701', name: 'Computer Vision & Image Processing', credits: 3, type: 'Theory' },
-          { code: 'CSE-702', name: 'Mobile Computing & IoT', credits: 3, type: 'Theory' },
-          { code: 'CSE-703', name: 'Cloud Computing', credits: 3, type: 'Theory' },
-          { code: 'CSE-704', name: 'Internet Protocol', credits: 3, type: 'Theory' },
-          { code: 'CSE-705', name: 'Soft Computing', credits: 3, type: 'Theory' },
-          { code: 'CSE-706', name: 'Social Network Analysis', credits: 3, type: 'Theory' },
-          { code: 'CSE-707', name: 'Artificial Neural Networks', credits: 3, type: 'Theory' }
-        ]
-      }
+      { code: 'CEN-501', name: 'Computer Architecture', credits: 3, type: 'Theory' },
+      { code: 'CEN-502', name: 'Automata Theory', credits: 3, type: 'Theory' },
+      { code: 'CEN-503', name: 'Microprocessor', credits: 3, type: 'Theory' },
+      { code: 'CEN-504', name: 'Object Oriented Programming', credits: 3, type: 'Theory' },
+      { code: 'CEN-505', name: 'Computer Networks (CBCS)', credits: 3, type: 'Theory' },
+      { code: 'CEN-591', name: 'Object Oriented Programming Lab', credits: 1, type: 'Lab' },
+      { code: 'CEN-592', name: 'Microprocessor Lab', credits: 1, type: 'Lab' },
+      { code: 'CEN-593', name: 'Computer Network Lab', credits: 1, type: 'Lab' }
     ]
   },
   'Semester 6': {
     subjects: [
-      { code: 'DSC-601', name: 'Analysis & Design of Algorithms – PCC13', credits: 3, type: 'Theory' },
-      { code: 'DSC-602', name: 'Compiler Design – PCC14', credits: 3, type: 'Theory' },
-      { code: 'DSC-603', name: 'Data Visualization – PCC15', credits: 3, type: 'Theory' },
-      { code: 'DSC-604', name: 'Artificial Intelligence – PCC16', credits: 3, type: 'Theory' },
-      { code: 'DSL-601', name: 'Compiler Design Lab – PCL12', credits: 1, type: 'Lab' },
-      { code: 'DSL-602', name: 'Artificial Intelligence Lab – PCL13', credits: 1, type: 'Lab' },
-      { code: 'DSL-603', name: 'Deep Learning Lab – PCL14', credits: 1, type: 'Lab' },
-      { code: 'DSL-604', name: 'Data Visualization Lab – PCL15', credits: 1, type: 'Lab' },
-      { code: 'DSL-605', name: 'Seminar', credits: 1, type: 'Lab' }
-    ],
-    electives: [
-      {
-        id: 'sem6_comp_group1',
-        label: 'Professional Elective-II',
-        options: [
-          { code: 'DSE-605', name: 'Deep Learning', credits: 3, type: 'Theory' }
-        ]
-      }
+      { code: 'CEN-601', name: 'Analysis & Design of Algorithm (CBCS)', credits: 3, type: 'Theory' },
+      { code: 'CEN-602', name: 'Software Engineering', credits: 3, type: 'Theory' },
+      { code: 'CEN-603', name: 'Compiler Design', credits: 3, type: 'Theory' },
+      { code: 'CEN-604', name: 'Embedded System', credits: 3, type: 'Theory' },
+      { code: 'CEN-605', name: 'Internet Protocols', credits: 3, type: 'Theory' },
+      { code: 'CEN-691', name: 'Embedded System Lab', credits: 1, type: 'Lab' },
+      { code: 'CEN-692', name: 'Compiler Lab', credits: 1, type: 'Lab' },
+      { code: 'CEN-693', name: 'Seminar', credits: 1, type: 'Lab' }
     ]
   },
   'Semester 7': {
     subjects: [
-      { code: 'CSP-792', name: 'Summer Internship', credits: 2, type: 'Lab' },
-      { code: 'CSP-793', name: 'Minor Project', credits: 3, type: 'Lab' }
+      { code: 'CEN-701', name: 'Data Mining (CBCS)', credits: 3, type: 'Theory' },
+      { code: 'CEN-791', name: 'Data Mining Lab', credits: 1, type: 'Lab' },
+      { code: 'CEN-792', name: 'Minor Project', credits: 3, type: 'Lab' }
     ],
     electives: [
       {
-        id: 'sem7_comp_group1',
-        label: 'Professional Elective-III',
+        id: 'sem7_comp_elective1',
+        label: 'Elective I',
         options: [
-          { code: 'CSE-701', name: 'Computer Vision & Image Processing', credits: 3, type: 'Theory' },
-          { code: 'CSE-702', name: 'Mobile Computing & IoT', credits: 3, type: 'Theory' },
-          { code: 'CSE-703', name: 'Cloud Computing', credits: 3, type: 'Theory' },
-          { code: 'CSE-704', name: 'Internet Protocol', credits: 3, type: 'Theory' },
-          { code: 'CSE-705', name: 'Soft Computing', credits: 3, type: 'Theory' },
-          { code: 'CSE-706', name: 'Social Network Analysis', credits: 3, type: 'Theory' },
-          { code: 'CSE-707', name: 'Artificial Neural Networks', credits: 3, type: 'Theory' }
+          { code: 'CEN-702', name: 'Mobile Communication', credits: 3, type: 'Theory' },
+          { code: 'CEN-703', name: 'Artificial Intelligence', credits: 3, type: 'Theory' },
+          { code: 'CEN-704', name: 'Parallel & Distributed Computing', credits: 3, type: 'Theory' },
+          { code: 'CEN-705', name: 'Optimization Techniques', credits: 3, type: 'Theory' },
+          { code: 'CEN-706', name: 'Computer Graphics', credits: 3, type: 'Theory' },
+          { code: 'CEN-707', name: 'Management Science', credits: 3, type: 'Theory' }
         ]
       },
       {
-        id: 'sem7_comp_group2',
-        label: 'Professional Elective-IV',
+        id: 'sem7_comp_elective2',
+        label: 'Elective II',
         options: [
-          { code: 'CSE-701', name: 'Computer Vision & Image Processing', credits: 3, type: 'Theory' },
-          { code: 'CSE-702', name: 'Mobile Computing & IoT', credits: 3, type: 'Theory' },
-          { code: 'CSE-703', name: 'Cloud Computing', credits: 3, type: 'Theory' },
-          { code: 'CSE-704', name: 'Internet Protocol', credits: 3, type: 'Theory' },
-          { code: 'CSE-705', name: 'Soft Computing', credits: 3, type: 'Theory' },
-          { code: 'CSE-706', name: 'Social Network Analysis', credits: 3, type: 'Theory' },
-          { code: 'CSE-707', name: 'Artificial Neural Networks', credits: 3, type: 'Theory' }
+          { code: 'CEN-703', name: 'Artificial Intelligence', credits: 3, type: 'Theory' },
+          { code: 'CEN-702', name: 'Mobile Communication', credits: 3, type: 'Theory' },
+          { code: 'CEN-704', name: 'Parallel & Distributed Computing', credits: 3, type: 'Theory' },
+          { code: 'CEN-705', name: 'Optimization Techniques', credits: 3, type: 'Theory' },
+          { code: 'CEN-706', name: 'Computer Graphics', credits: 3, type: 'Theory' },
+          { code: 'CEN-707', name: 'Management Science', credits: 3, type: 'Theory' }
         ]
       },
       {
-        id: 'sem7_comp_group3',
-        label: 'Professional Elective-V',
+        id: 'sem7_comp_elective3',
+        label: 'Elective III',
         options: [
-          { code: 'CSE-701', name: 'Computer Vision & Image Processing', credits: 3, type: 'Theory' },
-          { code: 'CSE-702', name: 'Mobile Computing & IoT', credits: 3, type: 'Theory' },
-          { code: 'CSE-703', name: 'Cloud Computing', credits: 3, type: 'Theory' },
-          { code: 'CSE-704', name: 'Internet Protocol', credits: 3, type: 'Theory' },
-          { code: 'CSE-705', name: 'Soft Computing', credits: 3, type: 'Theory' },
-          { code: 'CSE-706', name: 'Social Network Analysis', credits: 3, type: 'Theory' },
-          { code: 'CSE-707', name: 'Artificial Neural Networks', credits: 3, type: 'Theory' }
-        ]
-      },
-      {
-        id: 'sem7_comp_group4',
-        label: 'Professional Elective-VI',
-        options: [
-          { code: 'CSE-701', name: 'Computer Vision & Image Processing', credits: 3, type: 'Theory' },
-          { code: 'CSE-702', name: 'Mobile Computing & IoT', credits: 3, type: 'Theory' },
-          { code: 'CSE-703', name: 'Cloud Computing', credits: 3, type: 'Theory' },
-          { code: 'CSE-704', name: 'Internet Protocol', credits: 3, type: 'Theory' },
-          { code: 'CSE-705', name: 'Soft Computing', credits: 3, type: 'Theory' },
-          { code: 'CSE-706', name: 'Social Network Analysis', credits: 3, type: 'Theory' },
-          { code: 'CSE-707', name: 'Artificial Neural Networks', credits: 3, type: 'Theory' }
-        ]
-      },
-      {
-        id: 'sem7_comp_open_group',
-        label: 'Open Elective-III',
-        options: [
-          { code: 'CSO-701', name: 'Any approved Open Elective', credits: 3, type: 'Theory' }
+          { code: 'CEN-704', name: 'Parallel & Distributed Computing', credits: 3, type: 'Theory' },
+          { code: 'CEN-702', name: 'Mobile Communication', credits: 3, type: 'Theory' },
+          { code: 'CEN-703', name: 'Artificial Intelligence', credits: 3, type: 'Theory' },
+          { code: 'CEN-705', name: 'Optimization Techniques', credits: 3, type: 'Theory' },
+          { code: 'CEN-706', name: 'Computer Graphics', credits: 3, type: 'Theory' },
+          { code: 'CEN-707', name: 'Management Science', credits: 3, type: 'Theory' }
         ]
       }
     ]
   },
   'Semester 8': {
     subjects: [
-      { code: 'CSP-891', name: 'Major Project', credits: 6, type: 'Lab' }
+      { code: 'CEN-807', name: 'Natural Language Processing & Information Extraction (CBCS)', credits: 3, type: 'Theory' },
+      { code: 'CEN-891', name: 'NLP Lab', credits: 1, type: 'Lab' },
+      { code: 'CEN-892', name: 'Major Project', credits: 6, type: 'Lab' }
     ],
     electives: [
       {
-        id: 'sem8_comp_open_group1',
-        label: 'Open Elective-IV',
+        id: 'sem8_comp_elective1',
+        label: 'Elective I',
         options: [
-          { code: 'CSO-801', name: 'Network Security', credits: 3, type: 'Theory' },
-          { code: 'CSO-802', name: 'Applications of Blockchain Technology', credits: 3, type: 'Theory' },
-          { code: 'CSO-803', name: 'Software Testing', credits: 3, type: 'Theory' },
-          { code: 'CSO-804', name: 'Big Data Analytics', credits: 3, type: 'Theory' },
-          { code: 'CSO-805', name: 'Applied Linear Algebra in AI & ML', credits: 3, type: 'Theory' },
-          { code: 'CSO-806', name: 'Generative AI', credits: 3, type: 'Theory' }
+          { code: 'CEN-801', name: 'Software Project Management', credits: 3, type: 'Theory' },
+          { code: 'CEN-802', name: 'Internet Technologies', credits: 3, type: 'Theory' },
+          { code: 'CEN-803', name: 'Blockchain Technology', credits: 3, type: 'Theory' },
+          { code: 'CEN-804', name: 'Software Testing', credits: 3, type: 'Theory' },
+          { code: 'CEN-805', name: 'Network Security', credits: 3, type: 'Theory' },
+          { code: 'CEN-806', name: 'Soft Computing', credits: 3, type: 'Theory' }
         ]
       },
       {
-        id: 'sem8_comp_open_group2',
-        label: 'Open Elective-V',
+        id: 'sem8_comp_elective2',
+        label: 'Elective II',
         options: [
-          { code: 'CSO-801', name: 'Network Security', credits: 3, type: 'Theory' },
-          { code: 'CSO-802', name: 'Applications of Blockchain Technology', credits: 3, type: 'Theory' },
-          { code: 'CSO-803', name: 'Software Testing', credits: 3, type: 'Theory' },
-          { code: 'CSO-804', name: 'Big Data Analytics', credits: 3, type: 'Theory' },
-          { code: 'CSO-805', name: 'Applied Linear Algebra in AI & ML', credits: 3, type: 'Theory' },
-          { code: 'CSO-806', name: 'Generative AI', credits: 3, type: 'Theory' }
+          { code: 'CEN-802', name: 'Internet Technologies', credits: 3, type: 'Theory' },
+          { code: 'CEN-801', name: 'Software Project Management', credits: 3, type: 'Theory' },
+          { code: 'CEN-803', name: 'Blockchain Technology', credits: 3, type: 'Theory' },
+          { code: 'CEN-804', name: 'Software Testing', credits: 3, type: 'Theory' },
+          { code: 'CEN-805', name: 'Network Security', credits: 3, type: 'Theory' },
+          { code: 'CEN-806', name: 'Soft Computing', credits: 3, type: 'Theory' }
         ]
       }
     ]
