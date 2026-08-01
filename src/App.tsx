@@ -75,6 +75,7 @@ import {
 } from './types';
 import SettingsTab from './components/SettingsTab';
 import ExamsTab from './components/ExamsTab';
+import AdModal from './components/AdModal';
 import { 
   formatDate, 
   getTodayStr, 
@@ -590,6 +591,11 @@ export default function App() {
   });
 
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
+
+  const [showNaviAd, setShowNaviAd] = useState<boolean>(() => {
+    const dismissed = sessionStorage.getItem('bs_navi_ad_dismissed');
+    return !dismissed;
+  });
 
   const showToast = (message: string, type: 'success' | 'error' | 'info' = 'success') => {
     setToast({ message, type });
@@ -3238,30 +3244,28 @@ export default function App() {
               </motion.div>
             )}
 
-            {profile.department === 'Civil Engineering' && profile.semester === 'Semester 5' && (
-              <motion.div 
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                className="bg-purple-500/10 border border-purple-500/20 p-4 rounded-2xl flex items-center justify-between gap-4 shadow-lg shadow-purple-500/5"
-              >
-                <div className="flex items-center gap-3 text-purple-400">
-                  <GraduationCap size={20} />
-                  <div>
-                    <h4 className="text-xs font-bold text-white leading-tight">Civil Engineering Semester 5</h4>
-                    <p className="text-[10px] text-zinc-400 mt-0.5">
-                      Weekly Schedule: <span className="text-purple-400 font-extrabold">{profile.labGroup ? `Group ${profile.labGroup}` : 'Not Selected'}</span>
-                    </p>
-                  </div>
+            <motion.div 
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              onClick={() => setShowNaviAd(true)}
+              className="bg-gradient-to-r from-[#200732] to-[#3B0D58] border border-emerald-500/30 p-3.5 rounded-2xl flex items-center justify-between gap-3 shadow-lg shadow-purple-900/20 cursor-pointer group hover:border-emerald-400/50 transition-all select-none"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-emerald-400 text-purple-950 font-black text-xs flex items-center justify-center shrink-0 shadow-md group-hover:scale-105 transition-transform">
+                  navi
                 </div>
-                <Button 
-                  variant="secondary" 
-                  className="text-xs py-1.5 px-3 border border-purple-500/30 hover:bg-purple-500/15 text-purple-400 hover:text-purple-300 transition-all font-bold bg-zinc-950/40" 
-                  onClick={() => setShowCivil5GroupModal(true)}
-                >
-                  {profile.labGroup ? 'Change Group' : 'Choose Group'}
-                </Button>
-              </motion.div>
-            )}
+                <div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xs font-black text-emerald-400 tracking-tight">Navi UPI – Fast 0.8s Payments</span>
+                    <span className="px-1.5 py-0.5 bg-emerald-400/20 text-emerald-300 text-[9px] font-bold rounded uppercase">Ad</span>
+                  </div>
+                  <p className="text-[10px] text-zinc-300 font-medium">Fast, very fast payments. Tap to claim offer</p>
+                </div>
+              </div>
+              <div className="px-3 py-1.5 rounded-xl bg-emerald-400 text-purple-950 text-xs font-bold shrink-0 group-hover:bg-emerald-300 transition-colors shadow-sm">
+                View
+              </div>
+            </motion.div>
 
             <div className="grid grid-cols-1 gap-3">
               <Card className="relative overflow-hidden p-2.5">
@@ -4970,6 +4974,14 @@ export default function App() {
       {renderFirstYearPatternModal()}
       {renderAttendanceInfoModal()}
       {renderCivil5GroupModal()}
+      {showNaviAd && (
+        <AdModal
+          onClose={() => {
+            sessionStorage.setItem('bs_navi_ad_dismissed', 'true');
+            setShowNaviAd(false);
+          }}
+        />
+      )}
     </div>
   );
 }
