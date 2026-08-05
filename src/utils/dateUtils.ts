@@ -78,7 +78,6 @@ export const getJamiaHoliday = (date: Date | string | null | undefined): { isHol
     '2026-05-28': 'Eidul-Azha*',
     '2026-06-25': 'Muharram*',
     '2026-06-26': 'Muharram*',
-    '2026-08-05': 'Chehellum*',
     '2026-08-15': 'Independence day',
     '2026-08-26': 'Eid- Milad-Un-Nabi*',
     '2026-09-04': 'Janamashtami',
