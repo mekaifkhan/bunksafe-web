@@ -5,7 +5,7 @@
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { logCustomEvent, saveUserSubjectsToFirestore, loadUserSubjectsFromFirestore, saveUserProfileToFirestore, loadUserProfileFromFirestore, syncNotificationDeviceToFirestore } from './firebase';
-import { getDefaultCurriculumSubjects, generateCivil5Schedule } from './utils/curriculum';
+import { getDefaultCurriculumSubjects, generateCivil5Schedule, generateEce5Schedule, getEceAcademicWeek, getSubjectDisplayName } from './utils/curriculum';
 import { 
   LayoutDashboard, 
   Calendar as CalendarIcon, 
@@ -417,6 +417,13 @@ export default function App() {
     return !!(isCivil5 && isCompleted && !hasGroup && !hasDismissed);
   });
 
+  const [showEceGroupModal, setShowEceGroupModal] = useState<boolean>(() => {
+    const isEce5 = (profile.department === 'Electronics & Communication Engineering' || !profile.department || profile.department.includes('Electronics')) && (profile.semester === 'Semester 5' || !profile.semester);
+    const hasValidGroup = ['X1', 'X2', 'X3', 'X4'].includes((profile.labGroup || '').toUpperCase());
+    const hasDismissed = localStorage.getItem('bs_ece_group_dismissed') === 'true';
+    return !hasValidGroup && !hasDismissed;
+  });
+
   const [onboardName, setOnboardName] = useState('');
   const [onboardProgramme, setOnboardProgramme] = useState<'Regular' | 'Self-Financed' | ''>('');
   const [onboardDept, setOnboardDept] = useState('');
@@ -659,6 +666,41 @@ export default function App() {
       }
     }
   }, [subjects, swayamSubjectId]);
+
+  // ECE 5th Semester Timetable & Subjects Initializer
+  useEffect(() => {
+    const isEce5 = (profile.department === 'Electronics & Communication Engineering' || !profile.department || profile.department.includes('Electronics')) && (profile.semester === 'Semester 5' || !profile.semester);
+    if (isEce5) {
+      // 1. Ensure ECE 5th Sem subjects are loaded if subjects list is empty
+      if (subjects.length === 0) {
+        const { subjects: defaultSubs } = getDefaultCurriculumSubjects('Semester 5', 'Electronics & Communication Engineering', 'SetA');
+        if (defaultSubs && defaultSubs.length > 0) {
+          setSubjects(defaultSubs);
+        }
+      }
+
+      // 2. Ensure custom lab slot times are set for 2:00-3:40 PM and 3:40-5:20 PM
+      if (customClassTimes[4] === '02:00 PM - 03:00 PM' || !customClassTimes[4]) {
+        setCustomClassTimes(prev => ({
+          ...prev,
+          4: '02:00 PM - 03:40 PM',
+          5: '03:40 PM - 05:20 PM'
+        }));
+      }
+
+      // 3. Ensure schedule is initialized with rotation if labGroup exists
+      const group = (profile.labGroup || 'X1').toUpperCase();
+      if (['X1', 'X2', 'X3', 'X4'].includes(group)) {
+        const weekInfo = getEceAcademicWeek(new Date());
+        const eceSchedule = generateEce5Schedule(group, weekInfo.isOddWeek);
+        const hasSchedule = Object.values(classSchedule).some(day => Object.values(day).some(val => typeof val === 'string' && val.trim().length > 0));
+        if (!hasSchedule) {
+          setClassSchedule(eceSchedule);
+          localStorage.setItem('bs_class_schedule', JSON.stringify(eceSchedule));
+        }
+      }
+    }
+  }, [profile.department, profile.semester, profile.labGroup]);
 
   // Keep SWAYAM subjects on the weekly schedule - bypassed automatic deletion
   useEffect(() => {
@@ -3736,8 +3778,8 @@ export default function App() {
                           );
                         }
 
-                        const foundSub = subjects.find(s => s.id === subId);
-                        const subjectName = foundSub ? foundSub.name : subId;
+                        const foundSub = subjects.find(s => s.id === subId || s.name === subId || (s.originalCode && subId.includes(s.originalCode)));
+                        const subjectName = getSubjectDisplayName(subId, subjects);
 
                         return (
                           <div key={slot.id} className="bg-zinc-900/30 border border-zinc-800/50 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
@@ -3884,6 +3926,55 @@ export default function App() {
               exit={{ opacity: 0, y: -15 }}
               className="space-y-6"
             >
+              {/* ECE 5th Semester Rotation Banner */}
+              {((profile.department === 'Electronics & Communication Engineering' || !profile.department || profile.department.includes('Electronics')) && (profile.semester === 'Semester 5' || !profile.semester)) && (() => {
+                const eceWeekInfo = getEceAcademicWeek(new Date());
+                const activeGroup = (profile.labGroup || 'X1').toUpperCase();
+                let rotationText = '';
+                if (activeGroup === 'X1') rotationText = eceWeekInfo.isOddWeek ? 'Original X3 Schedule' : 'Original X1 Schedule';
+                else if (activeGroup === 'X2') rotationText = eceWeekInfo.isOddWeek ? 'Original X2 Schedule' : 'Original X4 Schedule';
+                else if (activeGroup === 'X3') rotationText = eceWeekInfo.isOddWeek ? 'Original X1 Schedule' : 'Original X3 Schedule';
+                else rotationText = eceWeekInfo.isOddWeek ? 'Original X4 Schedule' : 'Original X2 Schedule';
+
+                return (
+                  <div className="bg-gradient-to-r from-purple-950/40 via-zinc-900 to-zinc-900 border border-purple-500/30 rounded-2xl p-4 space-y-3">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="px-2 py-0.5 text-[10px] font-black uppercase rounded bg-purple-500/20 text-purple-300 border border-purple-500/30">
+                            ECE 5th Sem (2026)
+                          </span>
+                          <span className="text-[10px] font-bold text-zinc-400">
+                            10 Aug 2026 – 20 Nov 2026
+                          </span>
+                        </div>
+                        <h4 className="text-sm font-extrabold text-zinc-100">
+                          Academic Week {eceWeekInfo.weekNumber} • <span className="text-purple-400">{eceWeekInfo.isOddWeek ? 'Odd Week' : 'Even Week'}</span>
+                        </h4>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => setShowEceGroupModal(true)}
+                        className="self-start sm:self-auto px-3.5 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-xl text-xs font-bold transition-all shadow-md flex items-center gap-1.5 shrink-0"
+                      >
+                        <GraduationCap size={14} />
+                        <span>Group: {activeGroup} (Change)</span>
+                      </button>
+                    </div>
+
+                    <div className="text-[11px] text-zinc-400 border-t border-zinc-800/80 pt-2 flex flex-wrap items-center justify-between gap-2">
+                      <span>
+                        Active Rotation: <strong className="text-zinc-200">Group {activeGroup}</strong> is currently following <strong className="text-purple-300">{rotationText}</strong>.
+                      </span>
+                      <span className="text-[10px] text-zinc-500 italic">
+                        (Laboratory schedule auto-updates weekly)
+                      </span>
+                    </div>
+                  </div>
+                );
+              })()}
+
               {/* Weekly Class Schedule Manager */}
               <Card className="space-y-6">
                 <div className="flex items-center gap-2">
@@ -3970,8 +4061,8 @@ export default function App() {
                     }
 
                     const subId = (classSchedule[selectedScheduleDay]?.[slot.id] || '').trim();
-                    const foundSub = subjects.find(s => s.id === subId);
-                    const subjectName = foundSub ? foundSub.name : subId;
+                    const foundSub = subjects.find(s => s.id === subId || s.name === subId || (s.originalCode && subId.includes(s.originalCode)));
+                    const subjectName = getSubjectDisplayName(subId, subjects);
 
                     return (
                       <div key={slot.id} className="bg-zinc-900/20 border border-zinc-800/60 rounded-xl p-3.5 flex flex-col gap-2.5">
@@ -4919,6 +5010,98 @@ export default function App() {
     );
   };
 
+  const renderEce5GroupModal = () => {
+    if (!showEceGroupModal) return null;
+
+    const eceWeekInfo = getEceAcademicWeek(new Date());
+
+    return (
+      <div id="ece5-group-modal" className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-fade-in">
+        <motion.div 
+          initial={{ scale: 0.9, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          className="bg-zinc-900 border border-zinc-800 rounded-3xl p-6 w-full max-w-sm space-y-5 shadow-2xl"
+        >
+          <div className="space-y-1.5 text-center">
+            <div className="mx-auto w-12 h-12 bg-purple-500/10 rounded-full flex items-center justify-center mb-2 border border-purple-500/20">
+              <GraduationCap size={24} className="text-purple-400" />
+            </div>
+            <h2 className="text-base font-extrabold text-zinc-100">Select Laboratory Group</h2>
+            <p className="text-[11px] text-zinc-400 leading-relaxed">
+              Jamia Millia Islamia • B.Tech ECE 5th Sem (2026)
+              <br />
+              <span className="text-purple-400 font-bold">10 Aug 2026 – 20 Nov 2026</span>
+              <br />
+              Select your Lab Group below. Your timetable will automatically rotate based on the academic week ({`Week ${eceWeekInfo.weekNumber}`} • {eceWeekInfo.isOddWeek ? 'Odd Week' : 'Even Week'}).
+            </p>
+          </div>
+
+          <div className="grid grid-cols-2 gap-2">
+            {(['X1', 'X2', 'X3', 'X4'] as const).map(grp => (
+              <button
+                key={grp}
+                type="button"
+                onClick={() => {
+                  const updatedProfile = { ...profile, labGroup: grp };
+                  setProfile(updatedProfile);
+                  localStorage.setItem('bs_profile', JSON.stringify(updatedProfile));
+                  localStorage.setItem('bs_lab_group', grp);
+                  
+                  if (subjects.length === 0) {
+                    const { subjects: defaultSubs } = getDefaultCurriculumSubjects('Semester 5', 'Electronics & Communication Engineering', 'SetA');
+                    if (defaultSubs && defaultSubs.length > 0) {
+                      setSubjects(defaultSubs);
+                    }
+                  }
+
+                  const currentWeekInfo = getEceAcademicWeek(new Date());
+                  const schedule = generateEce5Schedule(grp, currentWeekInfo.isOddWeek);
+                  setClassSchedule(schedule);
+                  localStorage.setItem('bs_class_schedule', JSON.stringify(schedule));
+                  
+                  localStorage.setItem('bs_ece_group_dismissed', 'true');
+                  setShowEceGroupModal(false);
+                  showToast(`Lab Group ${grp} selected! Timetable synchronized for Week ${currentWeekInfo.weekNumber}.`, 'success');
+                }}
+                className={`text-left p-3 rounded-2xl bg-zinc-800/20 border transition-all flex flex-col gap-1 group font-sans ${
+                  profile.labGroup === grp 
+                    ? 'border-purple-500 bg-purple-500/10' 
+                    : 'border-zinc-800 hover:border-zinc-700 hover:bg-zinc-800/40'
+                }`}
+              >
+                <div className="flex items-center justify-between w-full">
+                  <span className="font-extrabold text-xs text-zinc-200 group-hover:text-purple-400 transition-colors">Group {grp}</span>
+                  {profile.labGroup === grp && (
+                    <span className="text-[9px] bg-purple-500/20 text-purple-400 font-bold px-1.5 py-0.5 rounded font-mono">Active</span>
+                  )}
+                </div>
+                <p className="text-[9px] text-zinc-500 leading-tight">
+                  {grp === 'X1' && 'Odd: X3 | Even: X1'}
+                  {grp === 'X2' && 'Odd: X2 | Even: X4'}
+                  {grp === 'X3' && 'Odd: X1 | Even: X3'}
+                  {grp === 'X4' && 'Odd: X4 | Even: X2'}
+                </p>
+              </button>
+            ))}
+          </div>
+
+          <div className="flex gap-2 pt-1">
+            <button
+              type="button"
+              onClick={() => {
+                localStorage.setItem('bs_ece_group_dismissed', 'true');
+                setShowEceGroupModal(false);
+              }}
+              className="w-full py-2.5 bg-zinc-800 hover:bg-zinc-750 text-zinc-300 rounded-xl text-xs font-bold uppercase transition-all"
+            >
+              Dismiss / Remind Later
+            </button>
+          </div>
+        </motion.div>
+      </div>
+    );
+  };
+
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-100 font-sans selection:bg-primary/30">
       <AnimatePresence>
@@ -4978,6 +5161,7 @@ export default function App() {
       {renderFirstYearPatternModal()}
       {renderAttendanceInfoModal()}
       {renderCivil5GroupModal()}
+      {renderEce5GroupModal()}
     </div>
   );
 }

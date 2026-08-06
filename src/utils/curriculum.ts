@@ -1462,3 +1462,172 @@ export function generateCivil5Schedule(labGroup: 'G1' | 'G2', minorHonorsEnabled
     }
   };
 }
+
+export function getSubjectDisplayName(subId: string, subjectsList: any[] = []): string {
+  if (!subId) return '';
+  if (subId === 'No Class') return 'No Class';
+  if (subId === 'Minor/Honors') return 'Minor/Honors';
+
+  const found = subjectsList.find(s => 
+    s.id === subId || 
+    s.name === subId || 
+    (s.originalCode && subId.endsWith(s.originalCode)) ||
+    (s.originalCode && subId.includes(s.originalCode))
+  );
+  if (found) return found.name;
+
+  // Fallback map for JMI ECE & Civil 5th Semester codes
+  const codeMatch = subId.match(/(ECC-50[1-5]|ECL-50[1-4]|CEC-50[1-5]|CEL-50[1-3])/);
+  if (codeMatch) {
+    const code = codeMatch[1];
+    const codeMap: Record<string, string> = {
+      'ECC-501': 'Active Filters and Signal Processing (AFSP)',
+      'ECC-502': 'Digital Communication Systems (DCS)',
+      'ECC-503': 'Microprocessor',
+      'ECC-504': 'Electromagnetic Field Theory (EMFT)',
+      'ECC-505': 'Instrumentation and Control Systems (ICS)',
+      'ECL-501': 'Active Filters and Signal Processing Laboratory',
+      'ECL-502': 'Digital Communication Laboratory',
+      'ECL-503': 'Microprocessor Laboratory',
+      'ECL-504': 'Instrumentation and Control Systems Laboratory',
+      'CEC-501': 'Structural Analysis II',
+      'CEC-502': 'Design of Concrete Structures',
+      'CEC-503': 'Geotechnical Engineering I',
+      'CEC-504': 'Transportation Engineering I',
+      'CEC-505': 'Environmental Engineering I',
+      'CEL-501': 'Geotechnical Engineering Lab',
+      'CEL-502': 'Transportation Engineering Lab',
+      'CEL-503': 'Environmental Engineering Lab'
+    };
+    if (codeMap[code]) return `${code} ${codeMap[code]}`;
+  }
+
+  if (subId.startsWith('sub_jmi_')) {
+    const parts = subId.split('_');
+    return parts[parts.length - 1] || subId;
+  }
+
+  return subId;
+}
+
+export interface EceWeekInfo {
+  weekNumber: number;
+  isOddWeek: boolean;
+  startDateStr: string;
+  endDateStr: string;
+}
+
+export function getEceAcademicWeek(date: Date = new Date()): EceWeekInfo {
+  // Start Date: 10 August 2026 (Monday)
+  // End Date: 20 November 2026 (Friday)
+  const startDate = new Date(2026, 7, 10);
+  startDate.setHours(0, 0, 0, 0);
+
+  const targetDate = new Date(date);
+  targetDate.setHours(0, 0, 0, 0);
+
+  const diffTime = targetDate.getTime() - startDate.getTime();
+  const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+
+  let weekNumber = 1;
+  if (diffDays >= 0) {
+    weekNumber = Math.floor(diffDays / 7) + 1;
+  } else {
+    weekNumber = 1;
+  }
+
+  const isOddWeek = weekNumber % 2 !== 0;
+
+  return {
+    weekNumber,
+    isOddWeek,
+    startDateStr: '10 August 2026',
+    endDateStr: '20 November 2026'
+  };
+}
+
+export function generateEce5Schedule(
+  labGroup: string,
+  isOddWeek: boolean
+): Record<string, Record<number, string>> {
+  // Base Original Lab Schedules
+  // Slot 4: Session 1 (2:00 PM – 3:40 PM)
+  // Slot 5: Session 2 (3:40 PM – 5:20 PM)
+
+  const origX1: Record<string, Record<number, string>> = {
+    'Monday': { 4: 'sub_jmi_Semester_5_ECL-501', 5: 'sub_jmi_Semester_5_ECL-504' },
+    'Tuesday': { 4: 'sub_jmi_Semester_5_ECL-502', 5: 'sub_jmi_Semester_5_ECL-503' },
+    'Wednesday': {},
+    'Thursday': {},
+    'Friday': {}
+  };
+
+  const origX2: Record<string, Record<number, string>> = {
+    'Monday': { 4: 'sub_jmi_Semester_5_ECL-504', 5: 'sub_jmi_Semester_5_ECL-501' },
+    'Tuesday': { 4: 'sub_jmi_Semester_5_ECL-503', 5: 'sub_jmi_Semester_5_ECL-502' },
+    'Wednesday': {},
+    'Thursday': {},
+    'Friday': {}
+  };
+
+  const origX3: Record<string, Record<number, string>> = {
+    'Monday': { 4: 'sub_jmi_Semester_5_ECL-503', 5: 'sub_jmi_Semester_5_ECL-502' },
+    'Tuesday': {},
+    'Wednesday': { 5: 'sub_jmi_Semester_5_ECL-501' },
+    'Thursday': { 4: 'sub_jmi_Semester_5_ECL-504' },
+    'Friday': {}
+  };
+
+  const origX4: Record<string, Record<number, string>> = {
+    'Monday': { 4: 'sub_jmi_Semester_5_ECL-502', 5: 'sub_jmi_Semester_5_ECL-503' },
+    'Tuesday': {},
+    'Wednesday': { 4: 'sub_jmi_Semester_5_ECL-501' },
+    'Thursday': { 5: 'sub_jmi_Semester_5_ECL-504' },
+    'Friday': {}
+  };
+
+  // Rotation rules
+  let activeLab: Record<string, Record<number, string>>;
+  const grp = (labGroup || 'X1').toUpperCase();
+
+  if (grp === 'X1') {
+    activeLab = isOddWeek ? origX3 : origX1;
+  } else if (grp === 'X3') {
+    activeLab = isOddWeek ? origX1 : origX3;
+  } else if (grp === 'X2') {
+    activeLab = isOddWeek ? origX2 : origX4;
+  } else { // X4
+    activeLab = isOddWeek ? origX4 : origX2;
+  }
+
+  // Combined Theory + Active Lab Timetable
+  return {
+    'Monday': {
+      1: 'sub_jmi_Semester_5_ECC-503', // 10:00 - 11:00 AM Microprocessor
+      2: 'sub_jmi_Semester_5_ECC-504', // 11:00 - 12:00 PM EMFT
+      ...(activeLab['Monday'] || {})
+    },
+    'Tuesday': {
+      0: 'sub_jmi_Semester_5_ECC-501', // 09:00 - 10:00 AM AFSP
+      1: 'sub_jmi_Semester_5_ECC-505', // 10:00 - 11:00 AM ICS
+      2: 'sub_jmi_Semester_5_ECC-502', // 11:00 - 12:00 PM DCS
+      ...(activeLab['Tuesday'] || {})
+    },
+    'Wednesday': {
+      0: 'sub_jmi_Semester_5_ECC-501', // 09:00 - 10:00 AM AFSP
+      1: 'sub_jmi_Semester_5_ECC-505', // 10:00 - 11:00 AM ICS
+      2: 'sub_jmi_Semester_5_ECC-502', // 11:00 - 12:00 PM DCS
+      ...(activeLab['Wednesday'] || {})
+    },
+    'Thursday': {
+      0: 'sub_jmi_Semester_5_ECC-503', // 09:00 - 10:00 AM Microprocessor
+      1: 'sub_jmi_Semester_5_ECC-502', // 10:00 - 11:00 AM DCS
+      2: 'sub_jmi_Semester_5_ECC-504', // 11:00 - 12:00 PM EMFT
+      3: 'sub_jmi_Semester_5_ECC-503', // 12:00 - 01:00 PM Microprocessor
+      ...(activeLab['Thursday'] || {})
+    },
+    'Friday': {
+      ...(activeLab['Friday'] || {})
+    }
+  };
+}

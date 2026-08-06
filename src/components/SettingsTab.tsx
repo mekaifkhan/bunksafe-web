@@ -40,7 +40,7 @@ import { format } from 'date-fns';
 import { Profile, Semester, AttendanceRecord, SemesterHistory, AppState, Subject, SubjectGradeConfig, formatSubjectName } from '../types';
 import { motion, AnimatePresence } from 'motion/react';
 import { logCustomEvent, addFeatureRequestToFirestore, fetchLatestAppVersionFromFirestore, fetchChangelogsFromFirestore, deleteUserAccountFromFirestore } from '../firebase';
-import { JMI_CURRICULUM, JMI_CIVIL_CURRICULUM, JMI_VLSI_CURRICULUM, JMI_ELECTRICAL_CURRICULUM, JMI_MECHANICAL_CURRICULUM, JMI_CSE_DS_CURRICULUM, JMI_COMP_ENG_CURRICULUM, JMI_ELECTRICAL_COMPUTER_CURRICULUM, JMI_FIRST_YEAR_SET_A, JMI_FIRST_YEAR_SET_B, getDefaultCurriculumSubjects, generateCivil5Schedule } from '../utils/curriculum';
+import { JMI_CURRICULUM, JMI_CIVIL_CURRICULUM, JMI_VLSI_CURRICULUM, JMI_ELECTRICAL_CURRICULUM, JMI_MECHANICAL_CURRICULUM, JMI_CSE_DS_CURRICULUM, JMI_COMP_ENG_CURRICULUM, JMI_ELECTRICAL_COMPUTER_CURRICULUM, JMI_FIRST_YEAR_SET_A, JMI_FIRST_YEAR_SET_B, getDefaultCurriculumSubjects, generateCivil5Schedule, generateEce5Schedule, getEceAcademicWeek } from '../utils/curriculum';
 
 interface SettingsTabProps {
   profile: Profile;
@@ -1024,7 +1024,7 @@ export default function SettingsTab({
                     if (defaultSubs && defaultSubs.length > 0) {
                       setSubjects(defaultSubs);
                       if (profile.department === 'Civil Engineering' && profile.semester === 'Semester 5') {
-                        const grp = profile.labGroup || 'G1';
+                        const grp: 'G1' | 'G2' = profile.labGroup === 'G2' ? 'G2' : 'G1';
                         // Also make sure profile has the default group if not set
                         const updatedProfile = { ...profile, labGroup: grp, minorHonorsEnabled: !!profile.minorHonorsEnabled };
                         setProfile(updatedProfile);
@@ -1034,6 +1034,17 @@ export default function SettingsTab({
                         setClassSchedule(schedule);
                         localStorage.setItem('bs_class_schedule', JSON.stringify(schedule));
                         alert(`Profile updated. Successfully loaded default subjects and weekly timetable schedule (Group ${grp}) for Semester 5 Civil Engineering!`);
+                      } else if ((profile.department === 'Electronics & Communication Engineering' || profile.department.includes('Electronics')) && profile.semester === 'Semester 5') {
+                        const grp = ['X1', 'X2', 'X3', 'X4'].includes(profile.labGroup || '') ? profile.labGroup! : 'X1';
+                        const updatedProfile = { ...profile, labGroup: grp };
+                        setProfile(updatedProfile);
+                        localStorage.setItem('bs_profile', JSON.stringify(updatedProfile));
+                        
+                        const weekInfo = getEceAcademicWeek(new Date());
+                        const schedule = generateEce5Schedule(grp, weekInfo.isOddWeek);
+                        setClassSchedule(schedule);
+                        localStorage.setItem('bs_class_schedule', JSON.stringify(schedule));
+                        alert(`Profile updated. Loaded default subjects and synchronized weekly timetable (Lab Group ${grp}, Academic Week ${weekInfo.weekNumber}) for ECE 5th Semester!`);
                       } else {
                         // Clear the schedule for any non-Civil 5 course to prevent carrying over stale course slots
                         const emptySchedule: Record<string, Record<number, string>> = {
@@ -1225,7 +1236,8 @@ export default function SettingsTab({
                       setProfile(updatedProfile);
                       localStorage.setItem('bs_profile', JSON.stringify(updatedProfile));
                       
-                      const schedule = generateCivil5Schedule(profile.labGroup || 'G1', updatedVal);
+                      const civilGrp: 'G1' | 'G2' = profile.labGroup === 'G2' ? 'G2' : 'G1';
+                      const schedule = generateCivil5Schedule(civilGrp, updatedVal);
                       setClassSchedule(schedule);
                       localStorage.setItem('bs_class_schedule', JSON.stringify(schedule));
                       
@@ -1241,6 +1253,39 @@ export default function SettingsTab({
                 <p className="text-[10px] text-zinc-500 italic">If enabled, the 12:00 PM – 1:00 PM slot on Monday, Tuesday, and Wednesday will be populated with "Minor/Honors Course".</p>
               </div>
             </>
+          ) : ((profile.department === 'Electronics & Communication Engineering' || !profile.department || profile.department.includes('Electronics')) && (profile.semester === 'Semester 5' || !profile.semester)) ? (
+            <div className="space-y-3">
+              <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider block">Change Laboratory Group (ECE 5th Semester)</label>
+              <div className="grid grid-cols-4 gap-2">
+                {(['X1', 'X2', 'X3', 'X4'] as const).map(g => (
+                  <button
+                    key={g}
+                    type="button"
+                    onClick={() => {
+                      const updatedProfile = { ...profile, labGroup: g };
+                      setProfile(updatedProfile);
+                      localStorage.setItem('bs_profile', JSON.stringify(updatedProfile));
+                      localStorage.setItem('bs_lab_group', g);
+                      
+                      const weekInfo = getEceAcademicWeek(new Date());
+                      const schedule = generateEce5Schedule(g, weekInfo.isOddWeek);
+                      setClassSchedule(schedule);
+                      localStorage.setItem('bs_class_schedule', JSON.stringify(schedule));
+                      
+                      if (showToast) {
+                        showToast(`ECE Lab Group changed to ${g}! Timetable updated.`, 'success');
+                      }
+                    }}
+                    className={`py-2.5 rounded-xl text-xs font-bold border transition-all ${profile.labGroup === g ? 'bg-purple-600 border-purple-500 text-white font-black shadow-md shadow-purple-600/20' : 'bg-zinc-950 border-zinc-800 text-zinc-400 hover:text-white'}`}
+                  >
+                    Group {g}
+                  </button>
+                ))}
+              </div>
+              <p className="text-[10px] text-zinc-500 italic leading-relaxed">
+                Automatically rotates your lab timetable according to academic week calculations (10 Aug 2026 – 20 Nov 2026).
+              </p>
+            </div>
           ) : (
             <div className="text-center py-4 space-y-1">
               <CalendarDays className="mx-auto text-zinc-700 opacity-40 mb-1" size={24} />
