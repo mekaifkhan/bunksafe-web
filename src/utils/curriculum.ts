@@ -48,11 +48,12 @@ export const JMI_CURRICULUM: Record<string, SemesterCurriculum> = {
   },
   'Semester 5': {
     subjects: [
-      { code: 'ECC-501', name: 'Active Filters and Signal Processing', credits: 3, type: 'Theory' },
+      { code: 'ECC-501', name: 'Active Filters and Signal Processing (AFSP)', credits: 3, type: 'Theory' },
       { code: 'ECC-502', name: 'Digital Communication', credits: 3, type: 'Theory' },
       { code: 'ECC-503', name: 'Microprocessors and Applications', credits: 3, type: 'Theory' },
-      { code: 'ECC-504', name: 'Electromagnetic Field Theory', credits: 3, type: 'Theory' },
-      { code: 'ECC-505', name: 'Instrumentation and Control Systems', credits: 3, type: 'Theory' },
+      { code: 'ECC-504', name: 'Electromagnetic Field Theory (EMFT)', credits: 3, type: 'Theory' },
+      { code: 'ECC-505', name: 'Instrumentation and Control Systems (ICS)', credits: 3, type: 'Theory' },
+      { code: 'DCS', name: 'Digital Circuits & Systems (DCS)', credits: 3, type: 'Theory' },
       { code: 'ECL-501', name: 'Active Filters and Signal Processing Lab', credits: 1, type: 'Lab' },
       { code: 'ECL-502', name: 'Digital Communication Lab', credits: 1, type: 'Lab' },
       { code: 'ECL-503', name: 'Microprocessors and Applications Lab', credits: 1, type: 'Lab' },
@@ -1476,13 +1477,15 @@ export function getSubjectDisplayName(subId: string, subjectsList: any[] = []): 
   );
   if (found) return found.name;
 
+  if (subId.includes('DCS')) return 'Digital Circuits & Systems (DCS)';
+
   // Fallback map for JMI ECE & Civil 5th Semester codes
   const codeMatch = subId.match(/(ECC-50[1-5]|ECL-50[1-4]|CEC-50[1-5]|CEL-50[1-3])/);
   if (codeMatch) {
     const code = codeMatch[1];
     const codeMap: Record<string, string> = {
       'ECC-501': 'Active Filters and Signal Processing (AFSP)',
-      'ECC-502': 'Digital Communication Systems (DCS)',
+      'ECC-502': 'Digital Communication',
       'ECC-503': 'Microprocessor',
       'ECC-504': 'Electromagnetic Field Theory (EMFT)',
       'ECC-505': 'Instrumentation and Control Systems (ICS)',
@@ -1499,7 +1502,7 @@ export function getSubjectDisplayName(subId: string, subjectsList: any[] = []): 
       'CEL-502': 'Transportation Engineering Lab',
       'CEL-503': 'Environmental Engineering Lab'
     };
-    if (codeMap[code]) return `${code} ${codeMap[code]}`;
+    if (codeMap[code]) return `${codeMap[code]}`;
   }
 
   if (subId.startsWith('sub_jmi_')) {
@@ -1610,23 +1613,26 @@ export function generateEce5Schedule(
     'Tuesday': {
       0: 'sub_jmi_Semester_5_ECC-501', // 09:00 - 10:00 AM AFSP
       1: 'sub_jmi_Semester_5_ECC-505', // 10:00 - 11:00 AM ICS
-      2: 'sub_jmi_Semester_5_ECC-502', // 11:00 - 12:00 PM DCS
+      2: 'sub_jmi_Semester_5_DCS',     // 11:00 - 12:00 PM Digital Circuits & Systems
       ...(activeLab['Tuesday'] || {})
     },
     'Wednesday': {
       0: 'sub_jmi_Semester_5_ECC-501', // 09:00 - 10:00 AM AFSP
       1: 'sub_jmi_Semester_5_ECC-505', // 10:00 - 11:00 AM ICS
-      2: 'sub_jmi_Semester_5_ECC-502', // 11:00 - 12:00 PM DCS
+      2: 'sub_jmi_Semester_5_DCS',     // 11:00 - 12:00 PM Digital Circuits & Systems
       ...(activeLab['Wednesday'] || {})
     },
     'Thursday': {
       0: 'sub_jmi_Semester_5_ECC-503', // 09:00 - 10:00 AM Microprocessor
-      1: 'sub_jmi_Semester_5_ECC-502', // 10:00 - 11:00 AM DCS
+      1: 'sub_jmi_Semester_5_DCS',     // 10:00 - 11:00 AM Digital Circuits & Systems
       2: 'sub_jmi_Semester_5_ECC-504', // 11:00 - 12:00 PM EMFT
       3: 'sub_jmi_Semester_5_ECC-503', // 12:00 - 01:00 PM Microprocessor
       ...(activeLab['Thursday'] || {})
     },
     'Friday': {
+      0: 'sub_jmi_Semester_5_ECC-501', // 09:00 - 10:00 AM AFSP
+      1: 'sub_jmi_Semester_5_ECC-505', // 10:00 - 11:00 AM ICS
+      2: 'sub_jmi_Semester_5_ECC-504', // 11:00 - 12:00 PM EMFT
       ...(activeLab['Friday'] || {})
     }
   };
