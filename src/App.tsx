@@ -688,15 +688,16 @@ export default function App() {
         }));
       }
 
-      // 3. Ensure schedule is initialized with rotation if labGroup exists
+      // 3. Ensure schedule is dynamically synced with current academic week & rotation on app open
       const group = (profile.labGroup || 'X1').toUpperCase();
       if (['X1', 'X2', 'X3', 'X4'].includes(group)) {
         const weekInfo = getEceAcademicWeek(new Date());
         const eceSchedule = generateEce5Schedule(group, weekInfo.isOddWeek);
-        const hasSchedule = Object.values(classSchedule).some(day => Object.values(day).some(val => typeof val === 'string' && val.trim().length > 0));
-        if (!hasSchedule) {
+        const currentStr = JSON.stringify(classSchedule);
+        const expectedStr = JSON.stringify(eceSchedule);
+        if (currentStr !== expectedStr) {
           setClassSchedule(eceSchedule);
-          localStorage.setItem('bs_class_schedule', JSON.stringify(eceSchedule));
+          localStorage.setItem('bs_class_schedule', expectedStr);
         }
       }
     }
