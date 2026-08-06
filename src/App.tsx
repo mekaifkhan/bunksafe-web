@@ -75,6 +75,7 @@ import {
 } from './types';
 import SettingsTab from './components/SettingsTab';
 import ExamsTab from './components/ExamsTab';
+import { AttendancePredictor } from './components/AttendancePredictor';
 import { 
   formatDate, 
   getTodayStr, 
@@ -4439,6 +4440,13 @@ export default function App() {
     return (
       <div className="space-y-6 pb-24">
         <h1 className="text-2xl font-bold">Special</h1>
+
+        {/* End of Month Attendance Predictor */}
+        <AttendancePredictor
+          stats={stats}
+          classSchedule={classSchedule}
+          targetAttendance={semester.targetAttendance}
+        />
 
         {/* Theme Customization */}
         <Card className="space-y-4">
