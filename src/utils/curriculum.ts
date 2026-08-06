@@ -53,7 +53,6 @@ export const JMI_CURRICULUM: Record<string, SemesterCurriculum> = {
       { code: 'ECC-503', name: 'Microprocessors and Applications', credits: 3, type: 'Theory' },
       { code: 'ECC-504', name: 'Electromagnetic Field Theory (EMFT)', credits: 3, type: 'Theory' },
       { code: 'ECC-505', name: 'Instrumentation and Control Systems (ICS)', credits: 3, type: 'Theory' },
-      { code: 'DCS', name: 'Digital Circuits & Systems (DCS)', credits: 3, type: 'Theory' },
       { code: 'ECL-501', name: 'Active Filters and Signal Processing Lab', credits: 1, type: 'Lab' },
       { code: 'ECL-502', name: 'Digital Communication Lab', credits: 1, type: 'Lab' },
       { code: 'ECL-503', name: 'Microprocessors and Applications Lab', credits: 1, type: 'Lab' },
@@ -64,7 +63,7 @@ export const JMI_CURRICULUM: Record<string, SemesterCurriculum> = {
         id: 'sem5_group1',
         label: 'Professional Elective',
         options: [
-          { code: 'ECE-501', name: 'DCS', credits: 3, type: 'Theory' },
+          { code: 'ECE-501', name: 'Digital Circuits & Systems (DCS)', credits: 3, type: 'Theory' },
           { code: 'ECE-502', name: 'Bio-medical Electronics', credits: 3, type: 'Theory' },
           { code: 'ECE-503', name: 'High Speed Electronics', credits: 3, type: 'Theory' }
         ]
@@ -1477,21 +1476,22 @@ export function getSubjectDisplayName(subId: string, subjectsList: any[] = []): 
   );
   if (found) return found.name;
 
-  if (subId.includes('DCS')) return 'Digital Circuits & Systems (DCS)';
+  if (subId.includes('DCS') || subId.includes('ECE-501') || subId.includes('sem5_group1')) return 'ECE-501 Digital Circuits & Systems (DCS)';
 
   // Fallback map for JMI ECE & Civil 5th Semester codes
-  const codeMatch = subId.match(/(ECC-50[1-5]|ECL-50[1-4]|CEC-50[1-5]|CEL-50[1-3])/);
+  const codeMatch = subId.match(/(ECC-50[1-5]|ECL-50[1-4]|ECE-50[1-3]|CEC-50[1-5]|CEL-50[1-3])/);
   if (codeMatch) {
     const code = codeMatch[1];
     const codeMap: Record<string, string> = {
       'ECC-501': 'Active Filters and Signal Processing (AFSP)',
       'ECC-502': 'Digital Communication',
-      'ECC-503': 'Microprocessor',
+      'ECC-503': 'Microprocessors and Applications',
       'ECC-504': 'Electromagnetic Field Theory (EMFT)',
       'ECC-505': 'Instrumentation and Control Systems (ICS)',
+      'ECE-501': 'Digital Circuits & Systems (DCS)',
       'ECL-501': 'Active Filters and Signal Processing Laboratory',
       'ECL-502': 'Digital Communication Laboratory',
-      'ECL-503': 'Microprocessor Laboratory',
+      'ECL-503': 'Microprocessors Laboratory',
       'ECL-504': 'Instrumentation and Control Systems Laboratory',
       'CEC-501': 'Structural Analysis II',
       'CEC-502': 'Design of Concrete Structures',
@@ -1606,27 +1606,27 @@ export function generateEce5Schedule(
   // Combined Theory + Active Lab Timetable
   return {
     'Monday': {
-      1: 'sub_jmi_Semester_5_ECC-503', // 10:00 - 11:00 AM Microprocessor
+      1: 'sub_jmi_Semester_5_ECC-503', // 10:00 - 11:00 AM Microprocessors
       2: 'sub_jmi_Semester_5_ECC-504', // 11:00 - 12:00 PM EMFT
       ...(activeLab['Monday'] || {})
     },
     'Tuesday': {
       0: 'sub_jmi_Semester_5_ECC-501', // 09:00 - 10:00 AM AFSP
       1: 'sub_jmi_Semester_5_ECC-505', // 10:00 - 11:00 AM ICS
-      2: 'sub_jmi_Semester_5_DCS',     // 11:00 - 12:00 PM Digital Circuits & Systems
+      2: 'sub_jmi_Semester_5_elective_sem5_group1', // 11:00 - 12:00 PM Professional Elective (DCS)
       ...(activeLab['Tuesday'] || {})
     },
     'Wednesday': {
       0: 'sub_jmi_Semester_5_ECC-501', // 09:00 - 10:00 AM AFSP
       1: 'sub_jmi_Semester_5_ECC-505', // 10:00 - 11:00 AM ICS
-      2: 'sub_jmi_Semester_5_DCS',     // 11:00 - 12:00 PM Digital Circuits & Systems
+      2: 'sub_jmi_Semester_5_elective_sem5_group1', // 11:00 - 12:00 PM Professional Elective (DCS)
       ...(activeLab['Wednesday'] || {})
     },
     'Thursday': {
-      0: 'sub_jmi_Semester_5_ECC-503', // 09:00 - 10:00 AM Microprocessor
-      1: 'sub_jmi_Semester_5_DCS',     // 10:00 - 11:00 AM Digital Circuits & Systems
+      0: 'sub_jmi_Semester_5_ECC-503', // 09:00 - 10:00 AM Microprocessors
+      1: 'sub_jmi_Semester_5_elective_sem5_group1', // 10:00 - 11:00 AM Professional Elective (DCS)
       2: 'sub_jmi_Semester_5_ECC-504', // 11:00 - 12:00 PM EMFT
-      3: 'sub_jmi_Semester_5_ECC-503', // 12:00 - 01:00 PM Microprocessor
+      3: 'sub_jmi_Semester_5_ECC-503', // 12:00 - 01:00 PM Microprocessors
       ...(activeLab['Thursday'] || {})
     },
     'Friday': {
