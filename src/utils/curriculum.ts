@@ -1296,12 +1296,27 @@ export const JMI_ELECTRICAL_CURRICULUM: Record<string, SemesterCurriculum> = {
  * By default, this maps CurriculumSubject items to Subject items (with generated unique IDs).
  * For electives, the first option in the group is chosen as the default.
  */
+import { JMI_SEM1_SUBJECT_MASTER } from './jmiSem1Timetable';
+
 export function getDefaultCurriculumSubjects(
   semesterTitle: string,
   department: string = 'Electronics & Communication Engineering',
   firstYearPattern?: 'SetA' | 'SetB'
  ): { subjects: any[]; electiveSelections: Record<string, string> } {
-  const isFirstYear = semesterTitle === 'Semester 1' || semesterTitle === 'Semester 2';
+  const isSem1 = semesterTitle === 'Semester 1';
+  if (isSem1) {
+    const sem1Subs = JMI_SEM1_SUBJECT_MASTER.map(s => ({
+      id: `sub_jmi_sem1_${s.code.replace(/\s+/g, '_')}`,
+      name: `${s.code} ${s.name}`,
+      type: s.type,
+      credits: s.credits,
+      isCurriculum: true,
+      originalCode: s.code,
+      originalName: s.name
+    }));
+    return { subjects: sem1Subs, electiveSelections: {} };
+  }
+  const isFirstYear = semesterTitle === 'Semester 2';
   if (isFirstYear) {
     return { subjects: [], electiveSelections: {} };
   }

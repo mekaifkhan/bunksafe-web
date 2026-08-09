@@ -76,6 +76,8 @@ import {
 import SettingsTab from './components/SettingsTab';
 import ExamsTab from './components/ExamsTab';
 import { AttendancePredictor } from './components/AttendancePredictor';
+import { JmiSem1TimetableCard } from './components/JmiSem1TimetableCard';
+import { getEffectiveClassesForDate } from './utils/jmiSem1Timetable';
 import { 
   formatDate, 
   getTodayStr, 
@@ -375,6 +377,11 @@ export default function App() {
   const [gradeSubjects, setGradeSubjects] = useState<SubjectGradeConfig[]>(() => {
     const saved = localStorage.getItem('bs_grade_planner_subjects');
     return saved ? JSON.parse(saved) : [];
+  });
+
+  const [userOverrideClasses, setUserOverrideClasses] = useState<Record<string, number>>(() => {
+    const saved = localStorage.getItem('bs_user_override_classes');
+    return saved ? JSON.parse(saved) : {};
   });
 
   const [showExamModal, setShowExamModal] = useState(false);
@@ -1605,6 +1612,15 @@ export default function App() {
       ...prev,
       [date]: { date, held, attended, isHoliday }
     }));
+
+    if (profile.semester === 'Semester 1') {
+      setUserOverrideClasses(prev => {
+        const next = { ...prev, [date]: held };
+        localStorage.setItem('bs_user_override_classes', JSON.stringify(next));
+        return next;
+      });
+    }
+
     if (!isHoliday) {
       logCustomEvent('attendance_marked', {
         branch: profile.department || 'Unknown',
@@ -2687,7 +2703,7 @@ export default function App() {
                         </div>
 
                         <AnimatePresence mode="popLayout">
-                          {!isSem1or2 && (
+                          {(onboardSem === 'Semester 1' || !isSem1or2) && (
                             <motion.div
                               initial={{ opacity: 0, height: 0 }}
                               animate={{ opacity: 1, height: 'auto' }}
@@ -2747,6 +2763,40 @@ export default function App() {
                                       </>
                                     )}
                                   </select>
+                                </motion.div>
+                              )}
+
+                              {onboardSem === 'Semester 1' && onboardDept && (
+                                <motion.div
+                                  initial={{ opacity: 0, height: 0 }}
+                                  animate={{ opacity: 1, height: 'auto' }}
+                                  exit={{ opacity: 0, height: 0 }}
+                                  className="space-y-2 text-left mt-3 overflow-hidden"
+                                >
+                                  <label className="text-xs font-bold text-zinc-500 uppercase tracking-widest block">Lab Group (Optional)</label>
+                                  <div className="grid grid-cols-3 gap-2">
+                                    <button
+                                      type="button"
+                                      onClick={() => setOnboardLabGroup('G1')}
+                                      className={`py-2 px-2 rounded-xl text-xs font-bold border transition-all ${onboardLabGroup === 'G1' ? 'bg-primary border-primary text-white font-black' : 'bg-zinc-950 border-zinc-800 text-zinc-500 hover:text-zinc-400'}`}
+                                    >
+                                      G1
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => setOnboardLabGroup('G2')}
+                                      className={`py-2 px-2 rounded-xl text-xs font-bold border transition-all ${onboardLabGroup === 'G2' ? 'bg-primary border-primary text-white font-black' : 'bg-zinc-950 border-zinc-800 text-zinc-500 hover:text-zinc-400'}`}
+                                    >
+                                      G2
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => setOnboardLabGroup('')}
+                                      className={`py-2 px-2 rounded-xl text-xs font-bold border transition-all ${!onboardLabGroup ? 'bg-zinc-800 border-zinc-700 text-white font-black' : 'bg-zinc-950 border-zinc-800 text-zinc-500 hover:text-zinc-400'}`}
+                                    >
+                                      Skip
+                                    </button>
+                                  </div>
                                 </motion.div>
                               )}
 
@@ -3180,7 +3230,16 @@ export default function App() {
     const today = getTodayStr();
     const currentDayName = format(new Date(), 'EEEE');
     const isWeekday = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'].includes(currentDayName);
-    const todayRecord = records[today] || { held: 0, attended: 0, isHoliday: false };
+    
+    const isSem1Student = profile.semester === 'Semester 1';
+    const sem1Effective = isSem1Student ? getEffectiveClassesForDate(today, profile, userOverrideClasses, records) : null;
+    const rawTodayRecord = records[today];
+
+    const todayRecord = rawTodayRecord || { 
+      held: sem1Effective ? sem1Effective.effectiveClasses : 0, 
+      attended: 0, 
+      isHoliday: sem1Effective ? sem1Effective.isHoliday : false 
+    };
     const parsedStartDate = semester.startDate ? parseISO(semester.startDate) : null;
     const isNotStarted = parsedStartDate && !isNaN(parsedStartDate.getTime()) && isBefore(startOfDay(new Date()), startOfDay(parsedStartDate));
 
@@ -3530,8 +3589,14 @@ export default function App() {
                     <div className="space-y-4">
                       <div className="flex items-center justify-between">
                         <div className="space-y-1">
-                          <div className="flex items-center gap-1.5">
+                          <div className="flex flex-wrap items-center gap-1.5">
                             <p className="font-bold">Total Available Attendance Today</p>
+                            {isSem1Student && (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary/10 border border-primary/20 text-primary text-[10px] font-extrabold uppercase">
+                                <Sparkles size={10} />
+                                Based on your timetable
+                              </span>
+                            )}
                             <button
                               type="button"
                               onClick={() => setShowAttendanceInfoModal(true)}
@@ -4533,11 +4598,28 @@ export default function App() {
       <div className="space-y-6 pb-24">
         <h1 className="text-2xl font-bold">Special</h1>
 
+        {/* JMI FET 1st Semester Timetable Viewer */}
+        {profile.semester === 'Semester 1' && (
+          <JmiSem1TimetableCard 
+            profile={profile} 
+            onUpdateLabGroup={(newGrp) => {
+              const updated = { ...profile, labGroup: newGrp };
+              setProfile(updated);
+              localStorage.setItem('bs_profile', JSON.stringify(updated));
+              if (showToast) {
+                showToast(newGrp ? `Lab Group set to ${newGrp}` : 'Lab group cleared', 'success');
+              }
+            }} 
+          />
+        )}
+
         {/* End of Month Attendance Predictor */}
         <AttendancePredictor
           stats={stats}
           classSchedule={classSchedule}
           targetAttendance={semester.targetAttendance}
+          profile={profile}
+          records={records}
         />
 
         {/* Theme Customization */}

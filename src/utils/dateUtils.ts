@@ -129,9 +129,12 @@ export const calculateAttendance = (records: Record<string, any>, initialHeld = 
     }
     
     const jamiaHoliday = getJamiaHoliday(date);
-    if (!record.isHoliday && !jamiaHoliday.isHoliday && !isExamDay(date)) {
-      totalHeld += record.held;
-      totalAttended += record.attended;
+    const isHoliday = record.isHoliday === true || (jamiaHoliday.isHoliday && (record.held || 0) === 0 && record.isHoliday !== false);
+    if (!isHoliday && !isExamDay(date)) {
+      const h = Math.max(0, record.held || 0);
+      const a = Math.max(0, Math.min(h, record.attended || 0));
+      totalHeld += h;
+      totalAttended += a;
     }
   });
 

@@ -903,17 +903,15 @@ export default function SettingsTab({
                 value={profile.semester}
                 onChange={(e) => {
                   const sem = e.target.value;
-                  const is1or2 = sem === 'Semester 1' || sem === 'Semester 2';
+                  const is1 = sem === 'Semester 1';
+                  const is2 = sem === 'Semester 2';
                   setProfile({
                     ...profile,
                     semester: sem,
-                    department: is1or2 ? 'Applied Science & Humanities' : '',
-                    programme: is1or2 ? 'Regular' : ''
+                    department: is2 ? 'Applied Science & Humanities' : (is1 ? (profile.department || 'Civil Engineering') : ''),
+                    programme: is2 ? 'Regular' : (is1 ? (profile.programme || 'Regular') : '')
                   });
                   logCustomEvent('semester_selected', { semester: sem });
-                  if (is1or2) {
-                    logCustomEvent('branch_selected', { branch: 'Applied Science & Humanities' });
-                  }
                 }}
                 className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-3 py-2.5 text-xs text-zinc-100 focus:outline-none focus:border-primary transition-colors font-bold"
               >
@@ -924,7 +922,7 @@ export default function SettingsTab({
             </div>
           </div>
 
-          {!(profile.semester === 'Semester 1' || profile.semester === 'Semester 2') && (
+          {profile.semester !== 'Semester 2' && (
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider block">Programme</label>
@@ -993,11 +991,12 @@ export default function SettingsTab({
           <button 
             onClick={() => {
               const isSem1or2 = profile.semester === 'Semester 1' || profile.semester === 'Semester 2';
+              const isSem2 = profile.semester === 'Semester 2';
               if (!profile.name.trim()) {
                 alert('Please enter your full name.');
                 return;
               }
-              if (!isSem1or2 && (!profile.programme || !profile.department)) {
+              if (!isSem2 && (!profile.programme || !profile.department)) {
                 alert('Please select both Programme and Branch.');
                 return;
               }
@@ -1189,7 +1188,52 @@ export default function SettingsTab({
           <CalendarDays size={14} className="text-primary" /> Weekly Schedule
         </h3>
         <div className="bg-zinc-900 border border-zinc-800/80 rounded-2xl p-4 space-y-4">
-          {profile.department === 'Civil Engineering' && profile.semester === 'Semester 5' ? (
+          {profile.semester === 'Semester 1' ? (
+            <div className="space-y-3">
+              <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider block">Lab Group (Optional)</label>
+              <div className="grid grid-cols-3 gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const updatedProfile = { ...profile, labGroup: 'G1' };
+                    setProfile(updatedProfile);
+                    localStorage.setItem('bs_profile', JSON.stringify(updatedProfile));
+                    if (showToast) showToast('Lab Group set to G1. Timetable updated!', 'success');
+                  }}
+                  className={`py-2.5 rounded-xl text-xs font-bold border transition-all ${profile.labGroup === 'G1' ? 'bg-primary border-primary text-zinc-950 font-black' : 'bg-zinc-950 border-zinc-800 text-zinc-400 hover:text-white'}`}
+                >
+                  Group G1
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const updatedProfile = { ...profile, labGroup: 'G2' };
+                    setProfile(updatedProfile);
+                    localStorage.setItem('bs_profile', JSON.stringify(updatedProfile));
+                    if (showToast) showToast('Lab Group set to G2. Timetable updated!', 'success');
+                  }}
+                  className={`py-2.5 rounded-xl text-xs font-bold border transition-all ${profile.labGroup === 'G2' ? 'bg-primary border-primary text-zinc-950 font-black' : 'bg-zinc-950 border-zinc-800 text-zinc-400 hover:text-white'}`}
+                >
+                  Group G2
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const updatedProfile = { ...profile, labGroup: undefined };
+                    setProfile(updatedProfile);
+                    localStorage.setItem('bs_profile', JSON.stringify(updatedProfile));
+                    if (showToast) showToast('Lab Group selection cleared.', 'info');
+                  }}
+                  className={`py-2.5 rounded-xl text-xs font-bold border transition-all ${!profile.labGroup ? 'bg-zinc-800 border-zinc-700 text-white font-black' : 'bg-zinc-950 border-zinc-800 text-zinc-500 hover:text-zinc-400'}`}
+                >
+                  Unselected
+                </button>
+              </div>
+              <p className="text-[10px] text-zinc-500 italic leading-relaxed">
+                Optional. Selecting G1 or G2 will include group-specific labs (Physics, Chemistry, Language, Mechanics, Design Thinking) on your timetable and daily class defaults.
+              </p>
+            </div>
+          ) : profile.department === 'Civil Engineering' && profile.semester === 'Semester 5' ? (
             <>
               {/* Lab Group */}
               <div className="space-y-2">

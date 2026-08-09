@@ -22,6 +22,9 @@ import {
 import { format, eachDayOfInterval, startOfDay } from 'date-fns';
 import { getJamiaHoliday } from '../utils/dateUtils';
 
+import { Profile } from '../types';
+import { getSem1WeeklyScheduledCounts } from '../utils/jmiSem1Timetable';
+
 interface AttendancePredictorProps {
   stats: {
     totalHeld: number;
@@ -30,15 +33,23 @@ interface AttendancePredictorProps {
   };
   classSchedule?: Record<string, Record<number, string>>;
   targetAttendance?: number;
+  profile?: Profile;
+  records?: Record<string, any>;
 }
 
 export const AttendancePredictor: React.FC<AttendancePredictorProps> = ({
   stats,
   classSchedule = {},
   targetAttendance = 75,
+  profile,
+  records = {}
 }) => {
-  // Determine default class counts from user's classSchedule if set
+  // Determine default class counts from user's classSchedule if set, or JMI Sem 1 timetable
   const getClassesForDay = (dayName: string) => {
+    if (profile && profile.semester === 'Semester 1') {
+      const counts = getSem1WeeklyScheduledCounts(profile.department, profile.labGroup as any);
+      return counts[dayName] ?? null;
+    }
     const daySched = classSchedule[dayName];
     if (!daySched) return null;
     const count = Object.values(daySched).filter(val => typeof val === 'string' && val.trim() !== '').length;
@@ -53,6 +64,17 @@ export const AttendancePredictor: React.FC<AttendancePredictorProps> = ({
     Thursday: (getClassesForDay('Thursday') ?? 5).toString(),
     Friday: (getClassesForDay('Friday') ?? 4).toString(),
   });
+
+  // Re-sync weekly schedule when profile branch or labGroup changes
+  React.useEffect(() => {
+    setWeeklySchedule({
+      Monday: (getClassesForDay('Monday') ?? 5).toString(),
+      Tuesday: (getClassesForDay('Tuesday') ?? 4).toString(),
+      Wednesday: (getClassesForDay('Wednesday') ?? 6).toString(),
+      Thursday: (getClassesForDay('Thursday') ?? 5).toString(),
+      Friday: (getClassesForDay('Friday') ?? 4).toString(),
+    });
+  }, [profile?.department, profile?.labGroup, profile?.semester]);
 
   // Step 5 Input: Expected Missed Classes
   const [expectedMissedInput, setExpectedMissedInput] = useState<string>('0');
@@ -77,11 +99,17 @@ export const AttendancePredictor: React.FC<AttendancePredictorProps> = ({
     const skippedHolidays: Array<{ dateStr: string; name: string }> = [];
 
     daysRemainingInMonth.forEach((d) => {
+      const dStr = format(d, 'yyyy-MM-dd');
       const dayName = format(d, 'EEEE');
       const isWeekend = dayName === 'Saturday' || dayName === 'Sunday';
-      const jamiaH = getJamiaHoliday(d);
 
       if (isWeekend) return;
+
+      const rec = records[dStr];
+      const isAlreadyRecorded = rec && (rec.held > 0 || rec.isHoliday);
+      if (isAlreadyRecorded) return;
+
+      const jamiaH = getJamiaHoliday(d);
 
       if (jamiaH.isHoliday) {
         skippedHolidays.push({
@@ -109,7 +137,7 @@ export const AttendancePredictor: React.FC<AttendancePredictorProps> = ({
       remainingClasses: totalRemainingClasses,
       upcomingHolidays: skippedHolidays,
     };
-  }, [weeklySchedule]);
+  }, [weeklySchedule, records]);
 
   const expectedMissed = useMemo(() => {
     const parsed = parseInt(expectedMissedInput, 10);
