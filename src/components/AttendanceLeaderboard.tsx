@@ -56,10 +56,18 @@ export const AttendanceLeaderboard: React.FC<AttendanceLeaderboardProps> = ({
 
   // Current user's leaderboard object
   const currentMember: LeaderboardMember | null = useMemo(() => {
-    if (!batchId || !profile.email) return null;
+    if (!batchId) return null;
+    const studentId = (
+      profile.email || 
+      profile.rollNumber || 
+      (typeof window !== 'undefined' ? (window as any).AndroidDeviceID : null) || 
+      (typeof localStorage !== 'undefined' ? localStorage.getItem('bs_device_id') : null) || 
+      `student_${(profile.name || 'user').toLowerCase().replace(/[^a-z0-9]/g, '_')}`
+    ).toLowerCase().trim();
+
     return {
-      studentId: profile.email.toLowerCase().trim(),
-      name: profile.name || 'Anonymous Student',
+      studentId,
+      name: profile.name || 'Student',
       rollNumber: profile.rollNumber || '',
       academicBatchId: batchId,
       department: profile.department || '',
@@ -76,29 +84,11 @@ export const AttendanceLeaderboard: React.FC<AttendanceLeaderboardProps> = ({
     };
   }, [batchId, profile, myStats]);
 
-  // Fetch and sync batch leaderboard with local caching to avoid repeated reads
+  // Fetch and sync batch leaderboard
   const loadLeaderboardData = useCallback(async (isManualRefresh = false) => {
     if (!batchId || !currentMember) {
       setIsLoading(false);
       return;
-    }
-
-    const cacheKey = `bunksafe_leaderboard_${batchId}`;
-    if (!isManualRefresh) {
-      const cached = localStorage.getItem(cacheKey);
-      if (cached) {
-        try {
-          const parsed = JSON.parse(cached);
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            const filtered = parsed.filter((m: LeaderboardMember) => m.studentId.toLowerCase() !== currentMember.studentId.toLowerCase());
-            filtered.push(currentMember);
-            setMembers(filtered);
-            setIsLoading(false);
-          }
-        } catch (e) {
-          // ignore parsing error
-        }
-      }
     }
 
     if (isManualRefresh) {
@@ -108,7 +98,7 @@ export const AttendanceLeaderboard: React.FC<AttendanceLeaderboardProps> = ({
     }
 
     try {
-      // 1. Sync current user's updated record
+      // 1. Sync current user's updated record to Firestore & backend API
       await syncStudentLeaderboardToFirestore(currentMember);
 
       // 2. Fetch all classmates belonging to this exact batch
@@ -119,7 +109,9 @@ export const AttendanceLeaderboard: React.FC<AttendanceLeaderboardProps> = ({
       filtered.push(currentMember);
 
       setMembers(filtered);
-      localStorage.setItem(cacheKey, JSON.stringify(filtered));
+      if (typeof localStorage !== 'undefined') {
+        localStorage.setItem(`bunksafe_leaderboard_${batchId}`, JSON.stringify(filtered));
+      }
       setLastUpdated(new Date());
     } catch (err) {
       console.error('Error loading leaderboard:', err);
@@ -129,10 +121,26 @@ export const AttendanceLeaderboard: React.FC<AttendanceLeaderboardProps> = ({
     }
   }, [batchId, currentMember]);
 
-  // Trigger sync and fetch on mount or when batchId / myStats change
+  // Trigger sync and fetch on mount or when batchId / attendance stats change
   useEffect(() => {
     loadLeaderboardData();
-  }, [batchId, myStats.semesterPercentage, myStats.monthPercentage]);
+
+    // Periodic live refresh every 20 seconds
+    const interval = setInterval(() => {
+      loadLeaderboardData(false);
+    }, 20000);
+
+    // Refresh when user returns to tab
+    const handleFocus = () => {
+      loadLeaderboardData(false);
+    };
+    window.addEventListener('focus', handleFocus);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('focus', handleFocus);
+    };
+  }, [batchId, myStats.semesterPercentage, myStats.monthPercentage, myStats.semesterHeld, myStats.semesterAttended, loadLeaderboardData]);
 
   // Sorted members
   const rankedMembers = useMemo(() => {
@@ -222,25 +230,29 @@ export const AttendanceLeaderboard: React.FC<AttendanceLeaderboardProps> = ({
           </div>
 
           {/* Academic Identity Details */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-2 border-t border-zinc-800/80">
-            <div className="flex items-center gap-2 text-xs text-zinc-300">
-              <GraduationCap size={15} className="text-primary shrink-0" />
-              <span className="font-semibold text-zinc-200 truncate">
-                {academicDetails.programmeTitle} {academicDetails.branchTitle}
-              </span>
-              <span className="text-[10px] px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-400 border border-zinc-700 shrink-0">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pt-3 border-t border-zinc-800/80">
+            <div className="flex flex-wrap items-center gap-2 text-xs text-zinc-300 min-w-0">
+              <div className="flex items-center gap-1.5 min-w-0">
+                <GraduationCap size={15} className="text-primary shrink-0" />
+                <span className="font-semibold text-zinc-200 truncate">
+                  {academicDetails.programmeTitle} {academicDetails.branchTitle}
+                </span>
+              </div>
+              <span className="text-[10px] font-medium px-2 py-0.5 rounded-md bg-zinc-800/90 text-zinc-300 border border-zinc-700/80 shrink-0">
                 {academicDetails.modeTitle}
               </span>
             </div>
 
-            <div className="flex items-center gap-2 text-xs text-zinc-400 justify-start sm:justify-end">
-              <span className="text-zinc-300 font-medium">{academicDetails.semesterTitle}</span>
-              <span>•</span>
-              <span className="text-zinc-400">{academicDetails.sessionTitle}</span>
-              <span>•</span>
-              <span className="inline-flex items-center gap-1 text-primary font-bold">
-                <Users size={13} />
-                {rankedMembers.length} {rankedMembers.length === 1 ? 'student' : 'students'}
+            <div className="flex flex-wrap items-center gap-2 text-xs text-zinc-400">
+              <span className="text-zinc-300 font-medium px-2 py-0.5 bg-zinc-950/70 rounded-md border border-zinc-800/80 shrink-0">
+                {academicDetails.semesterTitle}
+              </span>
+              <span className="text-zinc-400 px-2 py-0.5 bg-zinc-950/70 rounded-md border border-zinc-800/80 shrink-0">
+                {academicDetails.sessionTitle}
+              </span>
+              <span className="inline-flex items-center gap-1.5 text-primary font-bold px-2.5 py-0.5 bg-primary/10 rounded-md border border-primary/20 shrink-0">
+                <Users size={13} className="shrink-0" />
+                <span>{rankedMembers.length} {rankedMembers.length === 1 ? 'student' : 'students'}</span>
               </span>
             </div>
           </div>
