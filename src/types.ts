@@ -16,6 +16,26 @@ export interface Profile {
   registeredAt?: string;
   labGroup?: 'G1' | 'G2' | 'X1' | 'X2' | 'X3' | 'X4' | string;
   minorHonorsEnabled?: boolean;
+  rollNumber?: string;
+  academicBatchId?: string;
+}
+
+export interface LeaderboardMember {
+  studentId: string;
+  name: string;
+  rollNumber?: string;
+  academicBatchId: string;
+  department: string;
+  programme: string;
+  semester: string;
+  academicYear: string;
+  semesterPercentage: number;
+  semesterHeld: number;
+  semesterAttended: number;
+  monthPercentage: number | null;
+  monthHeld: number;
+  monthAttended: number;
+  updatedAt: string;
 }
 
 export interface Semester {
@@ -83,6 +103,58 @@ export interface Subject {
   type: 'Theory' | 'Lab' | 'SWAYAM';
   credits: number;
   room?: string;
+}
+
+export interface DailyAttendanceSnapshot {
+  date: string; // YYYY-MM-DD in Asia/Kolkata
+  syncedAt: string; // ISO timestamp of the sync event
+  lastModifiedAt?: string; // ISO timestamp when manual local modifications occur
+  userId: string;
+  academicBatchId?: string;
+  overall: {
+    totalHeld: number;
+    totalAttended: number;
+    totalAbsent: number;
+    percentage: number;
+  };
+  currentMonth: {
+    totalHeld: number;
+    totalAttended: number;
+    percentage: number;
+    monthName: string;
+    monthKey: string; // YYYY-MM in Asia/Kolkata
+  };
+  semester: {
+    totalHeld: number;
+    totalAttended: number;
+    percentage: number;
+    targetAttendance: number;
+    startDate?: string;
+    endDate?: string;
+  };
+  subjects: Record<string, {
+    id: string;
+    name: string;
+    type: 'Theory' | 'Lab' | 'SWAYAM';
+    held: number;
+    attended: number;
+    percentage: number;
+  }>;
+  bunkInfo: {
+    status: 'SAFE' | 'WARNING' | 'OK';
+    canBunk: number;
+    mustAttend: number;
+  };
+  syncStatus: 'synced' | 'cached' | 'offline_fallback' | 'manual_update';
+}
+
+export interface DailySyncResult {
+  success: boolean;
+  isFirstOpenToday: boolean;
+  syncDate: string; // YYYY-MM-DD in Asia/Kolkata
+  snapshot: DailyAttendanceSnapshot | null;
+  error?: string;
+  source: 'network' | 'cache' | 'offline_fallback';
 }
 
 export function formatSubjectName(name: string): string {

@@ -37,6 +37,14 @@ service cloud.firestore {
       allow write: if false; // Clients only read changelogs
     }
 
+    // Batch Leaderboards rules (isolated per academicBatchId)
+    match /batchLeaderboards/{batchId}/students/{studentId} {
+      allow read: if isValidId(batchId);
+      allow write: if isValidId(batchId) &&
+                      isValidId(studentId) &&
+                      request.resource.data.academicBatchId == batchId;
+    }
+
     // Notification Devices rules
     match /notificationDevices/{deviceId} {
       allow get: if isValidId(deviceId);

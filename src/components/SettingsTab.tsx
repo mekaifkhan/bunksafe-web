@@ -975,14 +975,24 @@ export default function SettingsTab({
 
 
 
-          <div className="grid grid-cols-1 gap-3">
+          <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider block">Academic Session</label>
               <input 
                 type="text" 
-                value={profile.academicSession || '2025-26'} 
+                value={profile.academicSession || '2026-27'} 
                 onChange={(e) => setProfile({ ...profile, academicSession: e.target.value })} 
-                placeholder="e.g. 2025-26"
+                placeholder="e.g. 2026-27"
+                className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-3 py-2.5 text-xs text-zinc-100 focus:outline-none focus:border-primary transition-colors font-bold"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider block">Roll Number (Optional)</label>
+              <input 
+                type="text" 
+                value={profile.rollNumber || ''} 
+                onChange={(e) => setProfile({ ...profile, rollNumber: e.target.value })} 
+                placeholder="e.g. 24BCS012"
                 className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-3 py-2.5 text-xs text-zinc-100 focus:outline-none focus:border-primary transition-colors font-bold"
               />
             </div>

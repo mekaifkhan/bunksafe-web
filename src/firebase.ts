@@ -326,4 +326,99 @@ export async function syncNotificationDeviceToFirestore(data: NotificationDevice
   }
 }
 
+import { LeaderboardMember } from './types';
+
+/**
+ * Synchronize current student's leaderboard entry to Firestore and server API
+ */
+export async function syncStudentLeaderboardToFirestore(member: LeaderboardMember): Promise<boolean> {
+  if (!member || !member.academicBatchId || !member.studentId) return false;
+  
+  const studentDocId = member.studentId.toLowerCase().trim();
+  const batchId = member.academicBatchId;
+
+  // 1. Direct Firestore write
+  if (db) {
+    try {
+      const studentDocRef = doc(db, 'batchLeaderboards', batchId, 'students', studentDocId);
+      await setDoc(studentDocRef, member, { merge: true });
+      console.log('Successfully synced student leaderboard entry to Firestore:', studentDocId);
+    } catch (error: any) {
+      const isOffline = error instanceof Error && (
+        error.message.toLowerCase().includes('offline') || 
+        error.message.toLowerCase().includes('unavailable') || 
+        (error as any).code === 'unavailable'
+      );
+      if (isOffline) {
+        console.warn('Firestore is offline. Leaderboard sync will resume when online.');
+      } else {
+        console.error('Error syncing student leaderboard entry to Firestore:', error);
+      }
+    }
+  }
+
+  // 2. Also send to server API endpoint for backend caching & resilience
+  try {
+    fetch('/api/leaderboard/sync', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(member)
+    }).catch(() => {});
+  } catch (err) {
+    // Ignore network failure
+  }
+
+  return true;
+}
+
+/**
+ * Fetch all registered students for a specific academicBatchId from Firestore & server API
+ */
+export async function fetchBatchLeaderboardFromFirestore(batchId: string): Promise<LeaderboardMember[]> {
+  if (!batchId) return [];
+  const results: LeaderboardMember[] = [];
+  const seenIds = new Set<string>();
+
+  // 1. Try Firestore direct collection query
+  if (db) {
+    try {
+      const studentsColRef = collection(db, 'batchLeaderboards', batchId, 'students');
+      const snap = await getDocs(studentsColRef);
+      snap.forEach((docSnap) => {
+        const data = docSnap.data() as LeaderboardMember;
+        if (data && data.academicBatchId === batchId && data.studentId) {
+          results.push(data);
+          seenIds.add(data.studentId.toLowerCase());
+        }
+      });
+      if (results.length > 0) {
+        return results;
+      }
+    } catch (error: any) {
+      console.warn('Error fetching batch leaderboard from direct Firestore, attempting API fallback:', error.message);
+    }
+  }
+
+  // 2. Fallback to server API endpoint
+  try {
+    const res = await fetch(`/api/leaderboard?batchId=${encodeURIComponent(batchId)}`);
+    if (res.ok) {
+      const json = await res.json();
+      if (json.success && Array.isArray(json.students)) {
+        json.students.forEach((s: LeaderboardMember) => {
+          if (s.academicBatchId === batchId && !seenIds.has(s.studentId.toLowerCase())) {
+            results.push(s);
+            seenIds.add(s.studentId.toLowerCase());
+          }
+        });
+      }
+    }
+  } catch (apiErr: any) {
+    console.warn('Error fetching leaderboard from API fallback:', apiErr.message);
+  }
+
+  return results;
+}
+
 export { app, analytics };
+

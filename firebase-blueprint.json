@@ -184,12 +184,95 @@
         "lastSync",
         "lastReminderBypassDate"
       ]
+    },
+    "BatchLeaderboardMember": {
+      "title": "BatchLeaderboardMember",
+      "description": "Aggregated attendance and batch identity for leaderboard ranking.",
+      "type": "object",
+      "properties": {
+        "studentId": {
+          "type": "string",
+          "description": "Unique student identifier or email."
+        },
+        "name": {
+          "type": "string",
+          "description": "Student display name."
+        },
+        "rollNumber": {
+          "type": "string",
+          "description": "Student roll number."
+        },
+        "academicBatchId": {
+          "type": "string",
+          "description": "Deterministic academic batch identifier."
+        },
+        "department": {
+          "type": "string",
+          "description": "Department / branch name."
+        },
+        "programme": {
+          "type": "string",
+          "description": "Programme name."
+        },
+        "semester": {
+          "type": "string",
+          "description": "Current semester."
+        },
+        "academicYear": {
+          "type": "string",
+          "description": "Academic year / session."
+        },
+        "semesterPercentage": {
+          "type": "number",
+          "description": "Calculated semester attendance percentage."
+        },
+        "semesterHeld": {
+          "type": "number",
+          "description": "Total classes held in current semester."
+        },
+        "semesterAttended": {
+          "type": "number",
+          "description": "Total classes attended in current semester."
+        },
+        "monthPercentage": {
+          "type": ["number", "null"],
+          "description": "Calculated current calendar month attendance percentage or null."
+        },
+        "monthHeld": {
+          "type": "number",
+          "description": "Total classes held in current calendar month."
+        },
+        "monthAttended": {
+          "type": "number",
+          "description": "Total classes attended in current calendar month."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Last synchronization timestamp."
+        }
+      },
+      "required": [
+        "studentId",
+        "name",
+        "academicBatchId",
+        "semesterPercentage",
+        "semesterHeld",
+        "semesterAttended",
+        "monthHeld",
+        "monthAttended",
+        "updatedAt"
+      ]
     }
   },
   "firestore": {
     "/users/{email}": {
       "schema": "UserProfile",
       "description": "Core student profiles and settings indexed by lowercase email."
+    },
+    "/batchLeaderboards/{batchId}/students/{studentId}": {
+      "schema": "BatchLeaderboardMember",
+      "description": "Batch-isolated attendance leaderboard member records."
     },
     "/featureRequests/{requestId}": {
       "schema": "FeatureRequest",

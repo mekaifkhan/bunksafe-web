@@ -310,6 +310,93 @@ async function startServer() {
     res.json({ status: "ok", version: "1.0.2", timestamp: new Date().toISOString() });
   });
 
+  // ----------------------------------------------------
+  // Batch Isolated Leaderboard Endpoints
+  // ----------------------------------------------------
+  const memoryLeaderboards: Map<string, Map<string, any>> = new Map();
+
+  app.get("/api/leaderboard", async (req, res) => {
+    const batchId = (req.query.batchId as string || "").trim();
+    if (!batchId) {
+      return res.status(400).json({ success: false, error: "Missing required query parameter: batchId" });
+    }
+
+    const students: any[] = [];
+    const seenStudentIds = new Set<string>();
+
+    // 1. Try fetching from Firebase Admin Firestore if available
+    const adminSdk = getFirebaseAdmin();
+    if (adminSdk) {
+      try {
+        const snap = await adminSdk.db.collection('batchLeaderboards').doc(batchId).collection('students').get();
+        snap.forEach((doc: any) => {
+          const data = doc.data();
+          if (data && data.academicBatchId === batchId && data.studentId) {
+            students.push(data);
+            seenStudentIds.add(data.studentId.toLowerCase());
+          }
+        });
+      } catch (err: any) {
+        console.warn(`[Leaderboard API] Firestore read warning for ${batchId}:`, err.message);
+      }
+    }
+
+    // 2. Supplement from memory cache if not present
+    const batchMap = memoryLeaderboards.get(batchId);
+    if (batchMap) {
+      batchMap.forEach((studentData, studentKey) => {
+        if (!seenStudentIds.has(studentKey)) {
+          students.push(studentData);
+          seenStudentIds.add(studentKey);
+        }
+      });
+    }
+
+    return res.json({
+      success: true,
+      batchId,
+      totalStudents: students.length,
+      students
+    });
+  });
+
+  app.post("/api/leaderboard/sync", async (req, res) => {
+    const member = req.body;
+    if (!member || !member.academicBatchId || !member.studentId) {
+      return res.status(400).json({ success: false, error: "Invalid payload: missing academicBatchId or studentId" });
+    }
+
+    const batchId = member.academicBatchId.trim();
+    const studentKey = member.studentId.toLowerCase().trim();
+
+    // 1. Save in memory cache
+    if (!memoryLeaderboards.has(batchId)) {
+      memoryLeaderboards.set(batchId, new Map());
+    }
+    memoryLeaderboards.get(batchId)!.set(studentKey, {
+      ...member,
+      studentId: studentKey,
+      updatedAt: member.updatedAt || new Date().toISOString()
+    });
+
+    // 2. Persist to Firestore via Admin SDK if available
+    const adminSdk = getFirebaseAdmin();
+    if (adminSdk) {
+      try {
+        await adminSdk.db
+          .collection('batchLeaderboards')
+          .doc(batchId)
+          .collection('students')
+          .doc(studentKey)
+          .set(member, { merge: true });
+      } catch (err: any) {
+        console.warn(`[Leaderboard API] Firestore sync error for ${batchId}/${studentKey}:`, err.message);
+      }
+    }
+
+    return res.json({ success: true, message: "Leaderboard synchronized successfully", batchId, studentKey });
+  });
+
   const handleSendEmail = async (req: express.Request, res: express.Response) => {
     const { email, pdfBase64, monthName, userName } = req.body;
 

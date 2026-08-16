@@ -39,7 +39,9 @@ import {
   GraduationCap,
   Check,
   Clock,
-  X
+  X,
+  RefreshCw,
+  ShieldCheck
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { jsPDF } from 'jspdf';
@@ -71,22 +73,36 @@ import {
   Exam,
   SubjectGradeConfig,
   Subject,
+  DailyAttendanceSnapshot,
   formatSubjectName
 } from './types';
 import SettingsTab from './components/SettingsTab';
 import ExamsTab from './components/ExamsTab';
 import { AttendancePredictor } from './components/AttendancePredictor';
 import { JmiSem1TimetableCard } from './components/JmiSem1TimetableCard';
+import { AttendanceLeaderboard } from './components/AttendanceLeaderboard';
 import { getEffectiveClassesForDate } from './utils/jmiSem1Timetable';
 import { 
   formatDate, 
   getTodayStr, 
+  getKolkataTodayStr,
+  getKolkataMonthStr,
+  getKolkataTimeStr,
   calculateAttendance, 
   calculateBunkInfo,
   safeParse,
   parseTimeRange,
   getJamiaHoliday
 } from './utils/dateUtils';
+import {
+  getNormalizedUserId,
+  executeDailyFirstOpenSync,
+  updateSnapshotOnManualChange,
+  getCachedDailySnapshot,
+  getLatestAvailableSnapshot,
+  getSyncStatusLabel,
+  getLastSyncDateKey
+} from './utils/dailySyncService';
 
 function getOrCreateDeviceId(): string {
   let id = (window as any).AndroidDeviceID || localStorage.getItem('bs_device_id');
@@ -931,6 +947,78 @@ export default function App() {
   const [selectedDate, setSelectedDate] = useState<string | null>(getTodayStr());
   const [combiSelectedMonths, setCombiSelectedMonths] = useState<string[]>([]);
 
+  // Daily First-Open Attendance Data Snapshot & Synchronization (Asia/Kolkata timezone)
+  const [dailySnapshot, setDailySnapshot] = useState<DailyAttendanceSnapshot | null>(() => {
+    const userId = getNormalizedUserId(profile);
+    const todayKolkata = getKolkataTodayStr();
+    return getCachedDailySnapshot(userId, todayKolkata) || getLatestAvailableSnapshot(userId);
+  });
+  const [isDailySyncing, setIsDailySyncing] = useState<boolean>(false);
+  const isInitialDailySyncTriggered = useRef(false);
+
+  // Daily First-Open Sync Lifecycle
+  useEffect(() => {
+    const userId = getNormalizedUserId(profile);
+    const todayKolkata = getKolkataTodayStr();
+    const lastSyncDateKey = getLastSyncDateKey(userId);
+    const lastSyncDate = typeof localStorage !== 'undefined' ? localStorage.getItem(lastSyncDateKey) : null;
+
+    // Trigger daily sync ONLY if not already synced today in Asia/Kolkata
+    if (lastSyncDate !== todayKolkata && !isInitialDailySyncTriggered.current) {
+      isInitialDailySyncTriggered.current = true;
+      setIsDailySyncing(true);
+
+      executeDailyFirstOpenSync({
+        profile,
+        semester,
+        records,
+        exams,
+        subjects,
+        subjectAttendance,
+        forceRefresh: false
+      }).then(res => {
+        if (res.snapshot) {
+          setDailySnapshot(res.snapshot);
+        }
+        setIsDailySyncing(false);
+      }).catch(err => {
+        console.error('Error during daily first-open sync:', err);
+        setIsDailySyncing(false);
+      });
+    } else if (lastSyncDate === todayKolkata && !dailySnapshot) {
+      const cached = getCachedDailySnapshot(userId, todayKolkata) || getLatestAvailableSnapshot(userId);
+      if (cached) {
+        setDailySnapshot(cached);
+      }
+    }
+  }, [profile.email, profile.rollNumber, profile.semester, profile.department]);
+
+  // On-demand manual sync trigger
+  const handleManualDailySync = async () => {
+    setIsDailySyncing(true);
+    try {
+      const res = await executeDailyFirstOpenSync({
+        profile,
+        semester,
+        records,
+        exams,
+        subjects,
+        subjectAttendance,
+        forceRefresh: true
+      });
+      if (res.snapshot) {
+        setDailySnapshot(res.snapshot);
+        showToast('Daily attendance snapshot synchronized!', 'success');
+      } else {
+        showToast('Using latest available attendance data.', 'info');
+      }
+    } catch (e) {
+      showToast('Unable to refresh attendance. Showing last available data.', 'error');
+    } finally {
+      setIsDailySyncing(false);
+    }
+  };
+
   // Calculations
   const stats = useMemo(() => calculateAttendance(records, semester.initialHeld, semester.initialAttended, semester.startDate, exams), [records, semester, exams]);
   const bunkInfo = useMemo(() => calculateBunkInfo(stats.totalHeld, stats.totalAttended, semester.targetAttendance), [stats, semester]);
@@ -1608,10 +1696,31 @@ export default function App() {
   // --- Handlers ---
 
   const updateAttendance = (date: string, held: number, attended: number, isHoliday: boolean) => {
-    setRecords(prev => ({
-      ...prev,
-      [date]: { date, held, attended, isHoliday }
-    }));
+    setRecords(prev => {
+      const nextRecords = {
+        ...prev,
+        [date]: { date, held, attended, isHoliday }
+      };
+
+      // Immediately keep daily snapshot in sync with manual changes without requiring full server sync
+      try {
+        const userId = getNormalizedUserId(profile);
+        const updatedSnapshot = updateSnapshotOnManualChange({
+          userId,
+          profile,
+          semester,
+          records: nextRecords,
+          exams,
+          subjects,
+          subjectAttendance
+        });
+        setDailySnapshot(updatedSnapshot);
+      } catch (err) {
+        console.warn('Could not update daily snapshot on manual change:', err);
+      }
+
+      return nextRecords;
+    });
 
     if (profile.semester === 'Semester 1') {
       setUserOverrideClasses(prev => {
@@ -3286,6 +3395,44 @@ export default function App() {
           </div>
         </header>
 
+        {/* Daily Sync Status Bar (Asia/Kolkata First-Open Daily Sync) */}
+        {(() => {
+          const syncInfo = getSyncStatusLabel(dailySnapshot);
+          return (
+            <div className="flex items-center justify-between px-3.5 py-2 bg-zinc-900/60 border border-zinc-800/80 rounded-xl text-[11px] shadow-sm">
+              <div className="flex items-center gap-2 text-zinc-400">
+                <span className="relative flex h-2 w-2">
+                  {isDailySyncing ? (
+                    <>
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
+                    </>
+                  ) : syncInfo.badgeType === 'synced' ? (
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                  ) : syncInfo.badgeType === 'manual' ? (
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span>
+                  ) : (
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
+                  )}
+                </span>
+                <span className="font-medium text-zinc-300">
+                  {isDailySyncing ? 'Syncing daily attendance...' : syncInfo.label}
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={handleManualDailySync}
+                disabled={isDailySyncing}
+                title="Synchronize daily attendance"
+                className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-zinc-800/70 hover:bg-zinc-800 text-[10px] font-bold text-zinc-300 hover:text-primary transition-colors disabled:opacity-50"
+              >
+                <RefreshCw size={10} className={isDailySyncing ? "animate-spin text-primary" : ""} />
+                <span>{isDailySyncing ? 'Syncing' : 'Sync'}</span>
+              </button>
+            </div>
+          );
+        })()}
+
         {isNotStarted ? (
           <motion.div 
             initial={{ opacity: 0, y: 10 }}
@@ -4620,6 +4767,15 @@ export default function App() {
           targetAttendance={semester.targetAttendance}
           profile={profile}
           records={records}
+        />
+
+        {/* Special Batch Attendance Leaderboard */}
+        <AttendanceLeaderboard
+          profile={profile}
+          semester={semester}
+          records={records}
+          exams={exams}
+          onOpenSettings={() => setActiveTab('settings')}
         />
 
         {/* Theme Customization */}

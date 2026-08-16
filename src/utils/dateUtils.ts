@@ -50,7 +50,49 @@ export const formatDate = (date: Date | string) => {
   }
 };
 
-export const getTodayStr = () => formatDate(new Date());
+/**
+ * Returns YYYY-MM-DD string strictly in Asia/Kolkata timezone
+ */
+export const getKolkataTodayStr = (date: Date = new Date()): string => {
+  try {
+    return new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'Asia/Kolkata',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit'
+    }).format(date); // Returns "YYYY-MM-DD"
+  } catch (e) {
+    return formatDate(date);
+  }
+};
+
+/**
+ * Returns YYYY-MM string strictly in Asia/Kolkata timezone
+ */
+export const getKolkataMonthStr = (date: Date = new Date()): string => {
+  return getKolkataTodayStr(date).slice(0, 7);
+};
+
+/**
+ * Returns human-readable time string in Asia/Kolkata timezone (e.g. "09:30 AM")
+ */
+export const getKolkataTimeStr = (date: Date = new Date()): string => {
+  try {
+    return new Intl.DateTimeFormat('en-IN', {
+      timeZone: 'Asia/Kolkata',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true
+    }).format(date);
+  } catch (e) {
+    return format(date, 'hh:mm a');
+  }
+};
+
+/**
+ * Primary today string helper - defaults to Asia/Kolkata
+ */
+export const getTodayStr = () => getKolkataTodayStr();
 
 export const getJamiaHoliday = (date: Date | string | null | undefined): { isHoliday: boolean; name?: string } => {
   const d = safeParse(date);
@@ -97,27 +139,27 @@ export const getJamiaHoliday = (date: Date | string | null | undefined): { isHol
   return { isHoliday: false };
 };
 
+export const isExamDay = (dateStr: string, exams: any[] = []): boolean => {
+  return exams.some(e => {
+    if (!e.startDate || !e.endDate) return false;
+    const startParsed = safeParse(e.startDate);
+    const endParsed = safeParse(e.endDate);
+    const dParsed = safeParse(dateStr);
+    if (!startParsed || !endParsed || !dParsed) {
+      return false;
+    }
+    const start = startOfDay(startParsed);
+    const end = startOfDay(endParsed);
+    const d = startOfDay(dParsed);
+    return d >= start && d <= end;
+  });
+};
+
 export const calculateAttendance = (records: Record<string, any>, initialHeld = 0, initialAttended = 0, startDate?: string, exams: any[] = []) => {
   let totalHeld = initialHeld;
   let totalAttended = initialAttended;
 
   const start = safeParse(startDate) ? startOfDay(safeParse(startDate)!) : null;
-
-  const isExamDay = (dateStr: string) => {
-    return exams.some(e => {
-      if (!e.startDate || !e.endDate) return false;
-      const startParsed = safeParse(e.startDate);
-      const endParsed = safeParse(e.endDate);
-      const dParsed = safeParse(dateStr);
-      if (!startParsed || !endParsed || !dParsed) {
-        return false;
-      }
-      const start = startOfDay(startParsed);
-      const end = startOfDay(endParsed);
-      const d = startOfDay(dParsed);
-      return d >= start && d <= end;
-    });
-  };
 
   Object.entries(records).forEach(([date, record]: [string, any]) => {
     if (start) {
@@ -130,7 +172,7 @@ export const calculateAttendance = (records: Record<string, any>, initialHeld = 
     
     const jamiaHoliday = getJamiaHoliday(date);
     const isHoliday = record.isHoliday === true || (jamiaHoliday.isHoliday && (record.held || 0) === 0 && record.isHoliday !== false);
-    if (!isHoliday && !isExamDay(date)) {
+    if (!isHoliday && !isExamDay(date, exams)) {
       const h = Math.max(0, record.held || 0);
       const a = Math.max(0, Math.min(h, record.attended || 0));
       totalHeld += h;
