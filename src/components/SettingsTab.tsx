@@ -10,6 +10,7 @@ import {
   Download, 
   Upload, 
   Calendar as CalendarIcon, 
+  CalendarClock,
   LogOut, 
   Info,
   ShieldCheck,
@@ -72,6 +73,7 @@ interface SettingsTabProps {
   updateProfilePhoto?: (base64: string | null) => void;
   swayamSubjectId?: string | null;
   setSwayamSubjectId?: (id: string | null) => void;
+  onOpenLateSemesterModal?: () => void;
 }
 
 export default function SettingsTab({
@@ -103,7 +105,8 @@ export default function SettingsTab({
   profilePhoto,
   updateProfilePhoto,
   swayamSubjectId,
-  setSwayamSubjectId
+  setSwayamSubjectId,
+  onOpenLateSemesterModal
 }: SettingsTabProps) {
   // Local state for holiday manager
   const [newHolidayDate, setNewHolidayDate] = useState('');
@@ -1414,6 +1417,18 @@ export default function SettingsTab({
               Selecting a SWAYAM course will replace its standard internal marks structure with 12 weekly assignments (best 8 selected) and hide it from the weekly schedule.
             </p>
           </div>
+
+          {onOpenLateSemesterModal && (
+            <div className="border-t border-zinc-800/80 pt-3">
+              <button 
+                type="button"
+                onClick={onOpenLateSemesterModal}
+                className="w-full py-2.5 px-3.5 bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all"
+              >
+                <CalendarClock size={15} /> Past Attendance Catch-Up (Start from Today / % / Day-by-Day)
+              </button>
+            </div>
+          )}
 
           <div className="border-t border-zinc-800/80 pt-4 flex gap-2">
             <button 

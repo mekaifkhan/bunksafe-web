@@ -81,6 +81,7 @@ import ExamsTab from './components/ExamsTab';
 import { AttendancePredictor } from './components/AttendancePredictor';
 import { JmiSem1TimetableCard } from './components/JmiSem1TimetableCard';
 import { AttendanceLeaderboard } from './components/AttendanceLeaderboard';
+import { LateSemesterOnboardingModal } from './components/LateSemesterOnboardingModal';
 import { getEffectiveClassesForDate } from './utils/jmiSem1Timetable';
 import { 
   formatDate, 
@@ -467,7 +468,32 @@ export default function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [scheduleSubTab, setScheduleSubTab] = useState<'schedule' | 'calendar'>('schedule');
   const [selectedScheduleDay, setSelectedScheduleDay] = useState<'Monday' | 'Tuesday' | 'Wednesday' | 'Thursday' | 'Friday'>('Monday');
-  const [showLatePopup, setShowLatePopup] = useState(false);
+  const [showLatePopup, setShowLatePopup] = useState<boolean>(() => {
+    const isCompleted = localStorage.getItem('bs_onboarding_completed') === 'true' || localStorage.getItem('bs_semester') !== null;
+    const alreadyHandled = localStorage.getItem('bs_late_joiner_handled') === 'true';
+    if (alreadyHandled) return false;
+
+    const savedSem = localStorage.getItem('bs_semester');
+    if (!savedSem) return false;
+    try {
+      const parsedSem = JSON.parse(savedSem);
+      if (!parsedSem?.startDate) return false;
+      const todayKolkata = getKolkataTodayStr();
+      return isCompleted && todayKolkata > parsedSem.startDate;
+    } catch (e) {
+      return false;
+    }
+  });
+
+  useEffect(() => {
+    if (onboardingCompleted && semester.startDate) {
+      const todayKolkata = getKolkataTodayStr();
+      const alreadyHandled = localStorage.getItem('bs_late_joiner_handled') === 'true';
+      if (!alreadyHandled && todayKolkata > semester.startDate) {
+        setShowLatePopup(true);
+      }
+    }
+  }, [onboardingCompleted, semester.startDate]);
   const [notificationPermission, setNotificationPermission] = useState<NotificationPermission>(
     typeof Notification !== 'undefined' ? Notification.permission : 'default'
   );
@@ -3478,13 +3504,21 @@ export default function App() {
               <motion.div 
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
-                className="bg-primary/10 border border-primary/20 p-4 rounded-2xl flex items-center justify-between gap-4"
+                className="bg-primary/10 border border-primary/20 p-4 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3"
               >
                 <div className="flex items-center gap-3 text-primary">
-                  <AlertCircle size={20} />
-                  <p className="text-sm font-medium">You missed {missedDays.length} attendance entries.</p>
+                  <AlertCircle size={20} className="shrink-0" />
+                  <div>
+                    <p className="text-sm font-medium">You missed {missedDays.length} attendance entries.</p>
+                    <p className="text-[11px] text-zinc-400">Late start? Catch up via known % or start from today.</p>
+                  </div>
                 </div>
-                <Button variant="secondary" className="text-xs py-1 px-3" onClick={handleFillMissed}>Fill Now</Button>
+                <div className="flex items-center gap-2 w-full sm:w-auto">
+                  <Button variant="ghost" className="text-xs py-1 px-3 border border-primary/30 text-primary hover:bg-primary/10 flex-1 sm:flex-initial" onClick={() => setShowLatePopup(true)}>
+                    Catch-Up Wizard
+                  </Button>
+                  <Button variant="secondary" className="text-xs py-1 px-3 flex-1 sm:flex-initial" onClick={handleFillMissed}>Fill Days</Button>
+                </div>
               </motion.div>
             )}
 
@@ -4995,6 +5029,7 @@ export default function App() {
         updateProfilePhoto={updateProfilePhoto}
         swayamSubjectId={swayamSubjectId}
         setSwayamSubjectId={setSwayamSubjectId}
+        onOpenLateSemesterModal={() => setShowLatePopup(true)}
       />
     );
   };
@@ -5401,6 +5436,38 @@ export default function App() {
       {renderAttendanceInfoModal()}
       {renderCivil5GroupModal()}
       {renderEce5GroupModal()}
+      
+      <LateSemesterOnboardingModal
+        isOpen={showLatePopup}
+        onClose={() => setShowLatePopup(false)}
+        semester={semester}
+        onUpdateSemester={(updated) => {
+          setSemester(updated);
+          localStorage.setItem('bs_semester', JSON.stringify(updated));
+        }}
+        records={records}
+        onUpdateRecords={(updatedRecords) => {
+          setRecords(updatedRecords);
+          localStorage.setItem('bs_records', JSON.stringify(updatedRecords));
+          try {
+            updateSnapshotOnManualChange({
+              userId: profile.studentId || profile.name || 'default_user',
+              profile,
+              semester,
+              records: updatedRecords,
+              exams,
+              subjects,
+              subjectAttendance
+            });
+            const todayKolkata = getKolkataTodayStr();
+            setDailySnapshot(getCachedDailySnapshot(todayKolkata));
+          } catch (e) {
+            console.error('Failed to update daily snapshot on late semester update', e);
+          }
+        }}
+        classSchedule={classSchedule}
+        showToast={showToast}
+      />
     </div>
   );
 }

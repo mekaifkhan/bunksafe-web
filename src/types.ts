@@ -47,6 +47,9 @@ export interface Semester {
   initialHeld?: number;
   initialAttended?: number;
   lockedUntil?: string; // ISO string
+  lateJoinerHandled?: boolean;
+  lateJoinerChoice?: 'from_today' | 'percentage' | 'manual';
+  originalStartDate?: string;
 }
 
 export interface AttendanceRecord {
