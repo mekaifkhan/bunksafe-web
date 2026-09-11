@@ -1201,56 +1201,11 @@ export default function SettingsTab({
           <CalendarDays size={14} className="text-primary" /> Weekly Schedule
         </h3>
         <div className="bg-zinc-900 border border-zinc-800/80 rounded-2xl p-4 space-y-4">
-          {profile.semester === 'Semester 1' ? (
-            <div className="space-y-3">
-              <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider block">Lab Group (Optional)</label>
-              <div className="grid grid-cols-3 gap-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    const updatedProfile = { ...profile, labGroup: 'G1' };
-                    setProfile(updatedProfile);
-                    localStorage.setItem('bs_profile', JSON.stringify(updatedProfile));
-                    if (showToast) showToast('Lab Group set to G1. Timetable updated!', 'success');
-                  }}
-                  className={`py-2.5 rounded-xl text-xs font-bold border transition-all ${profile.labGroup === 'G1' ? 'bg-primary border-primary text-zinc-950 font-black' : 'bg-zinc-950 border-zinc-800 text-zinc-400 hover:text-white'}`}
-                >
-                  Group G1
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    const updatedProfile = { ...profile, labGroup: 'G2' };
-                    setProfile(updatedProfile);
-                    localStorage.setItem('bs_profile', JSON.stringify(updatedProfile));
-                    if (showToast) showToast('Lab Group set to G2. Timetable updated!', 'success');
-                  }}
-                  className={`py-2.5 rounded-xl text-xs font-bold border transition-all ${profile.labGroup === 'G2' ? 'bg-primary border-primary text-zinc-950 font-black' : 'bg-zinc-950 border-zinc-800 text-zinc-400 hover:text-white'}`}
-                >
-                  Group G2
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    const updatedProfile = { ...profile, labGroup: undefined };
-                    setProfile(updatedProfile);
-                    localStorage.setItem('bs_profile', JSON.stringify(updatedProfile));
-                    if (showToast) showToast('Lab Group selection cleared.', 'info');
-                  }}
-                  className={`py-2.5 rounded-xl text-xs font-bold border transition-all ${!profile.labGroup ? 'bg-zinc-800 border-zinc-700 text-white font-black' : 'bg-zinc-950 border-zinc-800 text-zinc-500 hover:text-zinc-400'}`}
-                >
-                  Unselected
-                </button>
-              </div>
-              <p className="text-[10px] text-zinc-500 italic leading-relaxed">
-                Optional. Selecting G1 or G2 will include group-specific labs (Physics, Chemistry, Language, Mechanics, Design Thinking) on your timetable and daily class defaults.
-              </p>
-            </div>
-          ) : profile.department === 'Civil Engineering' && profile.semester === 'Semester 5' ? (
+          {profile.department === 'Civil Engineering' && profile.semester === 'Semester 5' ? (
             <>
               {/* Lab Group */}
               <div className="space-y-2">
-                <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider block">Change Lab Group</label>
+                <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider block">Change Lab Group (Civil 5th Semester)</label>
                 <div className="grid grid-cols-2 gap-2">
                   {(['G1', 'G2'] as const).map(g => (
                     <button
@@ -1310,7 +1265,7 @@ export default function SettingsTab({
                 <p className="text-[10px] text-zinc-500 italic">If enabled, the 12:00 PM – 1:00 PM slot on Monday, Tuesday, and Wednesday will be populated with "Minor/Honors Course".</p>
               </div>
             </>
-          ) : ((profile.department === 'Electronics & Communication Engineering' || !profile.department || profile.department.includes('Electronics')) && (profile.semester === 'Semester 5' || !profile.semester)) ? (
+          ) : (profile.department === 'Electronics & Communication Engineering' && profile.semester === 'Semester 5') ? (
             <div className="space-y-3">
               <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider block">Change Laboratory Group (ECE 5th Semester)</label>
               <div className="grid grid-cols-4 gap-2">

@@ -4,14 +4,9 @@ import {
   Calendar, 
   Clock, 
   BookOpen, 
-  Info, 
   MapPin, 
   FlaskConical, 
-  Sparkles, 
-  CheckCircle2, 
-  ChevronRight, 
-  Users,
-  Layers
+  Sparkles
 } from 'lucide-react';
 import { 
   getSem1TimetableForBranch, 
@@ -24,18 +19,13 @@ import { Profile } from '../types';
 
 interface JmiSem1TimetableCardProps {
   profile: Profile;
-  onUpdateLabGroup?: (newGroup: 'G1' | 'G2' | undefined) => void;
 }
 
 export const JmiSem1TimetableCard: React.FC<JmiSem1TimetableCardProps> = ({
-  profile,
-  onUpdateLabGroup
+  profile
 }) => {
   const currentBranch = normalizeJmiBranch(profile.department);
   const [selectedBranch, setSelectedBranch] = useState<string>(currentBranch);
-  const [selectedGroup, setSelectedGroup] = useState<'G1' | 'G2' | undefined>(
-    (profile.labGroup === 'G1' || profile.labGroup === 'G2') ? profile.labGroup : undefined
-  );
 
   const days: Array<'Monday' | 'Tuesday' | 'Wednesday' | 'Thursday' | 'Friday'> = [
     'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'
@@ -47,16 +37,9 @@ export const JmiSem1TimetableCard: React.FC<JmiSem1TimetableCardProps> = ({
   
   const [activeDay, setActiveDay] = useState<'Monday' | 'Tuesday' | 'Wednesday' | 'Thursday' | 'Friday'>(defaultDay);
 
-  const timetableEntries = getSem1TimetableForBranch(selectedBranch, selectedGroup);
+  const timetableEntries = getSem1TimetableForBranch(selectedBranch);
   const activeDayEntries = timetableEntries.filter(e => e.day === activeDay);
-  const weeklyCounts = getSem1WeeklyScheduledCounts(selectedBranch, selectedGroup);
-
-  const handleGroupSelect = (grp: 'G1' | 'G2' | undefined) => {
-    setSelectedGroup(grp);
-    if (onUpdateLabGroup) {
-      onUpdateLabGroup(grp);
-    }
-  };
+  const weeklyCounts = getSem1WeeklyScheduledCounts(selectedBranch, undefined);
 
   return (
     <div className="bg-zinc-900/90 border border-zinc-800 rounded-3xl p-5 shadow-xl space-y-5">
@@ -90,81 +73,6 @@ export const JmiSem1TimetableCard: React.FC<JmiSem1TimetableCardProps> = ({
           </select>
         </div>
       </div>
-
-      {/* Lab Group Selection Row */}
-      <div className="bg-zinc-950/70 p-3.5 rounded-2xl border border-zinc-800/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div className="space-y-0.5">
-          <span className="text-xs font-extrabold text-zinc-200 uppercase tracking-wider flex items-center gap-1.5">
-            <Users size={14} className="text-primary" />
-            Lab Group Selection
-          </span>
-          <p className="text-[11px] text-zinc-400">
-            {selectedGroup 
-              ? `Currently viewing Group ${selectedGroup} labs and practicals.` 
-              : 'No lab group selected. Showing theory and whole-class practicals.'}
-          </p>
-        </div>
-
-        <div className="flex gap-2">
-          <button
-            type="button"
-            onClick={() => handleGroupSelect('G1')}
-            className={`px-3.5 py-1.5 rounded-xl text-xs font-extrabold border transition-all ${
-              selectedGroup === 'G1'
-                ? 'bg-primary border-primary text-zinc-950 shadow-md shadow-primary/20'
-                : 'bg-zinc-900 border-zinc-800 text-zinc-400 hover:text-white'
-            }`}
-          >
-            Group G1
-          </button>
-          <button
-            type="button"
-            onClick={() => handleGroupSelect('G2')}
-            className={`px-3.5 py-1.5 rounded-xl text-xs font-extrabold border transition-all ${
-              selectedGroup === 'G2'
-                ? 'bg-primary border-primary text-zinc-950 shadow-md shadow-primary/20'
-                : 'bg-zinc-900 border-zinc-800 text-zinc-400 hover:text-white'
-            }`}
-          >
-            Group G2
-          </button>
-          <button
-            type="button"
-            onClick={() => handleGroupSelect(undefined)}
-            className={`px-3 py-1.5 rounded-xl text-xs font-extrabold border transition-all ${
-              !selectedGroup
-                ? 'bg-zinc-800 border-zinc-700 text-white'
-                : 'bg-zinc-900 border-zinc-800 text-zinc-500 hover:text-zinc-400'
-            }`}
-          >
-            Unselected
-          </button>
-        </div>
-      </div>
-
-      {/* Unselected Group Prompt Banner */}
-      {!selectedGroup && (
-        <div className="bg-amber-500/10 border border-amber-500/25 p-3.5 rounded-2xl flex items-center justify-between gap-3 text-xs">
-          <div className="flex items-center gap-2 text-amber-300">
-            <Info size={16} className="shrink-0 text-amber-400" />
-            <span>Select your lab group (G1 or G2) to view group-specific physics, chemistry, language, and mechanics labs.</span>
-          </div>
-          <div className="flex gap-1.5 shrink-0">
-            <button
-              onClick={() => handleGroupSelect('G1')}
-              className="px-2.5 py-1 bg-amber-400 text-zinc-950 font-black rounded-lg text-[10px] uppercase hover:bg-amber-300 transition-all"
-            >
-              Select G1
-            </button>
-            <button
-              onClick={() => handleGroupSelect('G2')}
-              className="px-2.5 py-1 bg-amber-400 text-zinc-950 font-black rounded-lg text-[10px] uppercase hover:bg-amber-300 transition-all"
-            >
-              Select G2
-            </button>
-          </div>
-        </div>
-      )}
 
       {/* Day Selector Tabs */}
       <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-hide">

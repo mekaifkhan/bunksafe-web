@@ -180,7 +180,7 @@ const JMI_SEM1_TIMETABLE_CACHE: Record<string, TimetableEntry[]> = {};
 
 export function getSem1TimetableForBranch(
   branchName: string,
-  group: 'G1' | 'G2' | string | null | undefined
+  group?: 'G1' | 'G2' | string | null
 ): TimetableEntry[] {
   const normBranch = normalizeJmiBranch(branchName);
   if (!JMI_SEM1_TIMETABLE_CACHE[normBranch]) {
@@ -191,16 +191,15 @@ export function getSem1TimetableForBranch(
   const grp = (group === 'G1' || group === 'G2') ? group : null;
 
   return full.filter(entry => {
-    // Theory and whole-class practicals are always shown
-    if (entry.isWholeClass || entry.group === null) {
-      return true;
-    }
-    // If student selected G1 or G2, only show matching group labs
+    // If student selected G1 or G2 specifically, filter by it
     if (grp) {
+      if (entry.isWholeClass || entry.group === null) {
+        return true;
+      }
       return entry.group === grp;
     }
-    // If no group selected, hide group-dependent labs
-    return false;
+    // If no group specified, show all classes and labs so students see complete schedule without being prompted
+    return true;
   });
 }
 
@@ -211,7 +210,9 @@ export function getSem1DailyScheduledCount(
   dayName: string
 ): number {
   if (dayName === 'Saturday' || dayName === 'Sunday') return 0;
-  const filtered = getSem1TimetableForBranch(branchName, group).filter(e => e.day === dayName);
+  // Use specified group or fallback to 'G1' for representative single-student load to avoid double counting concurrent labs
+  const evalGroup = (group === 'G1' || group === 'G2') ? group : 'G1';
+  const filtered = getSem1TimetableForBranch(branchName, evalGroup).filter(e => e.day === dayName);
   // Each session represents 1 attendance unit
   return filtered.reduce((acc, curr) => acc + (curr.attendanceUnit || 1), 0);
 }

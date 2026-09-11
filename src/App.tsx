@@ -436,23 +436,24 @@ export default function App() {
   const [showCivil5GroupModal, setShowCivil5GroupModal] = useState<boolean>(() => {
     const isCivil5 = profile.department === 'Civil Engineering' && profile.semester === 'Semester 5';
     const isCompleted = localStorage.getItem('bs_onboarding_completed') === 'true' || localStorage.getItem('bs_semester') !== null;
-    const hasGroup = !!profile.labGroup;
+    const hasGroup = profile.labGroup === 'G1' || profile.labGroup === 'G2';
     const hasDismissed = localStorage.getItem('bs_civil5_group_dismissed') === 'true';
     return !!(isCivil5 && isCompleted && !hasGroup && !hasDismissed);
   });
 
   const [showEceGroupModal, setShowEceGroupModal] = useState<boolean>(() => {
-    const isEce5 = (profile.department === 'Electronics & Communication Engineering' || !profile.department || profile.department.includes('Electronics')) && (profile.semester === 'Semester 5' || !profile.semester);
+    const isEce5 = profile.department === 'Electronics & Communication Engineering' && profile.semester === 'Semester 5';
+    const isCompleted = localStorage.getItem('bs_onboarding_completed') === 'true' || localStorage.getItem('bs_semester') !== null;
     const hasValidGroup = ['X1', 'X2', 'X3', 'X4'].includes((profile.labGroup || '').toUpperCase());
     const hasDismissed = localStorage.getItem('bs_ece_group_dismissed') === 'true';
-    return !hasValidGroup && !hasDismissed;
+    return !!(isEce5 && isCompleted && !hasValidGroup && !hasDismissed);
   });
 
   const [onboardName, setOnboardName] = useState('');
   const [onboardProgramme, setOnboardProgramme] = useState<'Regular' | 'Self-Financed' | ''>('');
   const [onboardDept, setOnboardDept] = useState('');
   const [onboardSem, setOnboardSem] = useState('Semester 3');
-  const [onboardLabGroup, setOnboardLabGroup] = useState<'G1' | 'G2' | ''>('');
+  const [onboardLabGroup, setOnboardLabGroup] = useState<'G1' | 'G2' | 'X1' | 'X2' | 'X3' | 'X4' | ''>('');
 
   const [onboardStartDate, setOnboardStartDate] = useState('2026-07-17');
   const [onboardEndDate, setOnboardEndDate] = useState('2026-11-20');
@@ -2763,7 +2764,17 @@ export default function App() {
                 {onboardingStep === 2 && (() => {
                   const isSem1or2 = onboardSem === 'Semester 1' || onboardSem === 'Semester 2';
                   const isCivil5 = onboardDept === 'Civil Engineering' && onboardSem === 'Semester 5';
-                  const isFormValid = !!(onboardName.trim() && onboardSem && (isSem1or2 || (onboardProgramme && onboardDept && (!isCivil5 || onboardLabGroup))));
+                  const isEce5 = onboardDept === 'Electronics & Communication Engineering' && onboardSem === 'Semester 5';
+                  const isFormValid = !!(
+                    onboardName.trim() && 
+                    onboardSem && 
+                    (isSem1or2 || (
+                      onboardProgramme && 
+                      onboardDept && 
+                      (!isCivil5 || (onboardLabGroup === 'G1' || onboardLabGroup === 'G2')) &&
+                      (!isEce5 || ['X1', 'X2', 'X3', 'X4'].includes(onboardLabGroup))
+                    ))
+                  );
 
                   return (
                     <motion.div
@@ -2901,40 +2912,6 @@ export default function App() {
                                 </motion.div>
                               )}
 
-                              {onboardSem === 'Semester 1' && onboardDept && (
-                                <motion.div
-                                  initial={{ opacity: 0, height: 0 }}
-                                  animate={{ opacity: 1, height: 'auto' }}
-                                  exit={{ opacity: 0, height: 0 }}
-                                  className="space-y-2 text-left mt-3 overflow-hidden"
-                                >
-                                  <label className="text-xs font-bold text-zinc-500 uppercase tracking-widest block">Lab Group (Optional)</label>
-                                  <div className="grid grid-cols-3 gap-2">
-                                    <button
-                                      type="button"
-                                      onClick={() => setOnboardLabGroup('G1')}
-                                      className={`py-2 px-2 rounded-xl text-xs font-bold border transition-all ${onboardLabGroup === 'G1' ? 'bg-primary border-primary text-white font-black' : 'bg-zinc-950 border-zinc-800 text-zinc-500 hover:text-zinc-400'}`}
-                                    >
-                                      G1
-                                    </button>
-                                    <button
-                                      type="button"
-                                      onClick={() => setOnboardLabGroup('G2')}
-                                      className={`py-2 px-2 rounded-xl text-xs font-bold border transition-all ${onboardLabGroup === 'G2' ? 'bg-primary border-primary text-white font-black' : 'bg-zinc-950 border-zinc-800 text-zinc-500 hover:text-zinc-400'}`}
-                                    >
-                                      G2
-                                    </button>
-                                    <button
-                                      type="button"
-                                      onClick={() => setOnboardLabGroup('')}
-                                      className={`py-2 px-2 rounded-xl text-xs font-bold border transition-all ${!onboardLabGroup ? 'bg-zinc-800 border-zinc-700 text-white font-black' : 'bg-zinc-950 border-zinc-800 text-zinc-500 hover:text-zinc-400'}`}
-                                    >
-                                      Skip
-                                    </button>
-                                  </div>
-                                </motion.div>
-                              )}
-
                               {onboardDept === 'Civil Engineering' && onboardSem === 'Semester 5' && (
                                 <motion.div
                                   initial={{ opacity: 0, height: 0 }}
@@ -2942,7 +2919,7 @@ export default function App() {
                                   exit={{ opacity: 0, height: 0 }}
                                   className="space-y-2 text-left mt-3 overflow-hidden"
                                 >
-                                  <label className="text-xs font-bold text-zinc-500 uppercase tracking-widest block">Select your Lab Group</label>
+                                  <label className="text-xs font-bold text-zinc-500 uppercase tracking-widest block">Select your Lab Group (Civil 5th Sem)</label>
                                   <div className="grid grid-cols-2 gap-2">
                                     {(['G1', 'G2'] as const).map(g => (
                                       <button
@@ -2957,6 +2934,32 @@ export default function App() {
                                       </button>
                                     ))}
                                   </div>
+                                </motion.div>
+                              )}
+
+                              {onboardDept === 'Electronics & Communication Engineering' && onboardSem === 'Semester 5' && (
+                                <motion.div
+                                  initial={{ opacity: 0, height: 0 }}
+                                  animate={{ opacity: 1, height: 'auto' }}
+                                  exit={{ opacity: 0, height: 0 }}
+                                  className="space-y-2 text-left mt-3 overflow-hidden"
+                                >
+                                  <label className="text-xs font-bold text-zinc-500 uppercase tracking-widest block">Select your Lab Group (ECE 5th Sem)</label>
+                                  <div className="grid grid-cols-4 gap-2">
+                                    {(['X1', 'X2', 'X3', 'X4'] as const).map(g => (
+                                      <button
+                                        key={g}
+                                        type="button"
+                                        onClick={() => {
+                                          setOnboardLabGroup(g);
+                                        }}
+                                        className={`py-2.5 px-2 rounded-xl text-xs font-bold border transition-all ${onboardLabGroup === g ? 'bg-purple-600 border-purple-500 text-white font-black shadow-md shadow-purple-600/20' : 'bg-zinc-950 border-zinc-800 text-zinc-400 hover:text-white'}`}
+                                      >
+                                        Group {g}
+                                      </button>
+                                    ))}
+                                  </div>
+                                  <p className="text-[10px] text-zinc-500 italic mt-1">Timetable rotates weekly (X1, X2, X3, X4) based on the academic calendar.</p>
                                 </motion.div>
                               )}
                             </motion.div>
@@ -3090,6 +3093,13 @@ export default function App() {
                       </Button>
                       <Button className="flex-1" onClick={() => {
                         const isCivil5 = onboardDept === 'Civil Engineering' && onboardSem === 'Semester 5';
+                        const isEce5 = onboardDept === 'Electronics & Communication Engineering' && onboardSem === 'Semester 5';
+                        const chosenLabGroup = isCivil5 
+                          ? ((onboardLabGroup === 'G1' || onboardLabGroup === 'G2') ? onboardLabGroup : 'G1')
+                          : isEce5 
+                            ? (['X1', 'X2', 'X3', 'X4'].includes(onboardLabGroup) ? onboardLabGroup : 'X1')
+                            : undefined;
+
                         setProfile({
                           name: onboardName,
                           email: profile.email || 'student@jmi.ac.in',
@@ -3099,7 +3109,7 @@ export default function App() {
                           mobile: '',
                           avatar: '',
                           programme: (onboardSem === 'Semester 1' || onboardSem === 'Semester 2') ? 'Regular' : onboardProgramme,
-                          labGroup: isCivil5 ? (onboardLabGroup as 'G1' | 'G2') : undefined,
+                          labGroup: chosenLabGroup,
                           minorHonorsEnabled: isCivil5 ? false : undefined
                         });
 
@@ -3159,7 +3169,12 @@ export default function App() {
                         }
 
                         if (isCivil5) {
-                          const schedule = generateCivil5Schedule(onboardLabGroup as 'G1' | 'G2', false);
+                          const schedule = generateCivil5Schedule((chosenLabGroup as 'G1' | 'G2') || 'G1', false);
+                          setClassSchedule(schedule);
+                          localStorage.setItem('bs_class_schedule', JSON.stringify(schedule));
+                        } else if (isEce5) {
+                          const weekInfo = getEceAcademicWeek(new Date());
+                          const schedule = generateEce5Schedule((chosenLabGroup as 'X1' | 'X2' | 'X3' | 'X4') || 'X1', weekInfo.isOddWeek);
                           setClassSchedule(schedule);
                           localStorage.setItem('bs_class_schedule', JSON.stringify(schedule));
                         }
@@ -3541,6 +3556,31 @@ export default function App() {
                   variant="secondary" 
                   className="text-xs py-1.5 px-3 border border-purple-500/30 hover:bg-purple-500/15 text-purple-400 hover:text-purple-300 transition-all font-bold bg-zinc-950/40" 
                   onClick={() => setShowCivil5GroupModal(true)}
+                >
+                  {profile.labGroup ? 'Change Group' : 'Choose Group'}
+                </Button>
+              </motion.div>
+            )}
+
+            {profile.department === 'Electronics & Communication Engineering' && profile.semester === 'Semester 5' && (
+              <motion.div 
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="bg-purple-500/10 border border-purple-500/20 p-4 rounded-2xl flex items-center justify-between gap-4 shadow-lg shadow-purple-500/5"
+              >
+                <div className="flex items-center gap-3 text-purple-400">
+                  <GraduationCap size={20} />
+                  <div>
+                    <h4 className="text-xs font-bold text-white leading-tight">B.Tech ECE Semester 5</h4>
+                    <p className="text-[10px] text-zinc-400 mt-0.5">
+                      Lab Group: <span className="text-purple-400 font-extrabold">{profile.labGroup ? `Group ${profile.labGroup}` : 'Not Selected'}</span>
+                    </p>
+                  </div>
+                </div>
+                <Button 
+                  variant="secondary" 
+                  className="text-xs py-1.5 px-3 border border-purple-500/30 hover:bg-purple-500/15 text-purple-400 hover:text-purple-300 transition-all font-bold bg-zinc-950/40" 
+                  onClick={() => setShowEceGroupModal(true)}
                 >
                   {profile.labGroup ? 'Change Group' : 'Choose Group'}
                 </Button>
@@ -4174,7 +4214,7 @@ export default function App() {
               className="space-y-6"
             >
               {/* ECE 5th Semester Rotation Banner */}
-              {((profile.department === 'Electronics & Communication Engineering' || !profile.department || profile.department.includes('Electronics')) && (profile.semester === 'Semester 5' || !profile.semester)) && (() => {
+              {(profile.department === 'Electronics & Communication Engineering' && profile.semester === 'Semester 5') && (() => {
                 const eceWeekInfo = getEceAcademicWeek(new Date());
                 const activeGroup = (profile.labGroup || 'X1').toUpperCase();
                 let rotationText = '';
@@ -4781,17 +4821,7 @@ export default function App() {
 
         {/* JMI FET 1st Semester Timetable Viewer */}
         {profile.semester === 'Semester 1' && (
-          <JmiSem1TimetableCard 
-            profile={profile} 
-            onUpdateLabGroup={(newGrp) => {
-              const updated = { ...profile, labGroup: newGrp };
-              setProfile(updated);
-              localStorage.setItem('bs_profile', JSON.stringify(updated));
-              if (showToast) {
-                showToast(newGrp ? `Lab Group set to ${newGrp}` : 'Lab group cleared', 'success');
-              }
-            }} 
-          />
+          <JmiSem1TimetableCard profile={profile} />
         )}
 
         {/* End of Month Attendance Predictor */}
