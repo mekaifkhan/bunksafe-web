@@ -79,6 +79,7 @@ import {
 import SettingsTab from './components/SettingsTab';
 import ExamsTab from './components/ExamsTab';
 import { AttendancePredictor } from './components/AttendancePredictor';
+import { DateRangeAttendanceCard } from './components/DateRangeAttendanceCard';
 import { JmiSem1TimetableCard } from './components/JmiSem1TimetableCard';
 import { AttendanceLeaderboard } from './components/AttendanceLeaderboard';
 import { LateSemesterOnboardingModal } from './components/LateSemesterOnboardingModal';
@@ -4823,6 +4824,14 @@ export default function App() {
         {profile.semester === 'Semester 1' && (
           <JmiSem1TimetableCard profile={profile} />
         )}
+
+        {/* Date Range Attendance Checker (Check Attendance Between Specific Dates) */}
+        <DateRangeAttendanceCard
+          records={records}
+          semester={semester}
+          exams={exams}
+          showToast={showToast}
+        />
 
         {/* End of Month Attendance Predictor */}
         <AttendancePredictor
