@@ -557,7 +557,14 @@ export const LateSemesterOnboardingModal: React.FC<LateSemesterOnboardingModalPr
 
           <button
             type="button"
-            onClick={onClose}
+            onClick={() => {
+              try {
+                localStorage.setItem('bs_late_joiner_handled', 'true');
+              } catch (e) {
+                // ignore
+              }
+              onClose();
+            }}
             className="w-8 h-8 rounded-xl bg-zinc-800/80 hover:bg-zinc-800 text-zinc-400 hover:text-white flex items-center justify-center transition-colors"
             title="Close for now"
           >

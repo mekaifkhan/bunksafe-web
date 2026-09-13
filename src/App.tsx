@@ -471,31 +471,35 @@ export default function App() {
   const [scheduleSubTab, setScheduleSubTab] = useState<'schedule' | 'calendar'>('schedule');
   const [selectedScheduleDay, setSelectedScheduleDay] = useState<'Monday' | 'Tuesday' | 'Wednesday' | 'Thursday' | 'Friday'>('Monday');
   const [showLatePopup, setShowLatePopup] = useState<boolean>(() => {
-    const isCompleted = localStorage.getItem('bs_onboarding_completed') === 'true' || localStorage.getItem('bs_semester') !== null;
-    const alreadyHandled = localStorage.getItem('bs_late_joiner_handled') === 'true';
-    if (alreadyHandled) return false;
+    // This popup is strictly for NEW users during initial onboarding.
+    // NEVER show it to already registered users ("unka jaisa chal rha waisa chalega").
+    const isAlreadyRegistered =
+      localStorage.getItem('bs_onboarding_completed') === 'true' ||
+      localStorage.getItem('bs_semester') !== null ||
+      localStorage.getItem('bs_profile') !== null;
 
-    const savedSem = localStorage.getItem('bs_semester');
-    if (!savedSem) return false;
-    try {
-      const parsedSem = JSON.parse(savedSem);
-      if (!parsedSem?.startDate) return false;
-      const todayKolkata = getKolkataTodayStr();
-      return isCompleted && todayKolkata > parsedSem.startDate;
-    } catch (e) {
+    if (isAlreadyRegistered) {
+      // Permanently mark handled for existing registered users so they are never interrupted
+      if (localStorage.getItem('bs_late_joiner_handled') !== 'true') {
+        localStorage.setItem('bs_late_joiner_handled', 'true');
+      }
       return false;
     }
+
+    return false;
   });
 
+  // Safety shield: Ensure already registered users are always marked as handled
   useEffect(() => {
-    if (onboardingCompleted && semester.startDate) {
-      const todayKolkata = getKolkataTodayStr();
-      const alreadyHandled = localStorage.getItem('bs_late_joiner_handled') === 'true';
-      if (!alreadyHandled && todayKolkata > semester.startDate) {
-        setShowLatePopup(true);
-      }
+    const isAlreadyRegistered =
+      localStorage.getItem('bs_onboarding_completed') === 'true' ||
+      localStorage.getItem('bs_semester') !== null ||
+      localStorage.getItem('bs_profile') !== null;
+
+    if (isAlreadyRegistered && localStorage.getItem('bs_late_joiner_handled') !== 'true') {
+      localStorage.setItem('bs_late_joiner_handled', 'true');
     }
-  }, [onboardingCompleted, semester.startDate]);
+  }, []);
   const [notificationPermission, setNotificationPermission] = useState<NotificationPermission>(
     typeof Notification !== 'undefined' ? Notification.permission : 'default'
   );
@@ -2698,6 +2702,13 @@ export default function App() {
                       onClick={() => {
                         localStorage.setItem('bs_onboarding_completed', 'true');
                         setOnboardingCompleted(true);
+
+                        const todayKolkata = getKolkataTodayStr();
+                        if (manualStartDate && todayKolkata > manualStartDate) {
+                          setShowLatePopup(true);
+                        } else {
+                          localStorage.setItem('bs_late_joiner_handled', 'true');
+                        }
                       }}
                     >
                       Go to Dashboard &rarr;
@@ -3182,6 +3193,14 @@ export default function App() {
 
                         localStorage.setItem('bs_onboarding_completed', 'true');
                         setOnboardingCompleted(true);
+
+                        // Only for brand new user setting up for the first time:
+                        const todayKolkata = getKolkataTodayStr();
+                        if (onboardStartDate && todayKolkata > onboardStartDate) {
+                          setShowLatePopup(true);
+                        } else {
+                          localStorage.setItem('bs_late_joiner_handled', 'true');
+                        }
                       }}>
                         Finish & Activate
                       </Button>
@@ -5478,7 +5497,14 @@ export default function App() {
       
       <LateSemesterOnboardingModal
         isOpen={showLatePopup}
-        onClose={() => setShowLatePopup(false)}
+        onClose={() => {
+          try {
+            localStorage.setItem('bs_late_joiner_handled', 'true');
+          } catch (e) {
+            // ignore
+          }
+          setShowLatePopup(false);
+        }}
         semester={semester}
         onUpdateSemester={(updated) => {
           setSemester(updated);
