@@ -4855,6 +4855,8 @@ export default function App() {
         {/* End of Month Attendance Predictor */}
         <AttendancePredictor
           stats={stats}
+          semester={semester}
+          exams={exams}
           classSchedule={classSchedule}
           targetAttendance={semester.targetAttendance}
           profile={profile}
